@@ -100,7 +100,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:text="Pilih Poli Klinik"
+            android:text="Pilih Layanan Klinik"
             android:textColor="@android:color/black"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -140,7 +140,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Poli Umum"
+                        android:text="Umum"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -176,7 +176,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Poli Gigi"
+                        android:text="Gigi"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -221,7 +221,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Poli Mata"
+                        android:text="Mata"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -257,7 +257,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Poli Jantung"
+                        android:text="Jantung"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -302,7 +302,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Poli Anak"
+                        android:text="Anak"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -338,7 +338,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Poli Kandungan"
+                        android:text="Kandungan"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 

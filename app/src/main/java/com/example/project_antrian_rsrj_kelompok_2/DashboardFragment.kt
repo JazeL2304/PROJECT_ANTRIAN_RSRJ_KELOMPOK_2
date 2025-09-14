@@ -101,7 +101,7 @@ class DashboardFragment : Fragment() {
         val hasActiveQueue = true // Bisa diubah untuk testing
 
         if (hasActiveQueue) {
-            tvActiveQueue.text = "Antrian Aktif: Poli Umum - No. 15\nStatus: Menunggu (estimasi 30 menit)"
+            tvActiveQueue.text = "Antrian Aktif: Layanan Klinik Umum - No. 15\nStatus: Menunggu (estimasi 30 menit)"
             tvActiveQueue.visibility = View.VISIBLE
         } else {
             tvActiveQueue.visibility = View.GONE

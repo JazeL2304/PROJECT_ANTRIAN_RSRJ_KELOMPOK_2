@@ -67,7 +67,7 @@ class BookingFragment : Fragment() {
     private fun setupSpinners() {
         // Setup Specialization Spinner
         val specializations = DataSource.getSpecializations()
-        val specNames = mutableListOf("Pilih Poli Klinik")
+        val specNames = mutableListOf("Pilih Layanan Klinik")
         specNames.addAll(specializations.map { "${it.emoji} ${it.name}" })
 
         val specAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, specNames)
@@ -159,9 +159,9 @@ class BookingFragment : Fragment() {
             return false
         }
 
-        // Validasi poli
+        // Validasi layanan
         if (spinnerSpecialization.selectedItemPosition == 0) {
-            Toast.makeText(requireContext(), "Pilih poli klinik terlebih dahulu", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Pilih layanan klinik terlebih dahulu", Toast.LENGTH_SHORT).show()
             return false
         }
 
@@ -204,7 +204,7 @@ class BookingFragment : Fragment() {
             
             Nomor Antrian: $queueNumber
             Nama: $patientName
-            Poli: ${specialization?.name}
+            Layanan: ${specialization?.name}
             Dokter: ${selectedDoctor.name}
             Tanggal: ${tvSelectedDate.text}
             Jam: $selectedTime

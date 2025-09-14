@@ -41,7 +41,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:text="1️⃣ Nama Pasien"
+                    android:text="1. Nama Pasien"
                     android:textColor="#2196F3"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -57,12 +57,12 @@
                     android:padding="12dp"
                     android:textSize="14sp" />
 
-                <!-- Step 2: Pilih Poli -->
+                <!-- Step 2: Pilih Layanan -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:text="2️⃣ Pilih Poli Klinik"
+                    android:text="2. Layanan Klinik"
                     android:textColor="#2196F3"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -79,7 +79,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:text="3️⃣ Pilih Dokter"
+                    android:text="3. Dokter"
                     android:textColor="#2196F3"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -96,7 +96,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:text="4️⃣ Pilih Tanggal"
+                    android:text="4. Tanggal"
                     android:textColor="#2196F3"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -128,7 +128,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:text="5️⃣ Pilih Jam"
+                    android:text="5. Jam"
                     android:textColor="#2196F3"
                     android:textSize="16sp"
                     android:textStyle="bold" />

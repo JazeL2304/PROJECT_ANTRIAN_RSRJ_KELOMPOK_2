@@ -70,7 +70,7 @@ class QueueFragment : Fragment() {
 
     private fun setupUI() {
         // Set info dokter (simulasi)
-        tvDoctorInfo.text = "Dr. Ahmad Santoso - Poli Umum\n📅 ${getCurrentDate()} | 🕘 09:30"
+        tvDoctorInfo.text = "Dr. Ahmad Santoso - Layanan Umum\n📅 ${getCurrentDate()} | 🕘 09:30"
     }
 
     private fun setupRefreshButton() {
@@ -127,7 +127,7 @@ class QueueFragment : Fragment() {
         if (queueAhead <= 0) {
             tvEstimatedTime.text = "Giliran Anda!"
         } else {
-            val estimatedMinutes = queueAhead * 8 // Asumsi 8 menit per pasien
+            val estimatedMinutes = queueAhead * 5 // Asumsi 5 menit per pasien
             tvEstimatedTime.text = "Estimasi: $estimatedMinutes menit lagi\n($queueAhead pasien di depan Anda)"
         }
     }
