@@ -2,4 +2,9 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Tambahan warna ungu -->
+    <color name="purple_200">#BB86FC</color>
+    <color name="purple_500">#9C27B0</color>
+    <color name="purple_700">#7B1FA2</color>
 </resources>

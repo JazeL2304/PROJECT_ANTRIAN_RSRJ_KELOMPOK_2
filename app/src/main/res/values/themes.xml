@@ -3,6 +3,10 @@
     <style name="Base.Theme.PROJECT_ANTRIAN_RSRJ_KELOMPOK_2" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+
+        <!-- ✅ Tambahan warna navigation bar di bawah layar -->
+        <item name="android:navigationBarColor">@color/purple_500</item>
+        <item name="android:enforceNavigationBarContrast">true</item>
     </style>
 
     <style name="Theme.PROJECT_ANTRIAN_RSRJ_KELOMPOK_2" parent="Base.Theme.PROJECT_ANTRIAN_RSRJ_KELOMPOK_2" />
