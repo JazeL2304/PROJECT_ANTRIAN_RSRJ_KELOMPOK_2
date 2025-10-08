@@ -46,6 +46,10 @@ class MainActivity : AppCompatActivity() {
                     loadFragment(HistoryFragment())
                     true
                 }
+                R.id.nav_profile -> {
+                    loadFragment(fragment_news())
+                    true
+                }
                 else -> false
             }
         }

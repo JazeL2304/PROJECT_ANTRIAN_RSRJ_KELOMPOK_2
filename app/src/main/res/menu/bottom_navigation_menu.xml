@@ -4,7 +4,7 @@
     <item
         android:id="@+id/nav_dashboard"
         android:icon="@drawable/ic_dashboard"
-        android:title="Dashboard" />
+        android:title="Dashboard"/>
 
     <item
         android:id="@+id/nav_queue"
@@ -14,7 +14,7 @@
     <item
         android:id="@+id/nav_profile"
         android:icon="@drawable/ic_profile"
-        android:title="Profil" />
+        android:title="News" />
 
     <item
         android:id="@+id/nav_booking"
