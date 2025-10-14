@@ -12,7 +12,6 @@ import com.example.project_antrian_rsrj_kelompok_2.model.NewsItem
 
 class NewsAdapter(private val newsList: List<NewsItem>) :
     RecyclerView.Adapter<NewsAdapter.NewsViewHolder>() {
-
     inner class NewsViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val title: TextView = view.findViewById(R.id.textTitle)
         val desc: TextView = view.findViewById(R.id.textDesc)
@@ -27,6 +26,7 @@ class NewsAdapter(private val newsList: List<NewsItem>) :
 
     override fun onBindViewHolder(holder: NewsViewHolder, position: Int) {
         val item = newsList[position]
+
         holder.title.text = item.title ?: "-"
         holder.desc.text = item.description ?: "-"
         holder.date.text = item.pubDate ?: "-"
@@ -37,6 +37,5 @@ class NewsAdapter(private val newsList: List<NewsItem>) :
             }
         }
     }
-
     override fun getItemCount(): Int = newsList.size
 }
