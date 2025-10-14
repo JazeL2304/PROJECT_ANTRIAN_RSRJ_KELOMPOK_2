@@ -1,6 +1,6 @@
-package com.example.project_antrian_rsrj_kelompok_2.api
+package com.example.projectantrianrsrjkelompok2.api
 
-import com.example.project_antrian_rsrj_kelompok_2.model.NewsResponse
+import com.example.projectantrianrsrjkelompok2.model.NewsResponse
 import retrofit2.Call
 import retrofit2.http.GET
 import retrofit2.http.Query

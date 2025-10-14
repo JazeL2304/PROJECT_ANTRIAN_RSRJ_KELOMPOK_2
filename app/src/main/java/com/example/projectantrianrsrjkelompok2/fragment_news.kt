@@ -1,4 +1,4 @@
-package com.example.project_antrian_rsrj_kelompok_2
+package com.example.projectantrianrsrjkelompok2
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -9,9 +9,9 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.project_antrian_rsrj_kelompok_2.adapter.NewsAdapter
-import com.example.project_antrian_rsrj_kelompok_2.api.NewsApiService
-import com.example.project_antrian_rsrj_kelompok_2.model.NewsResponse
+import com.example.projectantrianrsrjkelompok2.adapter.NewsAdapter
+import com.example.projectantrianrsrjkelompok2.api.NewsApiService
+import com.example.projectantrianrsrjkelompok2.model.NewsResponse
 import retrofit2.*
 import retrofit2.converter.gson.GsonConverterFactory
 

@@ -6,22 +6,36 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Header/Toolbar sederhana -->
+    <!-- Header/Toolbar dengan Profile Icon -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:background="#2196F3"
-        android:gravity="center"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="16dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
+        <!-- Title -->
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="🏥 Antrian Rumah Sakit"
             android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
+
+        <!-- Profile Icon Button (TAMBAHAN BARU) -->
+        <ImageView
+            android:id="@+id/btnProfileIcon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_menu_myplaces"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="8dp"
+            android:tint="@android:color/white"
+            android:contentDescription="Profile" />
 
     </LinearLayout>
 

@@ -1,4 +1,4 @@
-package com.example.project_antrian_rsrj_kelompok_2.model
+package com.example.projectantrianrsrjkelompok2.model
 
 data class NewsResponse(
     val results: List<NewsItem>?

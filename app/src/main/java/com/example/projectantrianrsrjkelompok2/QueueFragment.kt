@@ -1,4 +1,4 @@
-package com.example.project_antrian_rsrj_kelompok_2
+package com.example.projectantrianrsrjkelompok2
 
 import android.os.Bundle
 import android.os.Handler
@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
-import com.example.project_antrian_rsrj_kelompok_2.R
 import java.text.SimpleDateFormat
 import java.util.*
 

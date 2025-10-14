@@ -1,4 +1,4 @@
-package com.example.project_antrian_rsrj_kelompok_2
+package com.example.projectantrianrsrjkelompok2
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,9 +8,6 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.cardview.widget.CardView
-import com.example.project_antrian_rsrj_kelompok_2.MainActivity
-import com.example.project_antrian_rsrj_kelompok_2.R
-import com.example.project_antrian_rsrj_kelompok_2.DataSource
 import java.text.SimpleDateFormat
 import java.util.*
 

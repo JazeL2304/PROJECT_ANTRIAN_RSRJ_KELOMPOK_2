@@ -1,4 +1,4 @@
-package com.example.project_antrian_rsrj_kelompok_2.adapter
+package com.example.projectantrianrsrjkelompok2.adapter
 
 import android.content.Intent
 import android.net.Uri
@@ -7,8 +7,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.example.project_antrian_rsrj_kelompok_2.R
-import com.example.project_antrian_rsrj_kelompok_2.model.NewsItem
+import com.example.projectantrianrsrjkelompok2.R
+import com.example.projectantrianrsrjkelompok2.model.NewsItem
 
 class NewsAdapter(private val newsList: List<NewsItem>) :
     RecyclerView.Adapter<NewsAdapter.NewsViewHolder>() {
