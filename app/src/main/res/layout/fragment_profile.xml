@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Profile Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@android:color/white"
+            android:padding="24dp"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"
+            android:elevation="2dp">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@android:drawable/ic_menu_myplaces"
+                android:layout_marginBottom="16dp"
+                android:contentDescription="Profile Icon" />
+
+            <TextView
+                android:id="@+id/tvUserName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nama User"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tvUserEmail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="email@example.com"
+                android:textSize="14sp"
+                android:textColor="#666666" />
+
+        </LinearLayout>
+
+        <!-- Account Settings Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pengaturan Akun"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:layout_marginBottom="12dp"
+            android:layout_marginTop="8dp" />
+
+        <!-- ← TAMBAHAN BARU: Edit Name Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEditName"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="✏️ Ubah Nama"
+            android:textColor="@android:color/black"
+            android:backgroundTint="@android:color/white"
+            android:elevation="2dp"
+            android:layout_marginBottom="12dp"
+            android:gravity="start|center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
+        <!-- Edit Password Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEditPassword"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Ubah Password"
+            android:textColor="@android:color/black"
+            android:backgroundTint="@android:color/white"
+            android:elevation="2dp"
+            android:layout_marginBottom="12dp"
+            android:gravity="start|center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
+        <!-- Update Profile Photo Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVerifyIdentity"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="📸 Ubah Foto Profil"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#2196F3"
+            android:elevation="2dp"
+            android:layout_marginBottom="12dp"
+            android:gravity="center" />
+
+        <!-- Logout Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Logout"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#F44336"
+            android:elevation="2dp"
+            android:layout_marginTop="24dp" />
+
+    </LinearLayout>
+
+</ScrollView>

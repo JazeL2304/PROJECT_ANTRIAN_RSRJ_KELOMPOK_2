@@ -57,7 +57,7 @@
                     android:padding="12dp"
                     android:textSize="14sp" />
 
-                <!-- Step 2: Pilih Layanan -->
+                <!-- Step 2: Layanan -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -74,7 +74,7 @@
                     android:layout_marginBottom="20dp"
                     android:background="@drawable/spinner_background" />
 
-                <!-- Step 3: Pilih Dokter -->
+                <!-- Step 3: Dokter -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -91,7 +91,7 @@
                     android:layout_marginBottom="20dp"
                     android:background="@drawable/spinner_background" />
 
-                <!-- Step 4: Pilih Tanggal -->
+                <!-- Step 4: Tanggal -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -123,12 +123,35 @@
                     android:textStyle="italic"
                     android:visibility="gone" />
 
-                <!-- Step 5: Pilih Jam -->
+                <!-- ← TAMBAHAN BARU: Step 5 Keluhan -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:text="5. Jam"
+                    android:text="5. Keluhan Awal"
+                    android:textColor="#2196F3"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/et_complaint"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:layout_marginBottom="20dp"
+                    android:background="@drawable/edittext_background"
+                    android:gravity="top"
+                    android:hint="Jelaskan keluhan Anda..."
+                    android:inputType="textMultiLine"
+                    android:maxLines="5"
+                    android:padding="12dp"
+                    android:textSize="14sp" />
+
+                <!-- Step 6: Jam (dulu step 5) -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="6. Jam"
                     android:textColor="#2196F3"
                     android:textSize="16sp"
                     android:textStyle="bold" />

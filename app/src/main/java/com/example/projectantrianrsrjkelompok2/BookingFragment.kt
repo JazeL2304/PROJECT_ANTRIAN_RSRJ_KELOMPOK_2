@@ -1,5 +1,6 @@
-package com.example.project_antrian_rsrj_kelompok_2
+package com.example.projectantrianrsrjkelompok2
 
+import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,10 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
-import com.example.project_antrian_rsrj_kelompok_2.MainActivity
-import com.example.project_antrian_rsrj_kelompok_2.R
-import com.example.project_antrian_rsrj_kelompok_2.DataSource
-import com.example.project_antrian_rsrj_kelompok_2.Doctor
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -22,6 +19,7 @@ class BookingFragment : Fragment() {
     private lateinit var tvSelectedDate: TextView
     private lateinit var spinnerTime: Spinner
     private lateinit var etPatientName: EditText
+    private lateinit var etComplaint: EditText
     private lateinit var btnConfirmBooking: Button
 
     private var selectedDate: String = ""
@@ -44,11 +42,10 @@ class BookingFragment : Fragment() {
         setupDatePicker()
         setupBookingButton()
 
-        // Cek apakah ada spesialisasi yang sudah dipilih dari dashboard
         arguments?.getInt("selected_specialization_id")?.let { specId ->
             if (specId > 0) {
                 selectedSpecializationId = specId
-                spinnerSpecialization.setSelection(specId) // Set spinner ke posisi yang benar
+                spinnerSpecialization.setSelection(specId)
                 loadDoctors(specId)
             }
         }
@@ -61,11 +58,11 @@ class BookingFragment : Fragment() {
         tvSelectedDate = view.findViewById(R.id.tv_selected_date)
         spinnerTime = view.findViewById(R.id.spinner_time)
         etPatientName = view.findViewById(R.id.et_patient_name)
+        etComplaint = view.findViewById(R.id.et_complaint)
         btnConfirmBooking = view.findViewById(R.id.btn_confirm_booking)
     }
 
     private fun setupSpinners() {
-        // Setup Specialization Spinner
         val specializations = DataSource.getSpecializations()
         val specNames = mutableListOf("Pilih Layanan Klinik")
         specNames.addAll(specializations.map { "${it.emoji} ${it.name}" })
@@ -86,7 +83,6 @@ class BookingFragment : Fragment() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // Setup Time Spinner
         val timeSlots = mutableListOf("Pilih Jam")
         timeSlots.addAll(DataSource.getTimeSlots())
 
@@ -131,10 +127,8 @@ class BookingFragment : Fragment() {
                 calendar.get(Calendar.DAY_OF_MONTH)
             )
 
-            // Set minimum date ke hari ini
             datePickerDialog.datePicker.minDate = System.currentTimeMillis()
 
-            // Set maximum date 30 hari ke depan
             val maxCalendar = Calendar.getInstance()
             maxCalendar.add(Calendar.DAY_OF_MONTH, 30)
             datePickerDialog.datePicker.maxDate = maxCalendar.timeInMillis
@@ -152,32 +146,53 @@ class BookingFragment : Fragment() {
     }
 
     private fun validateBookingData(): Boolean {
-        // Validasi nama pasien
+        val selectedDateBookings = DataSource.getBookingHistory().filter {
+            it.date == selectedDate
+        }
+
+        if (selectedDateBookings.size >= 50) {
+            val selectedCal = Calendar.getInstance()
+            selectedCal.time = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(selectedDate) ?: Date()
+            selectedCal.add(Calendar.DAY_OF_MONTH, 1)
+            val nextDate = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID")).format(selectedCal.time)
+
+            AlertDialog.Builder(requireContext())
+                .setTitle("Quota Penuh")
+                .setMessage("Maaf, pendaftaran untuk tanggal ${formatDate(selectedDate)} sudah penuh (max 50 pasien).\n\n" +
+                        "🕛 Pendaftaran di-reset otomatis jam 00:00 setiap hari\n" +
+                        "📅 Silakan pilih tanggal lain atau besok ($nextDate)")
+                .setPositiveButton("OK", null)
+                .show()
+            return false
+        }
+
         val patientName = etPatientName.text.toString().trim()
         if (patientName.isEmpty()) {
             etPatientName.error = "Nama pasien harus diisi"
             return false
         }
 
-        // Validasi layanan
+        val complaint = etComplaint.text.toString().trim()
+        if (complaint.isEmpty()) {
+            etComplaint.error = "Keluhan harus diisi"
+            return false
+        }
+
         if (spinnerSpecialization.selectedItemPosition == 0) {
             Toast.makeText(requireContext(), "Pilih layanan klinik terlebih dahulu", Toast.LENGTH_SHORT).show()
             return false
         }
 
-        // Validasi dokter
         if (spinnerDoctor.selectedItemPosition == 0) {
             Toast.makeText(requireContext(), "Pilih dokter terlebih dahulu", Toast.LENGTH_SHORT).show()
             return false
         }
 
-        // Validasi tanggal
         if (selectedDate.isEmpty()) {
             Toast.makeText(requireContext(), "Pilih tanggal terlebih dahulu", Toast.LENGTH_SHORT).show()
             return false
         }
 
-        // Validasi jam
         if (spinnerTime.selectedItemPosition == 0) {
             Toast.makeText(requireContext(), "Pilih jam terlebih dahulu", Toast.LENGTH_SHORT).show()
             return false
@@ -187,34 +202,55 @@ class BookingFragment : Fragment() {
     }
 
     private fun createBooking() {
-        // Generate nomor antrian random (1-50)
-        val queueNumber = (1..50).random()
+        val selectedDateBookings = DataSource.getBookingHistory().filter {
+            it.date == selectedDate
+        }
+
+        val queueNumber = selectedDateBookings.size + 1
 
         val patientName = etPatientName.text.toString().trim()
+        val complaint = etComplaint.text.toString().trim()
         val selectedDoctor = doctors[spinnerDoctor.selectedItemPosition - 1]
         val selectedTime = DataSource.getTimeSlots()[spinnerTime.selectedItemPosition - 1]
         val specialization = DataSource.getSpecializations().find { it.id == selectedSpecializationId }
 
-        // Simulasi menyimpan data booking
-        // Dalam implementasi nyata, data ini akan disimpan ke database
+        val booking = Booking(
+            id = "Q${queueNumber.toString().padStart(3, '0')}",
+            queueNumber = queueNumber,
+            patientName = patientName,
+            doctorName = selectedDoctor.name,
+            specialization = specialization?.name ?: "",
+            date = selectedDate,
+            time = selectedTime,
+            complaint = complaint,
+            status = BookingStatus.WAITING,
+            createdAt = System.currentTimeMillis()
+        )
 
-        // Tampilkan konfirmasi
-        val message = """
-            Booking Berhasil!
-            
-            Nomor Antrian: $queueNumber
-            Nama: $patientName
-            Layanan: ${specialization?.name}
-            Dokter: ${selectedDoctor.name}
-            Tanggal: ${tvSelectedDate.text}
-            Jam: $selectedTime
-            
-            Silakan datang 15 menit sebelum jadwal.
-        """.trimIndent()
+        DataSource.setActiveBooking(booking)
 
-        Toast.makeText(requireContext(), "Booking berhasil! Nomor antrian: $queueNumber", Toast.LENGTH_LONG).show()
+        // ← TAMBAHAN BARU: Auto-add ke history
+        DataSource.addToHistory(booking)
 
-        // Navigate ke Queue Fragment
+        Toast.makeText(
+            requireContext(),
+            "✅ Booking berhasil!\n" +
+                    "📋 Nomor antrian: $queueNumber\n" +
+                    "📅 ${formatDate(selectedDate)}",
+            Toast.LENGTH_LONG
+        ).show()
+
         (activity as MainActivity).navigateToFragment(QueueFragment())
+    }
+
+    private fun formatDate(dateString: String): String {
+        return try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
+            val date = inputFormat.parse(dateString)
+            outputFormat.format(date ?: Date())
+        } catch (e: Exception) {
+            dateString
+        }
     }
 }

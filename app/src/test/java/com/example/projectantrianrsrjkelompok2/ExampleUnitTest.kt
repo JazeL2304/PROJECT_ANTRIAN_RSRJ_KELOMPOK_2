@@ -1,4 +1,4 @@
-package com.example.project_antrian_rsrj_kelompok_2
+package com.example.projectantrianrsrjkelompok2
 
 import org.junit.Test
 

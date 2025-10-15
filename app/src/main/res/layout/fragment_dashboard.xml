@@ -16,7 +16,6 @@
 
         <!-- Welcome Card -->
         <androidx.cardview.widget.CardView
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
@@ -52,6 +51,20 @@
 
         </androidx.cardview.widget.CardView>
 
+        <!-- Info Reset Harian -->
+        <TextView
+            android:id="@+id/tv_reset_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="#E3F2FD"
+            android:padding="10dp"
+            android:text="📋 Pendaftaran reset jam 00:00&#10;⏰ Max 50 pasien/hari"
+            android:textColor="#1976D2"
+            android:textSize="11sp"
+            android:lineSpacingExtra="2dp"
+            android:gravity="center"/>
+
         <!-- Active Queue Info -->
         <TextView
             android:id="@+id/tv_active_queue"
@@ -78,9 +91,9 @@
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 android:background="#2196F3"
-                android:text="Buat Antrian Baru"
+                android:text="Buat Antrian"
                 android:textColor="@android:color/white"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
 
             <Button
                 android:id="@+id/btn_emergency"
@@ -91,7 +104,7 @@
                 android:background="#F44336"
                 android:text="🚨 Darurat"
                 android:textColor="@android:color/white"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
 
         </LinearLayout>
 
@@ -105,14 +118,14 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <!-- Poli Cards Grid (2 kolom) -->
+        <!-- Baris 1 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:orientation="horizontal">
 
-            <!-- Poli Umum -->
+            <!-- Poli Umum - ICON UPDATED -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_poli_umum"
                 android:layout_width="0dp"
@@ -130,11 +143,11 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🏥"
-                        android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_service_general"
+                        android:contentDescription="Layanan Umum"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -148,7 +161,7 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Poli Gigi -->
+            <!-- Poli Gigi - ICON UPDATED -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_poli_gigi"
                 android:layout_width="0dp"
@@ -166,11 +179,11 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🦷"
-                        android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_service_dental"
+                        android:contentDescription="Layanan Gigi"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -186,14 +199,14 @@
 
         </LinearLayout>
 
-        <!-- Baris kedua -->
+        <!-- Baris 2 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:orientation="horizontal">
 
-            <!-- Poli Mata -->
+            <!-- Poli Mata - ICON UPDATED -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_poli_mata"
                 android:layout_width="0dp"
@@ -211,11 +224,11 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="👁️"
-                        android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_service_eye"
+                        android:contentDescription="Layanan Mata"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -229,7 +242,7 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Poli Jantung -->
+            <!-- Poli Jantung - ICON UPDATED -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_poli_jantung"
                 android:layout_width="0dp"
@@ -247,11 +260,11 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="❤️"
-                        android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_service_heart"
+                        android:contentDescription="Layanan Jantung"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -267,14 +280,14 @@
 
         </LinearLayout>
 
-        <!-- Baris ketiga -->
+        <!-- Baris 3 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:orientation="horizontal">
 
-            <!-- Poli Anak -->
+            <!-- Poli Anak - ICON UPDATED -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_poli_anak"
                 android:layout_width="0dp"
@@ -292,11 +305,11 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="👶"
-                        android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_service_pediatric"
+                        android:contentDescription="Layanan Anak"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -310,7 +323,7 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Poli Kandungan -->
+            <!-- Poli Kandungan - ICON UPDATED -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_poli_kandungan"
                 android:layout_width="0dp"
@@ -328,11 +341,11 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🤱"
-                        android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_service_maternity"
+                        android:contentDescription="Layanan Kandungan"/>
 
                     <TextView
                         android:layout_width="wrap_content"

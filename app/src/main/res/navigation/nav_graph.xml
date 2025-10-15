@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <!-- Login Fragment -->
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.projectantrianrsrjkelompok2.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_login" />
+
+    <!-- Sign Up Fragment -->
+    <fragment
+        android:id="@+id/signUpFragment"
+        android:name="com.example.projectantrianrsrjkelompok2.SignUpFragment"
+        android:label="Sign Up"
+        tools:layout="@layout/fragment_signup" />
+
+    <!-- Dashboard Fragment (setelah login berhasil) -->
+    <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="com.example.projectantrianrsrjkelompok2.DashboardFragment"
+        android:label="Dashboard"
+        tools:layout="@layout/fragment_dashboard" />
+
+    <!-- Navigation Actions -->
+    <action
+        android:id="@+id/action_loginFragment_to_signUpFragment"
+        app:destination="@id/signUpFragment"
+        app:enterAnim="@android:anim/slide_in_left"
+        app:exitAnim="@android:anim/slide_out_right"
+        app:popEnterAnim="@android:anim/slide_in_left"
+        app:popExitAnim="@android:anim/slide_out_right" />
+
+    <action
+        android:id="@+id/action_signUpFragment_to_loginFragment"
+        app:destination="@id/loginFragment"
+        app:enterAnim="@android:anim/slide_in_left"
+        app:exitAnim="@android:anim/slide_out_right"
+        app:popEnterAnim="@android:anim/slide_in_left"
+        app:popExitAnim="@android:anim/slide_out_right" />
+
+    <action
+        android:id="@+id/action_loginFragment_to_dashboardFragment"
+        app:destination="@id/dashboardFragment"
+        app:popUpTo="@id/loginFragment"
+        app:popUpToInclusive="true"
+        app:enterAnim="@android:anim/fade_in"
+        app:exitAnim="@android:anim/fade_out" />
+
+    <action
+        android:id="@+id/action_signUpFragment_to_dashboardFragment"
+        app:destination="@id/dashboardFragment"
+        app:popUpTo="@id/signUpFragment"
+        app:popUpToInclusive="true"
+        app:enterAnim="@android:anim/fade_in"
+        app:exitAnim="@android:anim/fade_out" />
+
+</navigation>
