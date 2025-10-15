@@ -1,6 +1,5 @@
 package com.example.projectantrianrsrjkelompok2
 
-
 // Data class sederhana untuk dokter
 data class Doctor(
     val id: Int,
@@ -26,11 +25,105 @@ data class Queue(
     val queueNumber: Int,
     val date: String,
     val time: String,
-    val status: String // "Menunggu", "Sedang Dilayani", "Selesai"
+    val status: String
 )
 
-// Static data untuk simulasi
+// ===== Booking & BookingStatus =====
+data class Booking(
+    val id: String,
+    val queueNumber: Int,
+    val patientName: String,
+    val doctorName: String,
+    val specialization: String,
+    val date: String,
+    val time: String,
+    val complaint: String = "",
+    val status: BookingStatus,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+enum class BookingStatus {
+    WAITING,
+    CALLED,
+    COMPLETED,
+    CANCELLED,
+    MISSED
+}
+
+fun BookingStatus.toDisplayString(): String {
+    return when (this) {
+        BookingStatus.WAITING -> "Menunggu"
+        BookingStatus.CALLED -> "Dipanggil"
+        BookingStatus.COMPLETED -> "Selesai"
+        BookingStatus.CANCELLED -> "Dibatalkan"
+        BookingStatus.MISSED -> "Terlewat"
+    }
+}
+
+fun BookingStatus.getColorResource(): Int {
+    return when (this) {
+        BookingStatus.WAITING -> android.R.color.holo_orange_dark
+        BookingStatus.CALLED -> android.R.color.holo_blue_dark
+        BookingStatus.COMPLETED -> android.R.color.holo_green_dark
+        BookingStatus.CANCELLED -> android.R.color.holo_red_dark
+        BookingStatus.MISSED -> android.R.color.darker_gray
+    }
+}
+
 object DataSource {
+
+    private val bookingHistory = mutableListOf(
+        Booking(
+            id = "A001",
+            queueNumber = 5,
+            patientName = "John Doe",
+            doctorName = "Dr. Ahmad Santoso",
+            specialization = "Layanan Umum",
+            date = "2025-10-10",
+            time = "09:00",
+            complaint = "Demam dan batuk",
+            status = BookingStatus.COMPLETED,
+            createdAt = System.currentTimeMillis() - 432000000
+        ),
+        Booking(
+            id = "A002",
+            queueNumber = 12,
+            patientName = "John Doe",
+            doctorName = "Dr. Budi Dental",
+            specialization = "Layanan Gigi",
+            date = "2025-10-12",
+            time = "14:00",
+            complaint = "Sakit gigi geraham kiri",
+            status = BookingStatus.COMPLETED,
+            createdAt = System.currentTimeMillis() - 259200000
+        ),
+        Booking(
+            id = "A003",
+            queueNumber = 8,
+            patientName = "John Doe",
+            doctorName = "Dr. Indra Mata",
+            specialization = "Layanan Mata",
+            date = "2025-10-13",
+            time = "10:30",
+            complaint = "Mata merah dan gatal",
+            status = BookingStatus.CANCELLED,
+            createdAt = System.currentTimeMillis() - 172800000
+        ),
+        Booking(
+            id = "A004",
+            queueNumber = 15,
+            patientName = "John Doe",
+            doctorName = "Dr. Ani Pediatri",
+            specialization = "Layanan Anak",
+            date = "2025-10-14",
+            time = "11:00",
+            complaint = "Anak demam tinggi",
+            status = BookingStatus.MISSED,
+            createdAt = System.currentTimeMillis() - 86400000
+        )
+    )
+
+    private var currentActiveBooking: Booking? = null
 
     fun getSpecializations(): List<Specialization> {
         return listOf(
@@ -77,11 +170,77 @@ object DataSource {
         )
     }
 
-    // Simulasi data antrian
     fun getSampleQueues(): List<Queue> {
         return listOf(
             Queue(1, "John Doe", "Dr. Ahmad Santoso", "Poli Umum", 15, "2024-12-15", "09:30", "Menunggu"),
             Queue(2, "Jane Smith", "Dr. Budi Dental", "Poli Gigi", 3, "2024-12-14", "10:00", "Selesai")
         )
+    }
+
+    fun getBookingHistory(): List<Booking> {
+        return bookingHistory.sortedByDescending { it.createdAt }
+    }
+
+    fun addBooking(booking: Booking) {
+        bookingHistory.add(0, booking)
+    }
+
+    fun getBookingById(id: String): Booking? {
+        return bookingHistory.find { it.id == id }
+    }
+
+    fun updateBookingStatus(id: String, newStatus: BookingStatus) {
+        val booking = bookingHistory.find { it.id == id }
+        booking?.let {
+            val index = bookingHistory.indexOf(it)
+            bookingHistory[index] = it.copy(status = newStatus)
+        }
+    }
+
+    fun cancelBooking(id: String): Boolean {
+        val booking = bookingHistory.find { it.id == id }
+        return if (booking != null) {
+            updateBookingStatus(id, BookingStatus.CANCELLED)
+            true
+        } else {
+            false
+        }
+    }
+
+    fun setActiveBooking(booking: Booking) {
+        currentActiveBooking = booking
+        addBooking(booking)
+    }
+
+    fun getActiveBooking(): Booking? {
+        return currentActiveBooking
+    }
+
+    fun clearActiveBooking() {
+        currentActiveBooking = null
+    }
+
+    fun hasActiveBooking(): Boolean {
+        return currentActiveBooking != null
+    }
+
+    fun updateActiveBookingStatus(newStatus: BookingStatus) {
+        currentActiveBooking = currentActiveBooking?.copy(status = newStatus)
+        currentActiveBooking?.let {
+            updateBookingStatus(it.id, newStatus)
+        }
+    }
+
+    // ← TAMBAHAN BARU: Function untuk add/update history
+    fun addToHistory(booking: Booking) {
+        // Cek apakah sudah ada di history (by id)
+        val existingIndex = bookingHistory.indexOfFirst { it.id == booking.id }
+        if (existingIndex != -1) {
+            // Update existing booking
+            bookingHistory[existingIndex] = booking
+        } else {
+            // Add new booking
+            bookingHistory.add(0, booking)
+        }
     }
 }

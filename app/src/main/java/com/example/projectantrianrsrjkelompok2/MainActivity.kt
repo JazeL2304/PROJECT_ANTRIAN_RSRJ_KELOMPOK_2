@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
+import com.example.projectantrianrsrjkelompok2.utils.NotificationHelper
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,12 +20,26 @@ class MainActivity : AppCompatActivity() {
 
         preferencesHelper = PreferencesHelper(this)
 
+        NotificationHelper.createNotificationChannel(this)
+
         bottomNavigation = findViewById(R.id.bottom_navigation)
         btnProfileIcon = findViewById(R.id.btnProfileIcon)
 
         setupBottomNavigation()
         setupProfileIcon()
         checkLoginStatus()
+        handleNotificationIntent()
+    }
+
+    private fun handleNotificationIntent() {
+        if (intent.getBooleanExtra("open_queue_fragment", false)) {
+            if (DataSource.hasActiveBooking()) {
+                loadFragment(QueueFragment())
+            } else {
+                loadFragment(EmptyQueueFragment())
+            }
+            bottomNavigation.selectedItemId = R.id.nav_queue
+        }
     }
 
     private fun setupBottomNavigation() {
@@ -39,7 +54,11 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_queue -> {
-                    loadFragment(QueueFragment())
+                    if (DataSource.hasActiveBooking()) {
+                        loadFragment(QueueFragment())
+                    } else {
+                        loadFragment(EmptyQueueFragment())
+                    }
                     true
                 }
                 R.id.nav_history -> {
@@ -67,16 +86,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkLoginStatus() {
-        if (preferencesHelper.isLoggedIn()) {
-            loadFragment(DashboardFragment())
-            bottomNavigation.selectedItemId = R.id.nav_dashboard
-            bottomNavigation.visibility = android.view.View.VISIBLE
-            btnProfileIcon.visibility = android.view.View.VISIBLE
-        } else {
-            loadFragment(LoginFragment())
-            bottomNavigation.visibility = android.view.View.GONE
-            btnProfileIcon.visibility = android.view.View.GONE
-        }
+        preferencesHelper.clearSession()
+
+        loadFragment(LoginFragment())
+        bottomNavigation.visibility = android.view.View.GONE
+        btnProfileIcon.visibility = android.view.View.GONE
     }
 
     private fun loadFragment(fragment: Fragment) {
@@ -86,7 +100,6 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    // Method untuk navigasi fragment biasa (dengan bottom nav visible)
     fun navigateToFragment(fragment: Fragment) {
         loadFragment(fragment)
         if (bottomNavigation.visibility != android.view.View.VISIBLE) {
@@ -95,10 +108,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // TAMBAHAN BARU: Method khusus untuk navigate ke Login/SignUp (tanpa bottom nav)
     fun navigateToLoginOrSignup(fragment: Fragment) {
         loadFragment(fragment)
-        // Pastikan bottom nav TETAP HIDDEN
         bottomNavigation.visibility = android.view.View.GONE
         btnProfileIcon.visibility = android.view.View.GONE
     }
@@ -108,8 +119,10 @@ class MainActivity : AppCompatActivity() {
         btnProfileIcon.visibility = android.view.View.GONE
     }
 
+    // ← FIXED: Ganti preferencesHelper.logout() jadi clearSession()
     fun logout() {
-        preferencesHelper.logout()
+        preferencesHelper.clearSession()
+        DataSource.clearActiveBooking()
         bottomNavigation.visibility = android.view.View.GONE
         btnProfileIcon.visibility = android.view.View.GONE
         loadFragment(LoginFragment())

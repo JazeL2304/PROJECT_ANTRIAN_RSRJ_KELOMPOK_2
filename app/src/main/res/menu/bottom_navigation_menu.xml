@@ -12,11 +12,6 @@
         android:title="Antrian" />
 
     <item
-        android:id="@+id/nav_profile"
-        android:icon="@drawable/ic_profile"
-        android:title="News" />
-
-    <item
         android:id="@+id/nav_booking"
         android:icon="@drawable/ic_booking"
         android:title="Booking" />
@@ -25,5 +20,10 @@
         android:id="@+id/nav_history"
         android:icon="@drawable/ic_history"
         android:title="Riwayat" />
+
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/ic_news"
+        android:title="News" />
 
 </menu>

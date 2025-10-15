@@ -26,7 +26,7 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <!-- Profile Icon Button (TAMBAHAN BARU) -->
+        <!-- Profile Icon Button -->
         <ImageView
             android:id="@+id/btnProfileIcon"
             android:layout_width="40dp"
@@ -46,7 +46,7 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- Bottom Navigation -->
+    <!-- Bottom Navigation - UPDATED dengan Color Selector -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
@@ -54,9 +54,9 @@
         android:background="@android:color/white"
         android:elevation="8dp"
         app:menu="@menu/bottom_navigation_menu"
-        app:itemIconTint="@color/black"
-        app:itemTextColor="@color/black"
+        app:itemIconTint="@color/bottom_nav_icon_color"
+        app:itemTextColor="@color/bottom_nav_icon_color"
         app:labelVisibilityMode="labeled"
-        app:itemRippleColor="@color/purple_200" />
+        app:itemRippleColor="#E0E0E0" />
 
 </LinearLayout>
