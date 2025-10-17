@@ -4,43 +4,38 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@color/bg_primary">
+    android:background="#F5F5F5">
 
-    <!-- Pesan jika belum ada data riwayat -->
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📂 Riwayat Pasien"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#00796B"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Empty state -->
     <TextView
         android:id="@+id/tvEmptyHistory"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Belum ada pasien yang diselesaikan."
-        android:textAlignment="center"
-        android:textColor="@color/text_secondary"
-        android:textSize="16sp"
-        android:visibility="gone"
-        android:padding="8dp"
-        android:layout_marginBottom="8dp" />
+        android:text="Belum ada riwayat pasien yang selesai diperiksa"
+        android:textSize="14sp"
+        android:textColor="#757575"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone" />
 
-    <!-- Daftar Riwayat Pasien -->
+    <!-- List riwayat -->
     <ListView
-        android:id="@+id/listDoctorPatientHistory"
+        android:id="@+id/listPatientHistory"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:divider="@color/divider_gray"
-        android:dividerHeight="1dp"
-        android:background="@color/bg_secondary"
-        android:padding="4dp" />
-
-    <!-- Tombol Tambah Riwayat -->
-    <Button
-        android:id="@+id/btnAddHistory"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Tambah Riwayat Baru"
-        android:backgroundTint="@color/primary_button"
-        android:textColor="@color/white"
-        android:layout_marginTop="16dp"
-        android:padding="12dp"
-        android:textStyle="bold"
-        android:elevation="2dp" />
+        android:layout_height="match_parent"
+        android:divider="#E0E0E0"
+        android:dividerHeight="8dp"
+        android:padding="8dp" />
 
 </LinearLayout>

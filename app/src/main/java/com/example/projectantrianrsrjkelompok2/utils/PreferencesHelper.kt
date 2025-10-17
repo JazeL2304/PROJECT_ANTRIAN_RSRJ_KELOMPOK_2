@@ -12,6 +12,7 @@ class PreferencesHelper(context: Context) {
         private const val KEY_USER_FULL_NAME = "user_full_name"
         private const val KEY_USER_PHONE = "user_phone"
         private const val KEY_USER_ROLE = "user_role"
+        private const val KEY_PROFILE_PHOTO_PATH = "profile_photo_path"  // ✅ TAMBAHAN BARU
     }
 
     private val preferences: SharedPreferences =
@@ -71,5 +72,44 @@ class PreferencesHelper(context: Context) {
 
     fun clearSession() {
         clearAllPreferences()
+    }
+
+    // ===============================
+    // ✅ TAMBAHAN: Fungsi untuk Dashboard Greeting
+    // ===============================
+
+    /**
+     * ✅ Get username untuk ditampilkan di greeting dashboard
+     * Menggunakan getUserFullName() yang sudah ada
+     * Return default "User" jika full name tidak ada
+     */
+    fun getUsername(): String {
+        return getUserFullName() ?: "User"
+    }
+
+    // ===============================
+    // ✅ TAMBAHAN BARU: Fungsi untuk Profile Photo
+    // ===============================
+
+    /**
+     * ✅ Simpan path foto profil
+     */
+    fun saveProfilePhotoPath(path: String) {
+        preferences.edit().putString(KEY_PROFILE_PHOTO_PATH, path).apply()
+    }
+
+    /**
+     * ✅ Ambil path foto profil
+     * Return null jika foto belum pernah disimpan
+     */
+    fun getProfilePhotoPath(): String? {
+        return preferences.getString(KEY_PROFILE_PHOTO_PATH, null)
+    }
+
+    /**
+     * ✅ Hapus foto profil
+     */
+    fun clearProfilePhoto() {
+        preferences.edit().remove(KEY_PROFILE_PHOTO_PATH).apply()
     }
 }

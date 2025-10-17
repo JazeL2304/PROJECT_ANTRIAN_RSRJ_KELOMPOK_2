@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.cardview.widget.CardView
+import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper  // ← TAMBAHAN
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -27,6 +28,9 @@ class DashboardFragment : Fragment() {
     private lateinit var cardPoliAnak: CardView
     private lateinit var cardPoliKandungan: CardView
 
+    // ← TAMBAHAN: PreferencesHelper
+    private lateinit var preferencesHelper: PreferencesHelper
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -37,6 +41,9 @@ class DashboardFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // ← INITIALIZE PreferencesHelper
+        preferencesHelper = PreferencesHelper(requireContext())
 
         initViews(view)
         setupUI()
@@ -60,8 +67,9 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupUI() {
-        // Set welcome message
-        tvWelcome.text = "Selamat Datang di RS Sehat"
+        // ← SET WELCOME MESSAGE dengan nama user (DIUBAH!)
+        val username = preferencesHelper.getUsername()
+        tvWelcome.text = "Selamat Datang, $username! 👋"
 
         // Set tanggal saat ini
         val currentDate = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))

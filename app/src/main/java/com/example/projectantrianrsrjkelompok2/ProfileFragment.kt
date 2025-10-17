@@ -1,21 +1,25 @@
 package com.example.projectantrianrsrjkelompok2
 
 import android.app.AlertDialog
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
+import java.io.File
 
 class ProfileFragment : Fragment() {
 
     private lateinit var preferencesHelper: PreferencesHelper
 
+    private lateinit var ivProfilePhoto: ImageView
     private lateinit var tvUserName: TextView
     private lateinit var tvUserEmail: TextView
     private lateinit var btnEditName: Button
@@ -37,6 +41,7 @@ class ProfileFragment : Fragment() {
         preferencesHelper = PreferencesHelper(requireContext())
 
         // Initialize views
+        ivProfilePhoto = view.findViewById(R.id.ivProfilePhoto)
         tvUserName = view.findViewById(R.id.tvUserName)
         tvUserEmail = view.findViewById(R.id.tvUserEmail)
         btnEditName = view.findViewById(R.id.btnEditName)
@@ -47,20 +52,49 @@ class ProfileFragment : Fragment() {
         // Load user data
         loadUserData()
 
+        // ✅ Load profile photo
+        loadProfilePhoto()
+
         // Setup click listeners
         setupClickListeners()
     }
 
     private fun loadUserData() {
-        val userName = preferencesHelper.getUserFullName() ?: "User"
-        val userEmail = preferencesHelper.getUserEmail() ?: "email@example.com"
+        val userRole = preferencesHelper.getUserRole()
+
+        // Jika dokter, gunakan nama Dr. Ahmad Santoso
+        val userName = if (userRole == "dokter") {
+            "Dr. Ahmad Santoso"
+        } else {
+            preferencesHelper.getUserFullName() ?: "User"
+        }
+
+        val userEmail = if (userRole == "dokter") {
+            "dokter@rumahsakit.com"
+        } else {
+            preferencesHelper.getUserEmail() ?: "email@example.com"
+        }
 
         tvUserName.text = userName
         tvUserEmail.text = userEmail
     }
 
+    // ✅ FIXED: Load foto profil dari SharedPreferences
+    private fun loadProfilePhoto() {
+        val photoPath = preferencesHelper.getProfilePhotoPath()
+
+        if (photoPath != null && File(photoPath).exists()) {
+            // Load foto dari path
+            val bitmap = BitmapFactory.decodeFile(photoPath)
+            ivProfilePhoto.setImageBitmap(bitmap)
+        } else {
+            // ✅ FIXED: Gunakan icon default Android (bukan R.drawable.ic_profile_placeholder)
+            ivProfilePhoto.setImageResource(android.R.drawable.ic_menu_myplaces)
+        }
+    }
+
     private fun setupClickListeners() {
-        // ← TAMBAHAN BARU: Edit Name
+        // Edit Name
         btnEditName.setOnClickListener {
             showEditNameDialog()
         }
@@ -81,7 +115,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // ← TAMBAHAN BARU: Dialog Edit Name
     private fun showEditNameDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_name, null)
         val etNewName = dialogView.findViewById<EditText>(R.id.etNewName)
@@ -188,5 +221,11 @@ class ProfileFragment : Fragment() {
     private fun performLogout() {
         (activity as? MainActivity)?.logout()
         Toast.makeText(context, "Berhasil logout", Toast.LENGTH_SHORT).show()
+    }
+
+    // ✅ TAMBAHAN: Reload foto saat kembali ke fragment
+    override fun onResume() {
+        super.onResume()
+        loadProfilePhoto()
     }
 }

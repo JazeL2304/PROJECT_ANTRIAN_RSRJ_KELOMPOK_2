@@ -26,7 +26,6 @@ object DataSource {
         else println("⚠️ Dokter '${doctor.name}' tidak ditemukan.")
     }
 
-    /** ✅ Ubah jadwal dokter berdasarkan ID */
     fun updateDoctorSchedule(id: Int, newSchedule: String) {
         val index = doctorList.indexOfFirst { it.id == id }
         if (index != -1) {
@@ -38,10 +37,8 @@ object DataSource {
         }
     }
 
-    /** ✅ Ambil dokter berdasarkan ID */
     fun getDoctorById(id: Int): Doctor? = doctorList.find { it.id == id }
 
-    /** ✅ Ambil daftar dokter berdasarkan spesialisasi */
     fun getDoctorsBySpecialization(specId: Int): List<Doctor> = when (specId) {
         1 -> doctorList.filter { it.specialization.contains("Umum", true) }
         2 -> doctorList.filter { it.specialization.contains("Gigi", true) }
@@ -61,7 +58,6 @@ object DataSource {
 
     fun getAllPatients(): List<Patient> = patientList.toList()
 
-    /** ✅ Tambah pasien baru, return true jika berhasil */
     fun addPatient(patient: Patient): Boolean {
         val duplicate = patientList.any {
             it.name.equals(patient.name, true) && it.address.equals(patient.address, true)
@@ -93,7 +89,6 @@ object DataSource {
     fun findPatientsByName(nameQuery: String): List<Patient> =
         patientList.filter { it.name.contains(nameQuery, true) }
 
-    /** 🔹 Ganti seluruh daftar pasien (digunakan setelah penghapusan manual) */
     fun clearAndSetPatients(newList: List<Patient>) {
         patientList.clear()
         patientList.addAll(newList)
@@ -120,44 +115,114 @@ object DataSource {
 
     // ===============================
     // 📋 BOOKING / ANTRIAN & RIWAYAT PASIEN
+    // ✅ FIXED: Data antrian hari ini + history
     // ===============================
     private val bookingHistory = mutableListOf(
+        // ✅ Data lama (COMPLETED)
         Booking(
             id = "B001",
+            queueNumber = 7,
+            patientName = "Ahmad Santoso",
+            doctorName = "Dr. Budi Dental",
+            specialization = "Layanan Gigi",
+            date = "14/10/2025",  // ✅ GANTI FORMAT!
+            time = "08:30",
+            complaint = "Pemeriksaan rutin gigi dan pembersihan karang gigi",
+            diagnosis = "Karang gigi ringan",
+            prescription = "Scaling gigi, sikat gigi lebih teratur",
+            status = BookingStatus.COMPLETED,
+            createdAt = System.currentTimeMillis() - (3 * 24 * 60 * 60 * 1000L)
+        ),
+
+        Booking(
+            id = "B002",
+            queueNumber = 12,
+            patientName = "Ahmad Santoso",
+            doctorName = "Dr. Indra Mata",
+            specialization = "Layanan Mata",
+            date = "16/10/2025",  // ✅ GANTI FORMAT!
+            time = "09:00",
+            complaint = "Mata perih dan penglihatan kabur",
+            diagnosis = "Mata kering dan lelah akibat terlalu lama menatap layar",
+            prescription = "Tetes mata artifisial, istirahat mata setiap 20 menit",
+            status = BookingStatus.COMPLETED,
+            createdAt = System.currentTimeMillis() - (1 * 24 * 60 * 60 * 1000L)
+        ),
+
+        Booking(
+            id = "B003",
+            queueNumber = 5,
+            patientName = "Ahmad Santoso",
+            doctorName = "Dr. Ani Pediatri",
+            specialization = "Layanan Anak",
+            date = "17/10/2025",  // ✅ GANTI FORMAT!
+            time = "10:30",
+            complaint = "Imunisasi anak umur 2 tahun",
+            diagnosis = "Anak sehat, imunisasi lengkap",
+            prescription = "Vaksin DPT, Vitamin A",
+            status = BookingStatus.COMPLETED,
+            createdAt = System.currentTimeMillis() - (2 * 60 * 60 * 1000L)
+        ),
+
+        // ✅ DATA BARU: Antrian HARI INI (17 Okt) - WAITING
+        Booking(
+            id = "B004",
             queueNumber = 1,
             patientName = "Rizky Amalia",
             doctorName = "Dr. Ahmad Santoso",
-            specialization = "Dokter Umum",
-            date = "17/10/2025",
-            time = "08:30",
-            complaint = "Demam tinggi dan batuk kering",
-            diagnosis = "Infeksi saluran pernapasan ringan",
-            prescription = "Paracetamol 500mg, Amoxicillin 250mg",
-            status = BookingStatus.COMPLETED
+            specialization = "Layanan Umum",
+            date = "17/10/2025",  // ✅ GANTI FORMAT!
+            time = "14:00",
+            complaint = "Demam dan batuk",
+            diagnosis = "",
+            prescription = "",
+            status = BookingStatus.WAITING,
+            createdAt = System.currentTimeMillis()
         ),
+
         Booking(
-            id = "B002",
+            id = "B005",
             queueNumber = 2,
             patientName = "Dewi Lestari",
             doctorName = "Dr. Ahmad Santoso",
-            specialization = "Dokter Umum",
-            date = "17/10/2025",
-            time = "09:15",
-            complaint = "Sakit kepala dan pusing",
-            diagnosis = "Migrain ringan",
-            prescription = "Ibuprofen 200mg, istirahat cukup",
-            status = BookingStatus.COMPLETED
+            specialization = "Layanan Umum",
+            date = "17/10/2025",  // ✅ GANTI FORMAT!
+            time = "14:30",
+            complaint = "Sakit kepala",
+            diagnosis = "",
+            prescription = "",
+            status = BookingStatus.WAITING,
+            createdAt = System.currentTimeMillis()
+        ),
+
+        Booking(
+            id = "B006",
+            queueNumber = 3,
+            patientName = "Atila Falah",
+            doctorName = "Dr. Ahmad Santoso",
+            specialization = "Layanan Umum",
+            date = "17/10/2025",  // ✅ GANTI FORMAT!
+            time = "15:00",
+            complaint = "Kontrol tekanan darah",
+            diagnosis = "",
+            prescription = "",
+            status = BookingStatus.CALLED,
+            createdAt = System.currentTimeMillis()
         )
     )
 
     private var activeBooking: Booking? = null
 
-    fun getBookingHistory(): List<Booking> = bookingHistory.toList()
+    fun getBookingHistory(): List<Booking> = bookingHistory.sortedByDescending { it.createdAt }
 
     fun addToHistory(booking: Booking) {
+        // ✅ Cek duplikat berdasarkan ID
         val idx = bookingHistory.indexOfFirst { it.id == booking.id }
-        if (idx != -1) bookingHistory[idx] = booking
-        else bookingHistory.add(0, booking)
+        if (idx != -1) {
+            bookingHistory[idx] = booking
+        } else {
+            bookingHistory.add(booking)
+        }
     }
 
     fun setActiveBooking(booking: Booking) {
@@ -167,10 +232,105 @@ object DataSource {
 
     fun getActiveBooking(): Booking? = activeBooking
 
+    // ✅ FIXED: Jangan hapus bookingHistory!
     fun clearActiveBooking() {
         activeBooking = null
-        println("🗑️ Booking aktif dihapus.")
+        // ❌ DIHAPUS: bookingHistory.clear()
+        println("🗑️ Booking aktif dihapus (history tetap ada).")
+    }
+
+    // ✅ NEW METHOD: Clear active booking saja (keep history)
+    fun clearActiveBookingOnly() {
+        activeBooking = null
+        println("🗑️ Active booking dihapus (history tetap ada).")
     }
 
     fun hasActiveBooking(): Boolean = activeBooking != null
+
+    // ===============================
+    // 📊 FUNGSI UNTUK ADMIN DASHBOARD & REPORTS
+    // ===============================
+
+    /** ✅ Total jumlah pasien terdaftar */
+    fun getTotalPatients(): Int = patientList.size
+
+    /** ✅ Total jumlah dokter */
+    fun getTotalDoctors(): Int = doctorList.size
+
+    /** ✅ Ambil booking hari ini berdasarkan tanggal */
+    fun getTodayBookings(): List<Booking> {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            .format(java.util.Date())
+
+        return bookingHistory.filter { it.date == today }
+    }
+
+    /** ✅ Ambil semua antrian yang masih aktif (WAITING atau CALLED) */
+    fun getActiveQueues(): List<Booking> {
+        return bookingHistory.filter {
+            it.status == BookingStatus.WAITING ||
+                    it.status == BookingStatus.CALLED
+        }
+    }
+
+    /** ✅ Generate nomor antrian berikutnya */
+    fun getNextQueueNumber(): Int {
+        val maxQueue = bookingHistory.maxOfOrNull { it.queueNumber } ?: 0
+        return maxQueue + 1
+    }
+
+    /** ✅ Ambil list dokter (alias untuk compatibility) */
+    fun getDoctors(): List<Doctor> = getAllDoctors()
+
+    // ===============================
+    // ✅ FUNGSI BARU UNTUK VALIDASI ANTRIAN
+    // ===============================
+
+    /**
+     * ✅ Cek apakah ada pasien yang sedang dipanggil (CALLED) hari ini
+     * Return true jika ada pasien dengan status CALLED
+     */
+    fun hasCalledPatient(): Boolean {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            .format(java.util.Date())
+
+        return bookingHistory.any {
+            it.date == today && it.status == BookingStatus.CALLED
+        }
+    }
+
+    /**
+     * ✅ Update status booking berdasarkan ID
+     * Digunakan untuk mengubah status WAITING → CALLED → COMPLETED
+     */
+    fun updateBookingStatus(bookingId: String, newStatus: BookingStatus) {
+        val index = bookingHistory.indexOfFirst { it.id == bookingId }
+        if (index != -1) {
+            val booking = bookingHistory[index]
+            bookingHistory[index] = booking.copy(status = newStatus)
+            println("✅ Status booking ${booking.patientName} diubah menjadi ${newStatus.name}")
+        } else {
+            println("⚠️ Booking dengan ID $bookingId tidak ditemukan.")
+        }
+    }
+
+    /**
+     * ✅ Update diagnosis dan resep untuk booking (saat selesai pemeriksaan)
+     */
+    fun updateBookingDiagnosis(
+        bookingId: String,
+        diagnosis: String,
+        prescription: String
+    ) {
+        val index = bookingHistory.indexOfFirst { it.id == bookingId }
+        if (index != -1) {
+            val booking = bookingHistory[index]
+            bookingHistory[index] = booking.copy(
+                diagnosis = diagnosis,
+                prescription = prescription,
+                status = BookingStatus.COMPLETED
+            )
+            println("✅ Diagnosis dan resep untuk ${booking.patientName} berhasil disimpan")
+        }
+    }
 }

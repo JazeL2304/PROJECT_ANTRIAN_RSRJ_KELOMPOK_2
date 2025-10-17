@@ -181,8 +181,16 @@ class BookingFragment : Fragment() {
     }
 
     private fun createBooking() {
+        // ✅ FIXED: Generate random queue number (5-50) + current bookings
         val selectedDateBookings = DataSource.getBookingHistory().filter { it.date == selectedDate }
-        val queueNumber = selectedDateBookings.size + 1
+
+        // ✅ Base random number (5-50) + existing bookings untuk avoid duplicate
+        val baseQueueNumber = (5..50).random()
+        val queueNumber = baseQueueNumber + selectedDateBookings.size
+
+        // ✅ ATAU kalau mau pure random 5-50:
+        // val queueNumber = (5..50).random()
+
         val selectedDoctor = doctors[spinnerDoctor.selectedItemPosition - 1]
         val specialization = DataSource.getSpecializations().find { it.id == selectedSpecializationId }
 
@@ -210,4 +218,5 @@ class BookingFragment : Fragment() {
 
         (activity as MainActivity).navigateToFragment(QueueFragment())
     }
+
 }

@@ -40,10 +40,21 @@ class DoctorQueueFragment : Fragment() {
     private fun loadTodayQueue() {
         val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
 
-        // 🔹 Filter booking hari ini
-        val bookingsToday = DataSource.getBookingHistory().filter {
-            it.date == today
-        }
+        // ✅ Filter booking hari ini untuk Dr. Ahmad Santoso
+        val bookingsToday = DataSource.getBookingHistory()
+            .filter { it.date == today }
+            .filter { it.doctorName == "Dr. Ahmad Santoso" }
+            .sortedWith(compareBy<Booking> {
+                // ✅ SORTING: CALLED (0) → WAITING (1) → COMPLETED (2) → LAINNYA (3)
+                when (it.status) {
+                    BookingStatus.CALLED -> 0
+                    BookingStatus.WAITING -> 1
+                    BookingStatus.COMPLETED -> 2
+                    BookingStatus.CANCELLED -> 3
+                    BookingStatus.MISSED -> 3
+                    else -> 4  // ← TAMBAHAN untuk case lainnya
+                }
+            }.thenBy { it.queueNumber })
 
         if (bookingsToday.isEmpty()) {
             emptyText.visibility = View.VISIBLE
@@ -52,10 +63,19 @@ class DoctorQueueFragment : Fragment() {
             emptyText.visibility = View.GONE
             listViewQueue.visibility = View.VISIBLE
 
-            // 🔹 Tampilkan daftar booking
+            // ✅ Tampilkan daftar booking
             val displayList = bookingsToday.map { booking ->
+                val statusEmoji = when (booking.status) {
+                    BookingStatus.CALLED -> "📢"
+                    BookingStatus.WAITING -> "⏱️"
+                    BookingStatus.COMPLETED -> "✅"
+                    BookingStatus.CANCELLED -> "❌"
+                    BookingStatus.MISSED -> "⚠️"
+                    else -> "❓"
+                }
+
                 """
-                👤 ${booking.patientName}
+                $statusEmoji No. ${booking.queueNumber} - ${booking.patientName}
                 🕒 Jam: ${booking.time}
                 🏥 Dokter: ${booking.doctorName}
                 💬 Keluhan: ${booking.complaint.ifEmpty { "-" }}
@@ -66,27 +86,79 @@ class DoctorQueueFragment : Fragment() {
             val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, displayList)
             listViewQueue.adapter = adapter
 
-            // 🔹 Klik item untuk ubah status
+            // ✅ Klik item untuk ubah status dengan VALIDASI
             listViewQueue.setOnItemClickListener { _, _, position, _ ->
                 val selected = bookingsToday[position]
-                val nextStatus = when (selected.status) {
-                    BookingStatus.WAITING -> BookingStatus.CALLED
-                    BookingStatus.CALLED -> BookingStatus.COMPLETED
-                    BookingStatus.COMPLETED -> BookingStatus.COMPLETED
-                    else -> BookingStatus.WAITING
-                }
-
-                val updatedBooking = selected.copy(status = nextStatus)
-                DataSource.addToHistory(updatedBooking) // update di datasource
-
-                Toast.makeText(
-                    requireContext(),
-                    "Status ${selected.patientName} → ${nextStatus.toDisplayString()}",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                loadTodayQueue() // refresh tampilan
+                handleStatusChange(selected)
             }
         }
+    }
+
+    private fun handleStatusChange(booking: Booking) {
+        when (booking.status) {
+            BookingStatus.WAITING -> {
+                // ✅ VALIDASI: Cek apakah ada pasien yang sedang dipanggil
+                if (DataSource.hasCalledPatient()) {
+                    Toast.makeText(
+                        requireContext(),
+                        "⚠️ Selesaikan pasien yang sedang dipanggil terlebih dahulu!",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return
+                }
+
+                // ✅ PANGGIL PASIEN: WAITING → CALLED
+                DataSource.updateBookingStatus(booking.id, BookingStatus.CALLED)
+                Toast.makeText(
+                    requireContext(),
+                    "✅ ${booking.patientName} dipanggil!",
+                    Toast.LENGTH_SHORT
+                ).show()
+                loadTodayQueue() // Refresh
+            }
+
+            BookingStatus.CALLED -> {
+                // ✅ SELESAIKAN PASIEN: CALLED → COMPLETED
+                DataSource.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
+                Toast.makeText(
+                    requireContext(),
+                    "✅ ${booking.patientName} selesai diperiksa!",
+                    Toast.LENGTH_SHORT
+                ).show()
+                loadTodayQueue() // Refresh
+            }
+
+            BookingStatus.COMPLETED -> {
+                // ✅ Sudah selesai, tidak bisa diubah lagi
+                Toast.makeText(
+                    requireContext(),
+                    "ℹ️ Pasien ini sudah selesai diperiksa",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            BookingStatus.CANCELLED -> {
+                // ✅ Booking dibatalkan
+                Toast.makeText(
+                    requireContext(),
+                    "ℹ️ Booking ini sudah dibatalkan",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            BookingStatus.MISSED -> {
+                // ✅ Pasien tidak datang
+                Toast.makeText(
+                    requireContext(),
+                    "ℹ️ Pasien tidak datang",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadTodayQueue() // Refresh saat kembali ke fragment
     }
 }
