@@ -2,7 +2,6 @@ package com.example.projectantrianrsrjkelompok2.utils
 
 import android.content.ContentValues
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -12,10 +11,9 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import com.example.projectantrianrsrjkelompok2.Booking
-import com.example.projectantrianrsrjkelompok2.toDisplayString // TAMBAHKAN INI
+import com.example.projectantrianrsrjkelompok2.toDisplayString
 import java.io.File
 import java.io.FileOutputStream
-import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -23,26 +21,23 @@ object ReceiptGenerator {
 
     fun generateAndSaveReceipt(context: Context, booking: Booking): Boolean {
         try {
-            // Create PDF document
+            // Buat dokumen PDF
             val pdfDocument = PdfDocument()
-            val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 size
+            val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // Ukuran A4
             val page = pdfDocument.startPage(pageInfo)
             val canvas = page.canvas
             val paint = Paint()
 
-            // Draw receipt content
+            // Isi struk
             drawReceiptContent(canvas, paint, booking)
-
             pdfDocument.finishPage(page)
 
-            // Save to Downloads folder
+            // Simpan ke folder Downloads
             val fileName = "Struk_${booking.id}_${System.currentTimeMillis()}.pdf"
 
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ (Scoped Storage)
                 saveToDownloadsQ(context, pdfDocument, fileName)
             } else {
-                // Android 9 and below
                 saveToDownloadsLegacy(context, pdfDocument, fileName)
             }
         } catch (e: Exception) {
@@ -56,7 +51,7 @@ object ReceiptGenerator {
         var yPos = 50f
         val leftMargin = 40f
 
-        // Header
+        // Header Rumah Sakit
         paint.textSize = 24f
         paint.color = Color.BLACK
         paint.typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -70,18 +65,18 @@ object ReceiptGenerator {
         canvas.drawText("Telp: (021) 1234-5678", leftMargin, yPos, paint)
         yPos += 40f
 
-        // Line separator
+        // Garis pemisah
         paint.strokeWidth = 2f
         canvas.drawLine(leftMargin, yPos, 555f, yPos, paint)
         yPos += 30f
 
-        // Title
+        // Judul
         paint.textSize = 18f
         paint.typeface = android.graphics.Typeface.DEFAULT_BOLD
         canvas.drawText("BUKTI PENDAFTARAN", leftMargin, yPos, paint)
         yPos += 40f
 
-        // Booking details
+        // Detail Booking
         paint.textSize = 14f
         paint.typeface = android.graphics.Typeface.DEFAULT
 
@@ -125,7 +120,7 @@ object ReceiptGenerator {
         canvas.drawText(booking.status.toDisplayString(), leftMargin + 200f, yPos, paint)
         yPos += 50f
 
-        // Line separator
+        // Garis pemisah bawah
         canvas.drawLine(leftMargin, yPos, 555f, yPos, paint)
         yPos += 30f
 
@@ -153,11 +148,7 @@ object ReceiptGenerator {
         }
     }
 
-    private fun saveToDownloadsQ(
-        context: Context,
-        pdfDocument: PdfDocument,
-        fileName: String
-    ): Boolean {
+    private fun saveToDownloadsQ(context: Context, pdfDocument: PdfDocument, fileName: String): Boolean {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
             put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
@@ -171,35 +162,21 @@ object ReceiptGenerator {
             resolver.openOutputStream(it)?.use { outputStream ->
                 pdfDocument.writeTo(outputStream)
                 pdfDocument.close()
-                Toast.makeText(
-                    context,
-                    "Struk berhasil disimpan di Downloads",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(context, "Struk berhasil disimpan di Downloads", Toast.LENGTH_LONG).show()
                 true
             } ?: false
         } ?: false
     }
 
-    private fun saveToDownloadsLegacy(
-        context: Context,
-        pdfDocument: PdfDocument,
-        fileName: String
-    ): Boolean {
-        val downloadsDir = Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_DOWNLOADS
-        )
+    private fun saveToDownloadsLegacy(context: Context, pdfDocument: PdfDocument, fileName: String): Boolean {
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val file = File(downloadsDir, fileName)
 
         return try {
             FileOutputStream(file).use { outputStream ->
                 pdfDocument.writeTo(outputStream)
                 pdfDocument.close()
-                Toast.makeText(
-                    context,
-                    "Struk berhasil disimpan di Downloads/$fileName",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(context, "Struk berhasil disimpan di Downloads/$fileName", Toast.LENGTH_LONG).show()
                 true
             }
         } catch (e: Exception) {

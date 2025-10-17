@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@color/bg_secondary">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- Judul -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tambah Riwayat Pasien"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_gravity="center"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Nama Pasien -->
+        <EditText
+            android:id="@+id/etPatientName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nama Pasien"
+            android:background="@android:drawable/edit_text"
+            android:padding="10dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Keluhan -->
+        <EditText
+            android:id="@+id/etComplaint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Keluhan"
+            android:background="@android:drawable/edit_text"
+            android:padding="10dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Diagnosis -->
+        <EditText
+            android:id="@+id/etDiagnosis"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Diagnosis"
+            android:background="@android:drawable/edit_text"
+            android:padding="10dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Resep Obat -->
+        <EditText
+            android:id="@+id/etPrescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Resep Obat"
+            android:background="@android:drawable/edit_text"
+            android:padding="10dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Tanggal -->
+        <EditText
+            android:id="@+id/etDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Tanggal (dd/MM/yyyy)"
+            android:background="@android:drawable/edit_text"
+            android:padding="10dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Waktu -->
+        <EditText
+            android:id="@+id/etTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Waktu (HH:mm)"
+            android:background="@android:drawable/edit_text"
+            android:padding="10dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Tombol Simpan -->
+        <Button
+            android:id="@+id/btnSaveHistory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Simpan Riwayat"
+            android:backgroundTint="@color/primary_button"
+            android:textColor="@color/white"
+            android:layout_marginTop="8dp"
+            android:padding="12dp"
+            android:textStyle="bold"
+            android:elevation="2dp" />
+    </LinearLayout>
+</ScrollView>

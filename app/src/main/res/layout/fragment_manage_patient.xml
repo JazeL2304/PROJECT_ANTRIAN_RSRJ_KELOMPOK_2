@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Kelola Pasien"
+        android:textStyle="bold"
+        android:textSize="20sp"
+        android:layout_marginBottom="16dp" />
+
+    <EditText
+        android:id="@+id/etPatientName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Nama Pasien" />
+
+    <EditText
+        android:id="@+id/etPatientGender"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Jenis Kelamin (L/P)" />
+
+    <EditText
+        android:id="@+id/etPatientAge"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Usia (tahun)"
+        android:inputType="number" />
+
+    <EditText
+        android:id="@+id/etPatientAddress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Alamat Pasien" />
+
+    <Button
+        android:id="@+id/btnAddPatient"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="TAMBAH PASIEN"
+        android:backgroundTint="#6200EE"
+        android:textColor="@android:color/white"
+        android:layout_marginTop="12dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Daftar Pasien:"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp" />
+
+    <ListView
+        android:id="@+id/listPatients"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:dividerHeight="8dp"
+        android:divider="@android:color/transparent" />
+
+</LinearLayout>

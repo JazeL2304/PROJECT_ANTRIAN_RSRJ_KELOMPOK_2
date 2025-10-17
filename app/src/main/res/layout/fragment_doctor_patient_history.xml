@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#F5F5F5">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📂 Riwayat Pasien"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#00796B"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/tvEmptyHistory"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Belum ada riwayat pasien yang selesai diperiksa"
+        android:textSize="14sp"
+        android:textColor="#757575"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone" />
+
+    <!-- List riwayat -->
+    <ListView
+        android:id="@+id/listPatientHistory"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="#E0E0E0"
+        android:dividerHeight="8dp"
+        android:padding="8dp" />
+
+</LinearLayout>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:id="@+id/tvPracticeStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔴 Dokter tidak aktif"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
+
+    <Switch
+        android:id="@+id/switchPracticeStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Aktifkan / Nonaktifkan Praktek"
+        android:textSize="16sp"
+        android:layout_marginBottom="40dp" />
+
+    <!-- Tombol panggil pasien -->
+    <Button
+        android:id="@+id/btnCallNextPatient"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Panggil Pasien Berikutnya"
+        android:backgroundTint="@color/purple_500"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Info pasien yang sedang dipanggil -->
+    <TextView
+        android:id="@+id/tvCurrentPatient"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Belum ada pasien yang dipanggil."
+        android:textSize="16sp"
+        android:textColor="#555555"
+        android:gravity="center"
+        android:layout_marginTop="8dp" />
+</LinearLayout>

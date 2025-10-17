@@ -23,6 +23,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
+import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -35,6 +36,7 @@ class CameraFragment : Fragment() {
     private lateinit var btnRetake: Button
     private lateinit var btnConfirm: Button
     private lateinit var tvInstruction: TextView
+    private lateinit var preferencesHelper: PreferencesHelper
 
     private var currentPhotoPath: String? = null
     private var photoUri: Uri? = null
@@ -74,6 +76,7 @@ class CameraFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        preferencesHelper = PreferencesHelper(requireContext())
         initViews(view)
         setupButtons()
     }
@@ -115,28 +118,35 @@ class CameraFragment : Fragment() {
     }
 
     private fun openCamera() {
-        val photoFile: File? = try {
-            createImageFile()
-        } catch (ex: IOException) {
-            Toast.makeText(requireContext(), "Error creating file", Toast.LENGTH_SHORT).show()
-            null
-        }
-
-        photoFile?.also {
-            photoUri = FileProvider.getUriForFile(
-                requireContext(),
-                "${requireContext().packageName}.fileprovider",
-                it
-            )
-
-            val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
-
-            if (takePictureIntent.resolveActivity(requireContext().packageManager) != null) {
-                takePictureLauncher.launch(takePictureIntent)
-            } else {
-                Toast.makeText(requireContext(), "Kamera tidak tersedia", Toast.LENGTH_SHORT).show()
+        try {
+            val photoFile: File? = try {
+                createImageFile()
+            } catch (ex: IOException) {
+                ex.printStackTrace()
+                Toast.makeText(requireContext(), "Error creating file: ${ex.message}", Toast.LENGTH_LONG).show()
+                null
             }
+
+            photoFile?.also {
+                try {
+                    photoUri = FileProvider.getUriForFile(
+                        requireContext(),
+                        "${requireContext().packageName}.fileprovider",
+                        it
+                    )
+
+                    val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+                    takePictureLauncher.launch(takePictureIntent)
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(requireContext(), "Error launching camera: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(requireContext(), "Error opening camera: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -202,13 +212,25 @@ class CameraFragment : Fragment() {
         photoUri = null
     }
 
+    // ✅ FIXED: Simpan path foto ke SharedPreferences
     private fun confirmPhoto() {
-        Toast.makeText(
-            requireContext(),
-            "✅ Foto profil berhasil disimpan!",
-            Toast.LENGTH_LONG
-        ).show()
+        currentPhotoPath?.let { path ->
+            // Simpan path foto
+            preferencesHelper.saveProfilePhotoPath(path)
 
-        (activity as MainActivity).navigateToFragment(ProfileFragment())
+            Toast.makeText(
+                requireContext(),
+                "✅ Foto profil berhasil disimpan!",
+                Toast.LENGTH_LONG
+            ).show()
+
+            (activity as MainActivity).navigateToFragment(ProfileFragment())
+        } ?: run {
+            Toast.makeText(
+                requireContext(),
+                "❌ Error: Foto tidak ditemukan",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 }

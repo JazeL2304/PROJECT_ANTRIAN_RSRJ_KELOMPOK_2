@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="👨‍⚕️ Kelola Dokter"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Input Nama Dokter -->
+    <EditText
+        android:id="@+id/etDoctorName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Nama Dokter"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Input Spesialisasi -->
+    <EditText
+        android:id="@+id/etDoctorSpecialization"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Spesialisasi (Umum, Gigi, Mata...)"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Tombol Tambah -->
+    <Button
+        android:id="@+id/btnAddDoctor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tambah Dokter"
+        android:layout_marginBottom="16dp" />
+
+    <ListView
+        android:id="@+id/listDoctors"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:divider="@android:color/darker_gray"
+        android:dividerHeight="1dp" />
+
+</LinearLayout>

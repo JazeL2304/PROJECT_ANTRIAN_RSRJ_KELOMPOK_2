@@ -114,10 +114,10 @@ class QueueFragment : Fragment() {
 
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             if (activeBooking.date == today) {
-                currentQueueNumber = maxOf(1, activeBooking.queueNumber - 7)
+                // ✅ FIXED: Current queue minimal 2, maksimal myQueueNumber - 3
+                currentQueueNumber = maxOf(2, (myQueueNumber - (7..12).random()))
             } else {
                 currentQueueNumber = 1
-                // JANGAN set myQueueNumber = 0 untuk tanggal berbeda
                 Toast.makeText(
                     requireContext(),
                     "📅 Booking Anda untuk tanggal ${formatDateIndonesia(activeBooking.date)}",
@@ -125,14 +125,13 @@ class QueueFragment : Fragment() {
                 ).show()
             }
 
-            // ← PENTING: Set card visible kalau ada booking
             cardMyQueue.visibility = View.VISIBLE
         } else {
-            // No active booking - hide card
             myQueueNumber = 0
             cardMyQueue.visibility = View.GONE
         }
     }
+
 
     private fun formatDateIndonesia(dateString: String): String {
         return try {

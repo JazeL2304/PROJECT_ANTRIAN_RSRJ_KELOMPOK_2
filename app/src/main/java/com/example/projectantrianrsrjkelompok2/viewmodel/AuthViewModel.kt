@@ -43,7 +43,7 @@ class AuthViewModel : ViewModel() {
             user = User(
                 id = "doc001",
                 email = "dokter@rumahsakit.com",
-                fullName = "Dr. Sarah Wilson",
+                fullName = "Dr. Ahmad Susanto",
                 phoneNumber = "081234567891",
                 userType = UserType.DOCTOR
             )
