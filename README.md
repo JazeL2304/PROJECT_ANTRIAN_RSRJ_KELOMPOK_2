@@ -1,7 +1,6 @@
 Sistem Antrian Rumah Sakit RSRJ - Kelompok 2
 Aplikasi mobile Android untuk manajemen antrian pasien di rumah sakit dengan fitur multi-role (Pasien, Dokter, dan Admin).
 
-Deskripsi Aplikasi
 Sistem Antrian Rumah Sakit RJR adalah aplikasi mobile berbasis Android yang dirancang untuk memudahkan proses pendaftaran dan manajemen antrian pasien di rumah sakit. Aplikasi ini menerapkan sistem role-based access control dengan 3 jenis pengguna: Pasien, Dokter, dan Admin.
 
 Fitur Utama:
