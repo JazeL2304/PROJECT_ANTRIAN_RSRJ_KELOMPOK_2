@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- Judul -->
+        <TextView
+            android:id="@+id/tvDoctorTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🩺 Dashboard Dokter"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:layout_marginBottom="28dp" />
+
+        <!-- Tombol 1 -->
+        <Button
+            android:id="@+id/btnViewQueue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📋  Lihat Antrian Pasien Hari Ini"
+            android:backgroundTint="@color/teal_700"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:elevation="4dp"
+            android:layout_marginBottom="16dp"
+            android:paddingVertical="12dp"
+            android:drawablePadding="12dp"
+            android:drawableStart="@drawable/ic_queue" />
+
+        <!-- Tombol 2 -->
+        <Button
+            android:id="@+id/btnPatientHistory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📖  Riwayat Pasien"
+            android:backgroundTint="@color/teal_700"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:elevation="4dp"
+            android:layout_marginBottom="16dp"
+            android:paddingVertical="12dp"
+            android:drawablePadding="12dp"
+            android:drawableStart="@drawable/ic_history" />
+
+        <!-- Tombol 3 -->
+        <Button
+            android:id="@+id/btnPracticeStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚙️  Atur Status Praktek"
+            android:backgroundTint="@color/teal_700"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:elevation="4dp"
+            android:paddingVertical="12dp"
+            android:drawablePadding="12dp"
+            android:drawableStart="@drawable/ic_settings" />
+    </LinearLayout>
+</ScrollView>

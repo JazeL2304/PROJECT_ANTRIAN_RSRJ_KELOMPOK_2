@@ -80,6 +80,7 @@ class BookingFragment : Fragment() {
                     clearDoctorSpinner()
                 }
             }
+
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
@@ -128,11 +129,9 @@ class BookingFragment : Fragment() {
             )
 
             datePickerDialog.datePicker.minDate = System.currentTimeMillis()
-
             val maxCalendar = Calendar.getInstance()
             maxCalendar.add(Calendar.DAY_OF_MONTH, 30)
             datePickerDialog.datePicker.maxDate = maxCalendar.timeInMillis
-
             datePickerDialog.show()
         }
     }
@@ -146,38 +145,6 @@ class BookingFragment : Fragment() {
     }
 
     private fun validateBookingData(): Boolean {
-        val selectedDateBookings = DataSource.getBookingHistory().filter {
-            it.date == selectedDate
-        }
-
-        if (selectedDateBookings.size >= 50) {
-            val selectedCal = Calendar.getInstance()
-            selectedCal.time = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(selectedDate) ?: Date()
-            selectedCal.add(Calendar.DAY_OF_MONTH, 1)
-            val nextDate = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID")).format(selectedCal.time)
-
-            AlertDialog.Builder(requireContext())
-                .setTitle("Quota Penuh")
-                .setMessage("Maaf, pendaftaran untuk tanggal ${formatDate(selectedDate)} sudah penuh (max 50 pasien).\n\n" +
-                        "🕛 Pendaftaran di-reset otomatis jam 00:00 setiap hari\n" +
-                        "📅 Silakan pilih tanggal lain atau besok ($nextDate)")
-                .setPositiveButton("OK", null)
-                .show()
-            return false
-        }
-
-        val patientName = etPatientName.text.toString().trim()
-        if (patientName.isEmpty()) {
-            etPatientName.error = "Nama pasien harus diisi"
-            return false
-        }
-
-        val complaint = etComplaint.text.toString().trim()
-        if (complaint.isEmpty()) {
-            etComplaint.error = "Keluhan harus diisi"
-            return false
-        }
-
         if (spinnerSpecialization.selectedItemPosition == 0) {
             Toast.makeText(requireContext(), "Pilih layanan klinik terlebih dahulu", Toast.LENGTH_SHORT).show()
             return false
@@ -198,59 +165,49 @@ class BookingFragment : Fragment() {
             return false
         }
 
+        val patientName = etPatientName.text.toString().trim()
+        if (patientName.isEmpty()) {
+            etPatientName.error = "Nama pasien harus diisi"
+            return false
+        }
+
+        val complaint = etComplaint.text.toString().trim()
+        if (complaint.isEmpty()) {
+            etComplaint.error = "Keluhan harus diisi"
+            return false
+        }
+
         return true
     }
 
     private fun createBooking() {
-        val selectedDateBookings = DataSource.getBookingHistory().filter {
-            it.date == selectedDate
-        }
-
+        val selectedDateBookings = DataSource.getBookingHistory().filter { it.date == selectedDate }
         val queueNumber = selectedDateBookings.size + 1
-
-        val patientName = etPatientName.text.toString().trim()
-        val complaint = etComplaint.text.toString().trim()
         val selectedDoctor = doctors[spinnerDoctor.selectedItemPosition - 1]
-        val selectedTime = DataSource.getTimeSlots()[spinnerTime.selectedItemPosition - 1]
         val specialization = DataSource.getSpecializations().find { it.id == selectedSpecializationId }
 
         val booking = Booking(
             id = "Q${queueNumber.toString().padStart(3, '0')}",
             queueNumber = queueNumber,
-            patientName = patientName,
+            patientName = etPatientName.text.toString().trim(),
             doctorName = selectedDoctor.name,
             specialization = specialization?.name ?: "",
             date = selectedDate,
-            time = selectedTime,
-            complaint = complaint,
+            time = DataSource.getTimeSlots()[spinnerTime.selectedItemPosition - 1],
+            complaint = etComplaint.text.toString().trim(),
             status = BookingStatus.WAITING,
             createdAt = System.currentTimeMillis()
         )
 
         DataSource.setActiveBooking(booking)
-
-        // ← TAMBAHAN BARU: Auto-add ke history
         DataSource.addToHistory(booking)
 
         Toast.makeText(
             requireContext(),
-            "✅ Booking berhasil!\n" +
-                    "📋 Nomor antrian: $queueNumber\n" +
-                    "📅 ${formatDate(selectedDate)}",
+            "✅ Booking berhasil!\nNomor Antrian: $queueNumber",
             Toast.LENGTH_LONG
         ).show()
 
         (activity as MainActivity).navigateToFragment(QueueFragment())
-    }
-
-    private fun formatDate(dateString: String): String {
-        return try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val outputFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
-            val date = inputFormat.parse(dateString)
-            outputFormat.format(date ?: Date())
-        } catch (e: Exception) {
-            dateString
-        }
     }
 }

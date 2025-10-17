@@ -1,36 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary Colors -->
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6C5CE7</color>
-    <color name="purple_700">#FF5A4A8F</color>
+    <!-- 🎨 Primary Colors -->
+    <color name="purple_200">#BB86FC</color>
+    <color name="purple_500">#6C5CE7</color>
+    <color name="purple_700">#5A4A8F</color>
 
-    <!-- Secondary Colors -->
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!-- 🌊 Secondary Colors -->
+    <color name="teal_200">#03DAC5</color>
+    <color name="teal_700">#018786</color>
 
-    <!-- Status Colors -->
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- ⚫ Basic Colors -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
 
-    <!-- Success, Error, Warning -->
-    <color name="success_green">#FF4CAF50</color>
-    <color name="error_red">#FFF44336</color>
-    <color name="warning_orange">#FFFFC107</color>
-    <color name="info_blue">#FF2196F3</color>
+    <!-- 🚦 Status Colors -->
+    <color name="success_green">#4CAF50</color>
+    <color name="error_red">#F44336</color>
+    <color name="warning_orange">#FFC107</color>
+    <color name="info_blue">#2196F3</color>
 
-    <!-- Neutral Colors -->
-    <color name="light_gray">#FFF5F5F5</color>
-    <color name="medium_gray">#FF999999</color>
-    <color name="dark_gray">#FF333333</color>
-    <color name="divider_gray">#FFDDDDDD</color>
+    <!-- ⚙️ Neutral Colors -->
+    <color name="light_gray">#F5F5F5</color>
+    <color name="medium_gray">#999999</color>
+    <color name="dark_gray">#333333</color>
+    <color name="divider_gray">#DDDDDD</color>
 
-    <!-- Background Colors -->
+    <!-- 🧩 Background Colors -->
     <color name="bg_primary">@color/white</color>
     <color name="bg_secondary">@color/light_gray</color>
 
-    <!-- Text Colors -->
+    <!-- 📝 Text Colors -->
     <color name="text_primary">@color/dark_gray</color>
     <color name="text_secondary">@color/medium_gray</color>
-    <color name="text_hint">#FF999999</color>
+    <color name="text_hint">#999999</color>
+
+    <!-- 🔘 Universal Button Color -->
+    <color name="primary_button">#018786</color>
+
+    <!-- 🔹 Navigation Colors -->
+    <color name="nav_active">#018786</color>
+    <color name="nav_inactive">#8A8A8A</color>
 </resources>

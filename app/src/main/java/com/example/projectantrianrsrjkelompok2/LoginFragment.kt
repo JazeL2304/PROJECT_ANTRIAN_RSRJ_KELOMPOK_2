@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.projectantrianrsrjkelompok2.viewmodel.AuthViewModel
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
+import com.example.projectantrianrsrjkelompok2.model.UserType
 import com.google.android.material.textfield.TextInputEditText
 
 class LoginFragment : Fragment() {
@@ -34,10 +35,9 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // TAMBAHAN BARU: Sembunyikan bottom navigation saat di Login
+        // Sembunyikan bottom navigation saat login
         (activity as? MainActivity)?.hideBottomNavigation()
 
-        // Initialize views
         etEmail = view.findViewById(R.id.etEmail)
         etPassword = view.findViewById(R.id.etPassword)
         btnLogin = view.findViewById(R.id.btnLogin)
@@ -54,7 +54,6 @@ class LoginFragment : Fragment() {
         }
 
         tvSignUp.setOnClickListener {
-            // Navigate ke SignUpFragment
             (activity as? MainActivity)?.navigateToLoginOrSignup(SignUpFragment())
         }
 
@@ -74,15 +73,20 @@ class LoginFragment : Fragment() {
                     btnLogin.isEnabled = true
                     btnLogin.text = "Masuk"
 
-                    // Save login status
+                    // Simpan data login & role user
                     val prefsHelper = PreferencesHelper(requireContext())
                     prefsHelper.setLoggedIn(true)
                     prefsHelper.saveUserData(state.user.email, state.user.fullName)
+                    prefsHelper.saveUserRole(state.user.userType.name)
 
                     Toast.makeText(context, "Login berhasil!", Toast.LENGTH_SHORT).show()
 
-                    // Show bottom navigation dan load dashboard
-                    (activity as? MainActivity)?.showBottomNavigation()
+                    // Arahkan sesuai role
+                    when (state.user.userType) {
+                        UserType.PATIENT -> (activity as? MainActivity)?.showPatientDashboard()
+                        UserType.DOCTOR -> (activity as? MainActivity)?.showDoctorDashboard()
+                        UserType.ADMIN -> (activity as? MainActivity)?.showAdminDashboard()
+                    }
                 }
                 state.error != null -> {
                     btnLogin.isEnabled = true
@@ -97,9 +101,7 @@ class LoginFragment : Fragment() {
         val email = etEmail.text.toString().trim()
         val password = etPassword.text.toString().trim()
 
-        if (!validateInput(email, password)) {
-            return
-        }
+        if (!validateInput(email, password)) return
 
         authViewModel.login(email, password)
     }

@@ -11,6 +11,7 @@ class PreferencesHelper(context: Context) {
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_FULL_NAME = "user_full_name"
         private const val KEY_USER_PHONE = "user_phone"
+        private const val KEY_USER_ROLE = "user_role"
     }
 
     private val preferences: SharedPreferences =
@@ -56,11 +57,18 @@ class PreferencesHelper(context: Context) {
         }
     }
 
+    fun saveUserRole(role: String) {
+        preferences.edit().putString(KEY_USER_ROLE, role).apply()
+    }
+
+    fun getUserRole(): String? {
+        return preferences.getString(KEY_USER_ROLE, null)
+    }
+
     fun clearAllPreferences() {
         preferences.edit().clear().apply()
     }
 
-    // ← TAMBAHAN BARU: Alias untuk clearAllPreferences
     fun clearSession() {
         clearAllPreferences()
     }

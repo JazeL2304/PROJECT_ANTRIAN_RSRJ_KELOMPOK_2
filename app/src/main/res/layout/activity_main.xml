@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Header/Toolbar dengan Profile Icon -->
+    <!-- 🔹 Header/Toolbar dengan Profile Icon -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
@@ -14,19 +14,23 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="16dp"
-        android:paddingEnd="16dp">
+        android:paddingEnd="16dp"
+        android:elevation="4dp">
 
-        <!-- Title -->
+        <!-- 🏥 Title yang bisa diubah dari MainActivity -->
         <TextView
+            android:id="@+id/toolbarTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="🏥 Antrian Rumah Sakit"
             android:textColor="@android:color/white"
             android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:ellipsize="end"
+            android:singleLine="true" />
 
-        <!-- Profile Icon Button -->
+        <!-- 👤 Profile Icon Button -->
         <ImageView
             android:id="@+id/btnProfileIcon"
             android:layout_width="40dp"
@@ -39,14 +43,14 @@
 
     </LinearLayout>
 
-    <!-- Fragment Container -->
+    <!-- 🔹 Fragment Container -->
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- Bottom Navigation - UPDATED dengan Color Selector -->
+    <!-- 🔹 Bottom Navigation -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
