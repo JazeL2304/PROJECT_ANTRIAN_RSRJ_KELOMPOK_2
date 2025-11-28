@@ -1,47 +1,153 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:background="#F8F9FA">
 
-    <TextView
+    <!-- 🎨 GRADIENT HEADER -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="👨‍⚕️ Kelola Dokter"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="12dp" />
+        android:orientation="vertical"
+        android:background="@drawable/bg_gradient_header"
+        android:padding="20dp"
+        android:elevation="8dp">
 
-    <!-- Input Nama Dokter -->
-    <EditText
-        android:id="@+id/etDoctorName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Nama Dokter"
-        android:layout_marginBottom="8dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="👨‍⚕️ Kelola Dokter"
+            android:textColor="@android:color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
 
-    <!-- Input Spesialisasi -->
-    <EditText
-        android:id="@+id/etDoctorSpecialization"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Spesialisasi (Umum, Gigi, Mata...)"
-        android:layout_marginBottom="8dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tambah dan kelola data dokter"
+            android:textColor="#E0FFFFFF"
+            android:textSize="13sp"/>
 
-    <!-- Tombol Tambah -->
-    <Button
-        android:id="@+id/btnAddDoctor"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Tambah Dokter"
-        android:layout_marginBottom="16dp" />
+    </LinearLayout>
 
-    <ListView
-        android:id="@+id/listDoctors"
+    <!-- CONTENT AREA -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:divider="@android:color/darker_gray"
-        android:dividerHeight="1dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Add Doctor Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="➕ Tambah Dokter Baru"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#00897B"
+                        android:layout_marginBottom="16dp"/>
+
+                    <!-- Doctor Name Input -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:boxBackgroundColor="#F5F5F5"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="#00897B">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etDoctorName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Nama Dokter"
+                            android:inputType="textPersonName"
+                            android:textSize="14sp"/>
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Specialization Input -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:boxBackgroundColor="#F5F5F5"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="#00897B">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etDoctorSpecialization"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Spesialisasi (Umum, Gigi, Mata...)"
+                            android:inputType="text"
+                            android:textSize="14sp"/>
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Add Button -->
+                    <Button
+                        android:id="@+id/btnAddDoctor"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:text="➕ Tambah Dokter"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:background="@drawable/btn_solid_teal"
+                        android:elevation="2dp"/>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Doctor List Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📋 Daftar Dokter"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#212121"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Doctor List -->
+            <ListView
+                android:id="@+id/listDoctors"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="8dp"/>
+
+        </LinearLayout>
+
+    </ScrollView>
 
 </LinearLayout>

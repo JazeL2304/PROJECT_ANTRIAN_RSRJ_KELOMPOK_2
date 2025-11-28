@@ -1,67 +1,198 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:background="#F8F9FA">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Kelola Pasien"
-        android:textStyle="bold"
-        android:textSize="20sp"
-        android:layout_marginBottom="16dp" />
-
-    <EditText
-        android:id="@+id/etPatientName"
+    <!-- 🎨 GRADIENT HEADER -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Nama Pasien" />
+        android:orientation="vertical"
+        android:background="@drawable/bg_gradient_header"
+        android:padding="20dp"
+        android:elevation="8dp">
 
-    <EditText
-        android:id="@+id/etPatientGender"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Jenis Kelamin (L/P)" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🧍‍♀️ Kelola Pasien"
+            android:textColor="@android:color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
 
-    <EditText
-        android:id="@+id/etPatientAge"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Usia (tahun)"
-        android:inputType="number" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tambah dan kelola data pasien"
+            android:textColor="#E0FFFFFF"
+            android:textSize="13sp"/>
 
-    <EditText
-        android:id="@+id/etPatientAddress"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Alamat Pasien" />
+    </LinearLayout>
 
-    <Button
-        android:id="@+id/btnAddPatient"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="TAMBAH PASIEN"
-        android:backgroundTint="#6200EE"
-        android:textColor="@android:color/white"
-        android:layout_marginTop="12dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Daftar Pasien:"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="8dp" />
-
-    <ListView
-        android:id="@+id/listPatients"
+    <!-- CONTENT AREA -->
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:dividerHeight="8dp"
-        android:divider="@android:color/transparent" />
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Add Patient Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="➕ Tambah Pasien Baru"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#00897B"
+                        android:layout_marginBottom="16dp"/>
+
+                    <!-- Patient Name -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:boxBackgroundColor="#F5F5F5"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="#00897B">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etPatientName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Nama Pasien"
+                            android:inputType="textPersonName"
+                            android:textSize="14sp"/>
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Gender -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:boxBackgroundColor="#F5F5F5"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="#00897B">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etPatientGender"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Jenis Kelamin (L/P)"
+                            android:inputType="text"
+                            android:textSize="14sp"/>
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Age -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:boxBackgroundColor="#F5F5F5"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="#00897B">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etPatientAge"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Usia (tahun)"
+                            android:inputType="number"
+                            android:textSize="14sp"/>
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Address -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:boxBackgroundColor="#F5F5F5"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="#00897B">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etPatientAddress"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Alamat Pasien"
+                            android:inputType="textMultiLine"
+                            android:maxLines="3"
+                            android:textSize="14sp"/>
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Add Button -->
+                    <Button
+                        android:id="@+id/btnAddPatient"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:text="➕ Tambah Pasien"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:background="@drawable/btn_solid_teal"
+                        android:elevation="2dp"/>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Patient List Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📋 Daftar Pasien"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#212121"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Patient List -->
+            <ListView
+                android:id="@+id/listPatients"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="8dp"/>
+
+        </LinearLayout>
+
+    </ScrollView>
 
 </LinearLayout>

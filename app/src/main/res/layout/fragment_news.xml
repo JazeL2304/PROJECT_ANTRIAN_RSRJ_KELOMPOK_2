@@ -4,20 +4,35 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#FAFAFA"
+    android:background="#F8F9FA"
     tools:context=".fragment_news">
 
-    <!-- Judul -->
-    <TextView
-        android:id="@+id/tvNewsTitle"
+    <!-- 🎨 GRADIENT HEADER -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="📰 Berita Kesehatan Terbaru"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:paddingBottom="8dp"
-        android:textColor="#333333" />
+        android:orientation="vertical"
+        android:background="@drawable/bg_gradient_header"
+        android:padding="20dp"
+        android:elevation="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📰 Berita Kesehatan"
+            android:textColor="@android:color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Update terbaru seputar kesehatan"
+            android:textColor="#E0FFFFFF"
+            android:textSize="13sp"/>
+
+    </LinearLayout>
 
     <!-- Progress Bar (Loading) -->
     <ProgressBar
@@ -27,13 +42,16 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:visibility="gone"
-        android:padding="16dp" />
+        android:layout_marginTop="24dp"
+        android:indeterminateTint="#00897B"/>
 
     <!-- Daftar berita -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerNews"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scrollbars="vertical" />
+        android:padding="12dp"
+        android:clipToPadding="false"
+        android:scrollbars="vertical"/>
 
 </LinearLayout>

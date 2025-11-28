@@ -4,191 +4,243 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="#F8F9FA"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="vertical">
 
-        <!-- Header -->
-        <TextView
+        <!-- 🎨 GRADIENT HEADER -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:gravity="center"
-            android:text="📋 Buat Antrian Baru"
-            android:textColor="@android:color/black"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:orientation="vertical"
+            android:background="@drawable/bg_gradient_header"
+            android:padding="20dp"
+            android:elevation="8dp">
 
-        <!-- Form Card -->
-        <androidx.cardview.widget.CardView
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📋 Buat Antrian Baru"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Lengkapi formulir di bawah untuk membuat antrian"
+                android:textColor="#E0FFFFFF"
+                android:textSize="13sp"/>
+
+        </LinearLayout>
+
+        <!-- CONTENT AREA -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <LinearLayout
+            <!-- 📝 Form Card -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <!-- Step 1: Nama Pasien -->
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="1. Nama Pasien"
-                    android:textColor="#2196F3"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <EditText
-                    android:id="@+id/et_patient_name"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginBottom="20dp"
-                    android:background="@drawable/edittext_background"
-                    android:hint="Masukkan nama lengkap"
-                    android:inputType="textPersonName"
-                    android:padding="12dp"
-                    android:textSize="14sp" />
+                    <!-- Step 1 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="1️⃣ Nama Pasien"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#00897B"
+                        android:layout_marginBottom="8dp"/>
 
-                <!-- Step 2: Layanan -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="2. Layanan Klinik"
-                    android:textColor="#2196F3"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        app:boxBackgroundColor="#F5F5F5"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="#00897B">
 
-                <Spinner
-                    android:id="@+id/spinner_specialization"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginBottom="20dp"
-                    android:background="@drawable/spinner_background" />
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_patient_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Masukkan nama lengkap"
+                            android:inputType="textPersonName"
+                            android:textSize="14sp"/>
 
-                <!-- Step 3: Dokter -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="3. Dokter"
-                    android:textColor="#2196F3"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                <Spinner
-                    android:id="@+id/spinner_doctor"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginBottom="20dp"
-                    android:background="@drawable/spinner_background" />
+                    <!-- Step 2 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="2️⃣ Layanan Klinik"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#00897B"
+                        android:layout_marginBottom="8dp"/>
 
-                <!-- Step 4: Tanggal -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="4. Tanggal"
-                    android:textColor="#2196F3"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    <Spinner
+                        android:id="@+id/spinner_specialization"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginBottom="20dp"
+                        android:background="@drawable/bg_spinner_modern"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"/>
 
-                <Button
-                    android:id="@+id/btn_select_date"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@drawable/button_outline"
-                    android:text="📅 Pilih Tanggal"
-                    android:textColor="#2196F3"
-                    android:textSize="14sp" />
+                    <!-- Step 3 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="3️⃣ Dokter"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#00897B"
+                        android:layout_marginBottom="8dp"/>
 
-                <TextView
-                    android:id="@+id/tv_selected_date"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="20dp"
-                    android:gravity="center"
-                    android:text=""
-                    android:textColor="@android:color/black"
-                    android:textSize="14sp"
-                    android:textStyle="italic"
-                    android:visibility="gone" />
+                    <Spinner
+                        android:id="@+id/spinner_doctor"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginBottom="20dp"
+                        android:background="@drawable/bg_spinner_modern"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"/>
 
-                <!-- ← TAMBAHAN BARU: Step 5 Keluhan -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="5. Keluhan Awal"
-                    android:textColor="#2196F3"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    <!-- Step 4 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="4️⃣ Tanggal"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#00897B"
+                        android:layout_marginBottom="8dp"/>
 
-                <EditText
-                    android:id="@+id/et_complaint"
-                    android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:layout_marginBottom="20dp"
-                    android:background="@drawable/edittext_background"
-                    android:gravity="top"
-                    android:hint="Jelaskan keluhan Anda..."
-                    android:inputType="textMultiLine"
-                    android:maxLines="5"
-                    android:padding="12dp"
-                    android:textSize="14sp" />
+                    <Button
+                        android:id="@+id/btn_select_date"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="📅 Pilih Tanggal"
+                        android:textSize="14sp"
+                        android:textColor="#00897B"
+                        android:background="@drawable/btn_outline_teal"
+                        android:elevation="0dp"/>
 
-                <!-- Step 6: Jam (dulu step 5) -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="6. Jam"
-                    android:textColor="#2196F3"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/tv_selected_date"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        android:gravity="center"
+                        android:text=""
+                        android:textColor="@android:color/black"
+                        android:textSize="14sp"
+                        android:textStyle="italic"
+                        android:visibility="gone"/>
 
-                <Spinner
-                    android:id="@+id/spinner_time"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginBottom="24dp"
-                    android:background="@drawable/spinner_background" />
+                    <!-- Step 5 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="5️⃣ Keluhan Awal"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#00897B"
+                        android:layout_marginBottom="8dp"/>
 
-            </LinearLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        app:boxBackgroundColor="#F5F5F5"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="#00897B">
 
-        </androidx.cardview.widget.CardView>
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_complaint"
+                            android:layout_width="match_parent"
+                            android:layout_height="120dp"
+                            android:gravity="top"
+                            android:hint="Jelaskan keluhan Anda..."
+                            android:inputType="textMultiLine"
+                            android:maxLines="5"
+                            android:textSize="14sp"/>
 
-        <!-- Confirm Button -->
-        <Button
-            android:id="@+id/btn_confirm_booking"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="16dp"
-            android:background="#4CAF50"
-            android:text="✅ Konfirmasi Booking"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Info Text -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:gravity="center"
-            android:text="💡 Tip: Datang 15 menit sebelum jadwal untuk registrasi"
-            android:textColor="#666666"
-            android:textSize="12sp"
-            android:textStyle="italic" />
+                    <!-- Step 6 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="6️⃣ Jam"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#00897B"
+                        android:layout_marginBottom="8dp"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_time"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:background="@drawable/bg_spinner_modern"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"/>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- ✅ Confirm Button -->
+            <Button
+                android:id="@+id/btn_confirm_booking"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="✅ Konfirmasi Booking"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:background="@drawable/btn_solid_teal"
+                android:layout_marginBottom="16dp"
+                android:elevation="4dp"/>
+
+            <!-- 💡 Info Text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="💡 Tip: Datang 15 menit sebelum jadwal untuk registrasi"
+                android:textSize="12sp"
+                android:textColor="#757575"
+                android:gravity="center"
+                android:lineSpacingExtra="2dp"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
