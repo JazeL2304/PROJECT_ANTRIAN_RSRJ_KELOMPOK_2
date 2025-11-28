@@ -20,68 +20,80 @@ class fragment_news : Fragment() {
     private lateinit var recyclerNews: RecyclerView
     private lateinit var progressBar: ProgressBar
     private val apiKey = "pub_1f56deb4f0334aff8befe1f8ad74e5cb"
-    private var param1: String? = null
-    private var param2: String? = null
+
+    // ✅ TAMBAHAN: Flag untuk cek apakah fragment masih attached
+    private var isFragmentAttached = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
+        // ✅ Set flag saat fragment dibuat
+        isFragmentAttached = true
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_news, container, false)
         recyclerNews = view.findViewById(R.id.recyclerNews)
         recyclerNews.layoutManager = LinearLayoutManager(requireContext())
         progressBar = view.findViewById(R.id.progressBar)
+
         loadNews()
+
         return view
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // ✅ Set flag saat fragment di-destroy
+        isFragmentAttached = false
+    }
+
     private fun loadNews() {
+        // ✅ FIXED: Cek fragment masih attached sebelum show progress
+        if (!isFragmentAttached || !isAdded) return
+
         progressBar.visibility = View.VISIBLE
 
         val retrofit = Retrofit.Builder()
             .baseUrl("https://newsdata.io/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
+
         val service = retrofit.create(NewsApiService::class.java)
         val call = service.getHealthNews(apiKey, "health,medical,medicine,hospital,doctor")
 
         call.enqueue(object : Callback<NewsResponse> {
             override fun onResponse(call: Call<NewsResponse>, response: Response<NewsResponse>) {
+                // ✅ FIXED: Cek fragment masih attached
+                if (!isFragmentAttached || !isAdded) return
+
                 progressBar.visibility = View.GONE
+
                 if (response.isSuccessful) {
                     val newsList = response.body()?.results ?: emptyList()
                     recyclerNews.adapter = NewsAdapter(newsList)
                 } else {
-                    Toast.makeText(context, "Gagal memuat berita (${response.code()})", Toast.LENGTH_SHORT).show()
+                    // ✅ FIXED: Gunakan context yang safe
+                    context?.let {
+                        Toast.makeText(it, "Gagal memuat berita (${response.code()})", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
 
             override fun onFailure(call: Call<NewsResponse>, t: Throwable) {
+                // ✅ FIXED: Cek fragment masih attached sebelum akses view/context
+                if (!isFragmentAttached || !isAdded) return
+
                 progressBar.visibility = View.GONE
-                Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
-    }
 
-    companion object {
-        private const val ARG_PARAM1 = "param1"
-        private const val ARG_PARAM2 = "param2"
-
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            fragment_news().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+                // ✅ FIXED: Gunakan context yang safe dengan null check
+                context?.let {
+                    Toast.makeText(it, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+        })
     }
 }

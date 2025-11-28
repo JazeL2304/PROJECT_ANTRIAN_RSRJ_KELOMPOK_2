@@ -17,8 +17,10 @@ class DashboardFragment : Fragment() {
     private lateinit var tvWelcome: TextView
     private lateinit var tvCurrentDate: TextView
     private lateinit var tvActiveQueue: TextView
-    private lateinit var btnQuickBooking: Button
-    private lateinit var btnEmergency: Button
+
+    // ✅ UBAH: Ganti Button jadi LinearLayout atau View
+    private lateinit var btnQuickBooking: View  // atau LinearLayout
+    private lateinit var btnEmergency: View     // atau LinearLayout
 
     // Cards untuk poli klinik
     private lateinit var cardPoliUmum: CardView
@@ -28,7 +30,6 @@ class DashboardFragment : Fragment() {
     private lateinit var cardPoliAnak: CardView
     private lateinit var cardPoliKandungan: CardView
 
-    // ← TAMBAHAN: PreferencesHelper
     private lateinit var preferencesHelper: PreferencesHelper
 
     override fun onCreateView(
@@ -42,7 +43,6 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ← INITIALIZE PreferencesHelper
         preferencesHelper = PreferencesHelper(requireContext())
 
         initViews(view)
@@ -54,6 +54,8 @@ class DashboardFragment : Fragment() {
         tvWelcome = view.findViewById(R.id.tv_welcome)
         tvCurrentDate = view.findViewById(R.id.tv_current_date)
         tvActiveQueue = view.findViewById(R.id.tv_active_queue)
+
+        // ✅ FIXED: Ganti Button jadi View/LinearLayout
         btnQuickBooking = view.findViewById(R.id.btn_quick_booking)
         btnEmergency = view.findViewById(R.id.btn_emergency)
 
@@ -67,7 +69,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupUI() {
-        // ← SET WELCOME MESSAGE dengan nama user (DIUBAH!)
+        // Set welcome message dengan nama user
         val username = preferencesHelper.getUsername()
         tvWelcome.text = "Selamat Datang, $username! 👋"
 
@@ -76,19 +78,17 @@ class DashboardFragment : Fragment() {
             .format(Date())
         tvCurrentDate.text = currentDate
 
-        // Tampilkan info antrian aktif (simulasi)
+        // Tampilkan info antrian aktif (opsional)
         showActiveQueueInfo()
     }
 
     private fun setupClickListeners() {
-        // Quick booking button
+        // ✅ FIXED: setOnClickListener tetap bisa digunakan untuk View/LinearLayout
         btnQuickBooking.setOnClickListener {
             navigateToBooking(0) // 0 = tanpa spesialisasi terpilih
         }
 
-        // Emergency button
         btnEmergency.setOnClickListener {
-            // Untuk sekarang hanya tampilkan pesan
             showEmergencyInfo()
         }
 
@@ -102,22 +102,30 @@ class DashboardFragment : Fragment() {
     }
 
     private fun showActiveQueueInfo() {
-        // Simulasi antrian aktif
-        val hasActiveQueue = true // Bisa diubah untuk testing
+        // Cek apakah ada booking aktif
+        val activeBooking = DataSource.getActiveBooking()
 
-        if (hasActiveQueue) {
-            tvActiveQueue.text = "Antrian Aktif: Layanan Klinik Umum - No. 15\nStatus: Menunggu (estimasi 30 menit)"
-            tvActiveQueue.visibility = View.VISIBLE
+        if (activeBooking != null) {
+            tvActiveQueue.text = "Antrian Aktif: ${activeBooking.specialization} - No. ${activeBooking.queueNumber}\n" +
+                    "Status: ${activeBooking.status.toDisplayString()} (estimasi 30 menit)"
+
+            // ✅ Tampilkan card active queue jika ada
+            val cardActiveQueue = view?.findViewById<CardView>(R.id.card_active_queue)
+            cardActiveQueue?.visibility = View.VISIBLE
         } else {
-            tvActiveQueue.visibility = View.GONE
+            // Sembunyikan card jika tidak ada antrian aktif
+            val cardActiveQueue = view?.findViewById<CardView>(R.id.card_active_queue)
+            cardActiveQueue?.visibility = View.GONE
         }
     }
 
     private fun showEmergencyInfo() {
-        // Simulasi info emergency - bisa diganti dengan dialog atau navigasi khusus
-        tvActiveQueue.text = "🚨 Untuk kondisi darurat, segera hubungi: \n(021) 1234-5678 atau datang langsung ke UGD"
-        tvActiveQueue.setTextColor(resources.getColor(android.R.color.holo_red_dark))
-        tvActiveQueue.visibility = View.VISIBLE
+        // Show emergency dialog atau info
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("🚨 Layanan Darurat")
+            .setMessage("Untuk kondisi darurat, segera hubungi:\n\n📞 (021) 1234-5678\n\natau datang langsung ke UGD")
+            .setPositiveButton("OK", null)
+            .show()
     }
 
     private fun navigateToBooking(specializationId: Int) {
