@@ -39,6 +39,16 @@
 
         </LinearLayout>
 
+        <!-- ✅ LOADING INDICATOR -->
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="16dp"
+            android:visibility="gone"
+            android:indeterminateTint="#00897B"/>
+
         <!-- CONTENT AREA -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -104,11 +114,15 @@
                     <Spinner
                         android:id="@+id/spinner_specialization"
                         android:layout_width="match_parent"
-                        android:layout_height="52dp"
+                        android:layout_height="56dp"
                         android:layout_marginBottom="20dp"
                         android:background="@drawable/bg_spinner_modern"
                         android:paddingStart="16dp"
-                        android:paddingEnd="16dp"/>
+                        android:paddingEnd="16dp"
+                        android:spinnerMode="dropdown"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"/>
 
                     <!-- Step 3 -->
                     <TextView
@@ -120,14 +134,19 @@
                         android:textColor="#00897B"
                         android:layout_marginBottom="8dp"/>
 
+                    <!-- Doctor Spinner -->
                     <Spinner
                         android:id="@+id/spinner_doctor"
                         android:layout_width="match_parent"
-                        android:layout_height="52dp"
+                        android:layout_height="56dp"
                         android:layout_marginBottom="20dp"
                         android:background="@drawable/bg_spinner_modern"
                         android:paddingStart="16dp"
-                        android:paddingEnd="16dp"/>
+                        android:paddingEnd="16dp"
+                        android:spinnerMode="dropdown"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"/>
 
                     <!-- Step 4 -->
                     <TextView
@@ -205,13 +224,18 @@
                         android:textColor="#00897B"
                         android:layout_marginBottom="8dp"/>
 
+                    <!-- Time Spinner -->
                     <Spinner
                         android:id="@+id/spinner_time"
                         android:layout_width="match_parent"
-                        android:layout_height="52dp"
+                        android:layout_height="56dp"
                         android:background="@drawable/bg_spinner_modern"
                         android:paddingStart="16dp"
-                        android:paddingEnd="16dp"/>
+                        android:paddingEnd="16dp"
+                        android:spinnerMode="dropdown"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"/>
 
                 </LinearLayout>
 

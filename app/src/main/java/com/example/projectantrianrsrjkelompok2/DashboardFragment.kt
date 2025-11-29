@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout  // ✅ TAMBAHKAN INI
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.cardview.widget.CardView
@@ -19,10 +19,11 @@ class DashboardFragment : Fragment() {
     private lateinit var tvCurrentDate: TextView
     private lateinit var tvActiveQueue: TextView
 
-    // ✅ UBAH: Dari CardView ke LinearLayout
+    // ✅ LinearLayout untuk quick actions
     private lateinit var layoutQuickBooking: LinearLayout
     private lateinit var layoutEmergency: LinearLayout
 
+    // ✅ ADDED BACK: Profile icon yang ada di fragment dashboard
     private lateinit var ivProfileIcon: ImageView
 
     // Cards untuk poli klinik
@@ -58,10 +59,11 @@ class DashboardFragment : Fragment() {
         tvCurrentDate = view.findViewById(R.id.tv_current_date)
         tvActiveQueue = view.findViewById(R.id.tv_active_queue)
 
-        // ✅ UBAH: Casting ke LinearLayout
+        // ✅ LinearLayout untuk quick actions
         layoutQuickBooking = view.findViewById(R.id.btn_quick_booking)
         layoutEmergency = view.findViewById(R.id.btn_emergency)
 
+        // ✅ ADDED BACK: Profile icon dari fragment_dashboard.xml
         ivProfileIcon = view.findViewById(R.id.ivProfileIcon)
 
         // Inisialisasi card poli
@@ -88,12 +90,12 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        // Profile icon click listener
+        // ✅ Profile icon click listener - Navigasi ke ProfileFragment
         ivProfileIcon.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(ProfileFragment())
+            (activity as? MainActivity)?.navigateToFragment(ProfileFragment())
         }
 
-        // ✅ UBAH: Gunakan layoutQuickBooking dan layoutEmergency
+        // ✅ Quick actions click listeners
         layoutQuickBooking.setOnClickListener {
             navigateToBooking(0)
         }
@@ -102,7 +104,7 @@ class DashboardFragment : Fragment() {
             showEmergencyInfo()
         }
 
-        // Click listeners untuk setiap card poli
+        // ✅ FIXED: Safe click listeners untuk setiap card poli
         cardPoliUmum.setOnClickListener { navigateToBooking(1) }
         cardPoliGigi.setOnClickListener { navigateToBooking(2) }
         cardPoliMata.setOnClickListener { navigateToBooking(3) }
@@ -129,6 +131,7 @@ class DashboardFragment : Fragment() {
         tvActiveQueue.visibility = View.VISIBLE
     }
 
+    // ✅ FIXED: Safe cast untuk navigasi
     private fun navigateToBooking(specializationId: Int) {
         val bookingFragment = BookingFragment()
 
@@ -138,6 +141,7 @@ class DashboardFragment : Fragment() {
             bookingFragment.arguments = bundle
         }
 
-        (activity as MainActivity).navigateToFragment(bookingFragment)
+        // ✅ CRITICAL FIX: Safe cast untuk mencegah crash
+        (activity as? MainActivity)?.navigateToFragment(bookingFragment)
     }
 }

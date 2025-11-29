@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "908535941804",
+    "firebase_url": "https://antrian-rsrj-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "antrian-rsrj",
+    "storage_bucket": "antrian-rsrj.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:908535941804:android:7862aaf314e28224a36d09",
+        "android_client_info": {
+          "package_name": "com.example.projectantrianrsrjkelompok2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHSGE6I3MUnd2EW8pvePaLZtjHfAQFKkE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
