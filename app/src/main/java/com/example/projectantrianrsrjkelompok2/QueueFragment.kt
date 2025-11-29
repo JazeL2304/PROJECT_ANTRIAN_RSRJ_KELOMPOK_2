@@ -31,7 +31,7 @@ class QueueFragment : Fragment() {
     private lateinit var btnDownloadReceipt: Button
     private lateinit var btnCancelQueue: Button
     private lateinit var progressBar: ProgressBar
-    private lateinit var cardMyQueue: LinearLayout
+    private lateinit var cardMyQueue: View
     private lateinit var tvQueueList: TextView
 
     private var currentQueueNumber = 8

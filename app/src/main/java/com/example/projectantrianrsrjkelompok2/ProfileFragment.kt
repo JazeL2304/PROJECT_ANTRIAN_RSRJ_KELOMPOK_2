@@ -22,10 +22,10 @@ class ProfileFragment : Fragment() {
     private lateinit var ivProfilePhoto: ImageView
     private lateinit var tvUserName: TextView
     private lateinit var tvUserEmail: TextView
-    private lateinit var btnEditName: Button
-    private lateinit var btnEditPassword: Button
-    private lateinit var btnVerifyIdentity: Button
-    private lateinit var btnLogout: Button
+    private lateinit var btnEditName: View
+    private lateinit var btnEditPassword: View
+    private lateinit var btnVerifyIdentity: View
+    private lateinit var btnLogout: View
 
     override fun onCreateView(
         inflater: LayoutInflater,
