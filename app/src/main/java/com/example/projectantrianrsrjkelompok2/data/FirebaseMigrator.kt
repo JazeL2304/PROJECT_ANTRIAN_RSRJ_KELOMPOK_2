@@ -1,317 +1,213 @@
 package com.example.projectantrianrsrjkelompok2.data
 
-import android.content.Context
 import android.util.Log
 import com.example.projectantrianrsrjkelompok2.*
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * Helper untuk migrasi data dummy dari DataSource.kt ke Firebase
- * HANYA DIJALANKAN SEKALI saat pertama kali setup!
+ * ✅ FirebaseMigrator - Utility untuk migrasi data lokal ke Firebase
  */
 object FirebaseMigrator {
 
-    private val db = FirebaseFirestore.getInstance()
-    private const val TAG = "FirebaseMigrator"
+    private val TAG = "FirebaseMigrator"
+    private val firebaseRepo = FirebaseRepository()
 
     /**
-     * Main migration function - call this once!
+     * 🔄 Migrate semua data dummy ke Firebase
      */
-    suspend fun migrateAllData(): Result<String> {
-        return try {
-            Log.d(TAG, "🔄 Starting migration...")
+    suspend fun migrateAllData() = withContext(Dispatchers.IO) {
+        Log.d(TAG, "🔄 Starting migration to Firebase...")
 
-            // 1. Migrate Specializations
+        try {
+            migrateDoctors()
+            migratePatients()
             migrateSpecializations()
 
-            // 2. Migrate Doctors
-            migrateDoctors()
-
-            // 3. Migrate Patients
-            migratePatients()
-
-            // 4. Migrate Bookings
-            migrateBookings()
-
             Log.d(TAG, "✅ Migration completed successfully!")
-            Result.success("✅ All data migrated successfully!")
-
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Migration failed: ${e.message}")
-            Result.failure(e)
+            Log.e(TAG, "❌ Migration failed: ${e.message}", e)
         }
     }
 
     /**
-     * Migrate Specializations
-     */
-    private suspend fun migrateSpecializations() {
-        Log.d(TAG, "📋 Migrating specializations...")
-
-        val specializations = listOf(
-            hashMapOf(
-                "id" to 1,
-                "name" to "Layanan Umum",
-                "description" to "Pelayanan kesehatan umum",
-                "emoji" to "🏥"
-            ),
-            hashMapOf(
-                "id" to 2,
-                "name" to "Layanan Gigi",
-                "description" to "Perawatan gigi dan mulut",
-                "emoji" to "🦷"
-            ),
-            hashMapOf(
-                "id" to 3,
-                "name" to "Layanan Mata",
-                "description" to "Kesehatan mata dan penglihatan",
-                "emoji" to "👁️"
-            ),
-            hashMapOf(
-                "id" to 4,
-                "name" to "Layanan Anak",
-                "description" to "Kesehatan bayi dan anak-anak",
-                "emoji" to "👶"
-            )
-        )
-
-        specializations.forEach { spec ->
-            db.collection("specializations")
-                .document(spec["id"].toString())
-                .set(spec)
-                .await()
-        }
-
-        Log.d(TAG, "✅ ${specializations.size} specializations migrated")
-    }
-
-    /**
-     * Migrate Doctors
+     * 👨‍⚕️ Migrate Doctors
      */
     private suspend fun migrateDoctors() {
-        Log.d(TAG, "👨‍⚕️ Migrating doctors...")
-
         val doctors = listOf(
-            hashMapOf(
-                "id" to 1,
-                "name" to "Dr. Ahmad Santoso",
-                "specialization" to "Dokter Umum",
-                "schedule" to "Senin–Jumat 08:00–15:00"
-            ),
-            hashMapOf(
-                "id" to 2,
-                "name" to "Dr. Budi Dental",
-                "specialization" to "Dokter Gigi",
-                "schedule" to "Senin–Kamis 09:00–16:00"
-            ),
-            hashMapOf(
-                "id" to 3,
-                "name" to "Dr. Indra Mata",
-                "specialization" to "Dokter Mata",
-                "schedule" to "Senin–Jumat 08:00–14:00"
-            ),
-            hashMapOf(
-                "id" to 4,
-                "name" to "Dr. Ani Pediatri",
-                "specialization" to "Dokter Anak",
-                "schedule" to "Setiap Hari 24 Jam"
-            )
+            Doctor(1, "Dr. Ahmad Santoso", "Dokter Umum", "Senin–Jumat 08:00–15:00"),
+            Doctor(2, "Dr. Budi Dental", "Dokter Gigi", "Senin–Kamis 09:00–16:00"),
+            Doctor(3, "Dr. Indra Mata", "Dokter Mata", "Senin–Jumat 08:00–14:00"),
+            Doctor(4, "Dr. Ani Pediatri", "Dokter Anak", "Setiap Hari 24 Jam"),
+            Doctor(5, "Dr. Siti Jantung", "Dokter Jantung", "Senin–Jumat 10:00–16:00"),
+            Doctor(6, "Dr. Rina Kandungan", "Dokter Kandungan", "Senin–Sabtu 09:00–15:00")
         )
+
+        Log.d(TAG, "📤 Migrating ${doctors.size} doctors...")
+        var successCount = 0
 
         doctors.forEach { doctor ->
-            db.collection("doctors")
-                .document(doctor["id"].toString())
-                .set(doctor)
-                .await()
+            val success = firebaseRepo.addDoctor(doctor)
+            if (success) {
+                successCount++
+                Log.d(TAG, "✅ Migrated: ${doctor.name}")
+            } else {
+                Log.e(TAG, "❌ Failed to migrate: ${doctor.name}")
+            }
         }
 
-        Log.d(TAG, "✅ ${doctors.size} doctors migrated")
+        Log.d(TAG, "✅ Doctors migration: $successCount/${doctors.size} successful")
     }
 
     /**
-     * Migrate Patients
+     * 🧍‍♀️ Migrate Patients
      */
     private suspend fun migratePatients() {
-        Log.d(TAG, "🧍‍♀️ Migrating patients...")
-
         val patients = listOf(
-            hashMapOf(
-                "id" to 1,
-                "name" to "Atila Falah",
-                "gender" to "Laki-laki",
-                "age" to 21,
-                "address" to "Jl. Anggrek No. 12"
-            ),
-            hashMapOf(
-                "id" to 2,
-                "name" to "Rizky Amalia",
-                "gender" to "Perempuan",
-                "age" to 23,
-                "address" to "Jl. Melati No. 8"
-            ),
-            hashMapOf(
-                "id" to 3,
-                "name" to "Dewi Lestari",
-                "gender" to "Perempuan",
-                "age" to 20,
-                "address" to "Jl. Mawar No. 5"
-            )
+            Patient(1, "Atila Falah", "Laki-laki", 21, "Jl. Anggrek No. 12"),
+            Patient(2, "Rizky Amalia", "Perempuan", 23, "Jl. Melati No. 8"),
+            Patient(3, "Dewi Lestari", "Perempuan", 20, "Jl. Mawar No. 5")
         )
+
+        Log.d(TAG, "📤 Migrating ${patients.size} patients...")
+        var successCount = 0
 
         patients.forEach { patient ->
-            db.collection("patients")
-                .document(patient["id"].toString())
-                .set(patient)
-                .await()
+            val success = firebaseRepo.addPatient(patient)
+            if (success) {
+                successCount++
+                Log.d(TAG, "✅ Migrated: ${patient.name}")
+            } else {
+                Log.e(TAG, "❌ Failed to migrate: ${patient.name}")
+            }
         }
 
-        Log.d(TAG, "✅ ${patients.size} patients migrated")
+        Log.d(TAG, "✅ Patients migration: $successCount/${patients.size} successful")
     }
 
     /**
-     * Migrate Bookings (historical data)
+     * 🏥 Migrate Specializations
+     */
+    private suspend fun migrateSpecializations() {
+        val specializations = listOf(
+            Specialization(1, "Layanan Umum", "Pelayanan kesehatan umum", "🏥"),
+            Specialization(2, "Layanan Gigi", "Perawatan gigi dan mulut", "🦷"),
+            Specialization(3, "Layanan Mata", "Kesehatan mata dan penglihatan", "👁️"),
+            Specialization(4, "Layanan Anak", "Kesehatan bayi dan anak-anak", "👶"),
+            Specialization(5, "Layanan Jantung", "Kesehatan jantung dan pembuluh darah", "❤️"),
+            Specialization(6, "Layanan Kandungan", "Kesehatan ibu dan anak", "🤰")
+        )
+
+        Log.d(TAG, "📤 Migrating ${specializations.size} specializations...")
+        var successCount = 0
+
+        specializations.forEach { spec ->
+            val success = firebaseRepo.addSpecialization(spec)
+            if (success) {
+                successCount++
+                Log.d(TAG, "✅ Migrated: ${spec.name}")
+            } else {
+                Log.e(TAG, "❌ Failed to migrate: ${spec.name}")
+            }
+        }
+
+        Log.d(TAG, "✅ Specializations migration: $successCount/${specializations.size} successful")
+    }
+
+    /**
+     * 📋 Migrate sample bookings (optional)
      */
     private suspend fun migrateBookings() {
-        Log.d(TAG, "📅 Migrating bookings...")
-
         val bookings = listOf(
-            // Booking 1 - COMPLETED
-            hashMapOf(
-                "id" to "B001",
-                "queueNumber" to 7,
-                "patientName" to "Ahmad Santoso",
-                "doctorName" to "Dr. Budi Dental",
-                "specialization" to "Layanan Gigi",
-                "date" to "2025-01-10",
-                "time" to "08:30",
-                "complaint" to "Pemeriksaan rutin gigi dan pembersihan karang gigi",
-                "diagnosis" to "Karang gigi ringan",
-                "prescription" to "Scaling gigi, sikat gigi lebih teratur",
-                "status" to "COMPLETED",
-                "createdAt" to (System.currentTimeMillis() - (20 * 24 * 60 * 60 * 1000L)),
-                "calledAt" to (System.currentTimeMillis() - (20 * 24 * 60 * 60 * 1000L) + (10 * 60 * 1000L)),
-                "completedAt" to (System.currentTimeMillis() - (20 * 24 * 60 * 60 * 1000L) + (25 * 60 * 1000L))
-            ),
-
-            // Booking 2 - COMPLETED
-            hashMapOf(
-                "id" to "B002",
-                "queueNumber" to 12,
-                "patientName" to "Ahmad Santoso",
-                "doctorName" to "Dr. Indra Mata",
-                "specialization" to "Layanan Mata",
-                "date" to "2025-01-15",
-                "time" to "09:00",
-                "complaint" to "Mata perih dan penglihatan kabur",
-                "diagnosis" to "Mata kering dan lelah akibat terlalu lama menatap layar",
-                "prescription" to "Tetes mata artifisial, istirahat mata setiap 20 menit",
-                "status" to "COMPLETED",
-                "createdAt" to (System.currentTimeMillis() - (15 * 24 * 60 * 60 * 1000L)),
-                "calledAt" to (System.currentTimeMillis() - (15 * 24 * 60 * 60 * 1000L) + (15 * 60 * 1000L)),
-                "completedAt" to (System.currentTimeMillis() - (15 * 24 * 60 * 60 * 1000L) + (30 * 60 * 1000L))
-            ),
-
-            // Booking 3 - COMPLETED
-            hashMapOf(
-                "id" to "B003",
-                "queueNumber" to 5,
-                "patientName" to "Ahmad Santoso",
-                "doctorName" to "Dr. Ani Pediatri",
-                "specialization" to "Layanan Anak",
-                "date" to "2025-01-20",
-                "time" to "10:30",
-                "complaint" to "Imunisasi anak umur 2 tahun",
-                "diagnosis" to "Anak sehat, imunisasi lengkap",
-                "prescription" to "Vaksin DPT, Vitamin A",
-                "status" to "COMPLETED",
-                "createdAt" to (System.currentTimeMillis() - (10 * 24 * 60 * 60 * 1000L)),
-                "calledAt" to (System.currentTimeMillis() - (10 * 24 * 60 * 60 * 1000L) + (8 * 60 * 1000L)),
-                "completedAt" to (System.currentTimeMillis() - (10 * 24 * 60 * 60 * 1000L) + (20 * 60 * 1000L))
-            ),
-
-            // Booking 4 - WAITING (hari ini)
-            hashMapOf(
-                "id" to "B004",
-                "queueNumber" to 1,
-                "patientName" to "Rizky Amalia",
-                "doctorName" to "Dr. Ahmad Santoso",
-                "specialization" to "Layanan Umum",
-                "date" to getCurrentDate(),
-                "time" to "14:00",
-                "complaint" to "Demam dan batuk",
-                "diagnosis" to "",
-                "prescription" to "",
-                "status" to "WAITING",
-                "createdAt" to System.currentTimeMillis(),
-                "calledAt" to 0L,
-                "completedAt" to 0L
-            ),
-
-            // Booking 5 - WAITING (hari ini)
-            hashMapOf(
-                "id" to "B005",
-                "queueNumber" to 2,
-                "patientName" to "Dewi Lestari",
-                "doctorName" to "Dr. Ahmad Santoso",
-                "specialization" to "Layanan Umum",
-                "date" to getCurrentDate(),
-                "time" to "14:30",
-                "complaint" to "Sakit kepala",
-                "diagnosis" to "",
-                "prescription" to "",
-                "status" to "WAITING",
-                "createdAt" to System.currentTimeMillis(),
-                "calledAt" to 0L,
-                "completedAt" to 0L
-            ),
-
-            // Booking 6 - CALLED (hari ini)
-            hashMapOf(
-                "id" to "B006",
-                "queueNumber" to 3,
-                "patientName" to "Atila Falah",
-                "doctorName" to "Dr. Ahmad Santoso",
-                "specialization" to "Layanan Umum",
-                "date" to getCurrentDate(),
-                "time" to "15:00",
-                "complaint" to "Kontrol tekanan darah",
-                "diagnosis" to "",
-                "prescription" to "",
-                "status" to "CALLED",
-                "createdAt" to System.currentTimeMillis(),
-                "calledAt" to System.currentTimeMillis() + (2 * 60 * 1000L),
-                "completedAt" to 0L
+            Booking(
+                id = "B001",
+                queueNumber = 1,
+                patientName = "Ahmad Santoso",
+                doctorName = "Dr. Budi Dental",
+                specialization = "Layanan Gigi",
+                date = "14/10/2025",
+                time = "08:30",
+                complaint = "Pemeriksaan rutin gigi",
+                diagnosis = "Karang gigi ringan",
+                prescription = "Scaling gigi",
+                status = BookingStatus.COMPLETED,
+                createdAt = System.currentTimeMillis() - (3 * 24 * 60 * 60 * 1000L)
             )
         )
 
+        Log.d(TAG, "📤 Migrating ${bookings.size} bookings...")
+        var successCount = 0
+
         bookings.forEach { booking ->
-            db.collection("bookings")
-                .document(booking["id"].toString())
-                .set(booking)
-                .await()
+            val success = firebaseRepo.createBooking(booking)
+            if (success) {
+                successCount++
+                Log.d(TAG, "✅ Migrated: ${booking.id}")
+            } else {
+                Log.e(TAG, "❌ Failed to migrate: ${booking.id}")
+            }
         }
 
-        Log.d(TAG, "✅ ${bookings.size} bookings migrated")
+        Log.d(TAG, "✅ Bookings migration: $successCount/${bookings.size} successful")
     }
 
     /**
-     * Get current date in yyyy-MM-dd format
+     * 🔍 Check migration status
      */
-    private fun getCurrentDate(): String {
-        return java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-            .format(java.util.Date())
-    }
+    suspend fun checkMigrationStatus(): MigrationStatus = withContext(Dispatchers.IO) {
+        try {
+            val doctors = firebaseRepo.getAllDoctors()
+            val patients = firebaseRepo.getAllPatients()
+            val specializations = firebaseRepo.getSpecializations()
 
-    /**
-     * Check if data already exists (to prevent duplicate migration)
-     */
-    suspend fun checkIfDataExists(): Boolean {
-        return try {
-            val doctors = db.collection("doctors").limit(1).get().await()
-            !doctors.isEmpty
+            MigrationStatus(
+                hasDoctors = doctors.isNotEmpty(),
+                hasPatients = patients.isNotEmpty(),
+                hasSpecializations = specializations.isNotEmpty(),
+                doctorCount = doctors.size,
+                patientCount = patients.size,
+                specializationCount = specializations.size
+            )
         } catch (e: Exception) {
-            false
+            Log.e(TAG, "❌ Error checking status: ${e.message}")
+            MigrationStatus()
+        }
+    }
+
+    /**
+     * 🗑️ Clear all Firebase data (use with caution!)
+     */
+    suspend fun clearFirebaseData() = withContext(Dispatchers.IO) {
+        Log.d(TAG, "⚠️ Clearing all Firebase data...")
+        firebaseRepo.clearAllData()
+        Log.d(TAG, "✅ Firebase data cleared")
+    }
+
+    /**
+     * 📊 Migration Status Data Class
+     */
+    data class MigrationStatus(
+        val hasDoctors: Boolean = false,
+        val hasPatients: Boolean = false,
+        val hasSpecializations: Boolean = false,
+        val doctorCount: Int = 0,
+        val patientCount: Int = 0,
+        val specializationCount: Int = 0
+    ) {
+        val isComplete: Boolean
+            get() = hasDoctors && hasPatients && hasSpecializations
+
+        val isEmpty: Boolean
+            get() = !hasDoctors && !hasPatients && !hasSpecializations
+
+        override fun toString(): String {
+            return """
+                Migration Status:
+                - Doctors: $doctorCount ${if (hasDoctors) "✅" else "❌"}
+                - Patients: $patientCount ${if (hasPatients) "✅" else "❌"}
+                - Specializations: $specializationCount ${if (hasSpecializations) "✅" else "❌"}
+                - Complete: ${if (isComplete) "✅" else "❌"}
+            """.trimIndent()
         }
     }
 }

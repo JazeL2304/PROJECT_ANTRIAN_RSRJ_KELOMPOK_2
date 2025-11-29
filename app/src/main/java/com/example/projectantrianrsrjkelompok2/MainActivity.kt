@@ -3,10 +3,12 @@ package com.example.projectantrianrsrjkelompok2
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // ========== FRAGMENT PASIEN ==========
 import com.example.projectantrianrsrjkelompok2.BookingFragment
@@ -42,8 +44,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var preferencesHelper: PreferencesHelper
-    private var btnProfileIcon: ImageView? = null  // ✅ FIXED: Nullable
-    private var tvToolbarTitle: TextView? = null   // ✅ FIXED: Sudah nullable
+
+    // ❌ REMOVED: btnProfileIcon dan tvToolbarTitle (toolbar sudah dihapus)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,22 +55,44 @@ class MainActivity : AppCompatActivity() {
         preferencesHelper = PreferencesHelper(this)
         NotificationHelper.createNotificationChannel(this)
 
-        // ✅ FIXED: Cek keberadaan views sebelum assign
         bottomNavigation = findViewById(R.id.bottom_navigation)
-        btnProfileIcon = findViewById(R.id.btnProfileIcon)
-        tvToolbarTitle = findViewById(R.id.toolbarTitle)
 
-        setupProfileIcon()
+        // ✅ SEED DATA FIREBASE (async, tidak blocking UI)
+        seedFirebaseDataIfNeeded()
 
-        // ✅ FIXED: Clear session SAJA (jangan clear data booking)
+        // ✅ Clear session SAJA
         preferencesHelper.clearSession()
 
         // ✅ Langsung tampilkan halaman login
-        setToolbarTitle("Login Akun")
         loadFragment(LoginFragment())
         hideBottomNavigation()
 
         handleNotificationIntent()
+    }
+
+    // 🌱 Seed Firebase with dummy data on first launch (ASYNC)
+    private fun seedFirebaseDataIfNeeded() {
+        val isFirstLaunch = preferencesHelper.isFirstLaunch()
+
+        if (isFirstLaunch) {
+            // ✅ FIXED: Use lifecycleScope with Dispatchers.IO
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    Log.d("MainActivity", "🌱 Starting Firebase seed...")
+                    com.example.projectantrianrsrjkelompok2.utils.FirebaseSeedData.seedAllData()
+
+                    // Mark as complete
+                    withContext(Dispatchers.Main) {
+                        preferencesHelper.setFirstLaunchComplete()
+                        Log.d("MainActivity", "✅ Firebase seed completed!")
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "❌ Firebase seed failed: ${e.message}", e)
+                }
+            }
+        } else {
+            Log.d("MainActivity", "ℹ️ Not first launch, skipping seed")
+        }
     }
 
     // 🔔 Jika notifikasi membuka QueueFragment
@@ -92,19 +116,16 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard -> {
                     showBottomNavigation()
-                    setToolbarTitle("Antrian Rumah Sakit")
                     loadFragment(DashboardFragment())
                     true
                 }
                 R.id.nav_booking -> {
                     showBottomNavigation()
-                    setToolbarTitle("Booking Dokter")
                     loadFragment(BookingFragment())
                     true
                 }
                 R.id.nav_queue -> {
                     showBottomNavigation()
-                    setToolbarTitle("Antrian Anda")
                     if (DataSource.hasActiveBooking()) {
                         loadFragment(QueueFragment())
                     } else {
@@ -114,13 +135,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_history -> {
                     showBottomNavigation()
-                    setToolbarTitle("Riwayat Kunjungan")
                     loadFragment(HistoryFragment())
                     true
                 }
                 R.id.nav_profile -> {
                     showBottomNavigation()
-                    setToolbarTitle("Berita Kesehatan")
                     loadFragment(fragment_news())
                     true
                 }
@@ -139,19 +158,16 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard_admin -> {
                     showBottomNavigation()
-                    setToolbarTitle("Dashboard Admin")
                     loadFragment(AdminDashboardFragment())
                     true
                 }
                 R.id.nav_reports -> {
                     showBottomNavigation()
-                    setToolbarTitle("Laporan Rumah Sakit")
                     loadFragment(ViewReportFragment())
                     true
                 }
                 R.id.nav_settings -> {
                     showBottomNavigation()
-                    setToolbarTitle("Pengaturan")
                     loadFragment(AdminSettingsFragment())
                     true
                 }
@@ -170,40 +186,21 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard_doctor -> {
                     showBottomNavigation()
-                    setToolbarTitle("Dashboard Dokter")
                     loadFragment(DoctorDashboardFragment())
                     true
                 }
                 R.id.nav_doctor_queue -> {
                     showBottomNavigation()
-                    setToolbarTitle("Antrian Pasien")
                     loadFragment(DoctorQueueFragment())
                     true
                 }
                 R.id.nav_patient_history -> {
                     showBottomNavigation()
-                    setToolbarTitle("Riwayat Pasien")
                     loadFragment(DoctorPatientHistoryFragment())
                     true
                 }
                 else -> false
             }
-        }
-    }
-
-    // 🧍 Tombol profil di pojok atas
-    private fun setupProfileIcon() {
-        btnProfileIcon?.setOnClickListener {  // ✅ Safe call
-            showBottomNavigation()
-            setToolbarTitle("Profil Pengguna")
-            loadFragment(ProfileFragment())
-
-            // Hilangkan highlight menu di bottom navigation
-            bottomNavigation.menu.setGroupCheckable(0, true, false)
-            for (i in 0 until bottomNavigation.menu.size()) {
-                bottomNavigation.menu.getItem(i).isChecked = false
-            }
-            bottomNavigation.menu.setGroupCheckable(0, true, true)
         }
     }
 
@@ -233,20 +230,19 @@ class MainActivity : AppCompatActivity() {
     // 🔹 Sembunyikan bottom navigation
     fun hideBottomNavigation() {
         bottomNavigation.visibility = View.GONE
-        btnProfileIcon?.visibility = View.GONE  // ✅ Safe call
+        // ❌ REMOVED: btnProfileIcon visibility (sudah tidak ada)
     }
 
     // 🔹 Tampilkan bottom navigation
     fun showBottomNavigation() {
         bottomNavigation.visibility = View.VISIBLE
-        btnProfileIcon?.visibility = View.VISIBLE  // ✅ Safe call
+        // ❌ REMOVED: btnProfileIcon visibility (sudah tidak ada)
     }
 
     // 🚪 Logout user
     fun logout() {
         preferencesHelper.clearSession()
         hideBottomNavigation()
-        setToolbarTitle("Login Akun")
         loadFragment(LoginFragment())
     }
 
@@ -254,31 +250,49 @@ class MainActivity : AppCompatActivity() {
     fun showPatientDashboard() {
         setupPatientNavigation()
         showBottomNavigation()
-        setToolbarTitle("Antrian Rumah Sakit")
         loadFragment(DashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard
+
+        // ✅ Preload data from Firebase
+        preloadDataFromFirebase()
     }
 
     // 🩺 Dokter → dashboard dokter + setup nav dokter
     fun showDoctorDashboard() {
         setupDoctorNavigation()
         showBottomNavigation()
-        setToolbarTitle("Dashboard Dokter")
         loadFragment(DoctorDashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard_doctor
+
+        // ✅ Preload data from Firebase
+        preloadDataFromFirebase()
     }
 
     // 🧾 Admin → dashboard admin + setup nav admin
     fun showAdminDashboard() {
         setupAdminNavigation()
         showBottomNavigation()
-        setToolbarTitle("Dashboard Admin")
         loadFragment(AdminDashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard_admin
+
+        // ✅ Preload data from Firebase
+        preloadDataFromFirebase()
     }
 
-    // 🆕 Ubah judul toolbar utama
-    private fun setToolbarTitle(title: String) {
-        tvToolbarTitle?.text = title
+    // 📥 Preload data from Firebase after login
+    private fun preloadDataFromFirebase() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                Log.d("MainActivity", "📥 Preloading data from Firebase...")
+                DataSource.forceLoadFromFirebase()
+                withContext(Dispatchers.Main) {
+                    Log.d("MainActivity", "✅ Data preloaded successfully!")
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "❌ Preload failed: ${e.message}", e)
+            }
+        }
     }
+
+    // ❌ REMOVED: setToolbarTitle() - tidak ada lagi toolbar
 }

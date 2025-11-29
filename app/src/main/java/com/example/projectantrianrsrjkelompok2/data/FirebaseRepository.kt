@@ -1,93 +1,79 @@
 package com.example.projectantrianrsrjkelompok2.data
 
-import android.util.Log
 import com.example.projectantrianrsrjkelompok2.*
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
+import com.google.firebase.database.*
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * Repository untuk handle semua operasi Firebase Firestore
- * Menggantikan DataSource yang static dengan database real
+ * ✅ Firebase Repository - Handle all Firebase operations
  */
 class FirebaseRepository {
 
-    private val db = FirebaseFirestore.getInstance()
-
-    // Collection names
-    companion object {
-        private const val COLLECTION_DOCTORS = "doctors"
-        private const val COLLECTION_PATIENTS = "patients"
-        private const val COLLECTION_BOOKINGS = "bookings"
-        private const val COLLECTION_SPECIALIZATIONS = "specializations"
-        private const val TAG = "FirebaseRepo"
-    }
+    private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
+    private val doctorsRef: DatabaseReference = database.getReference("doctors")
+    private val patientsRef: DatabaseReference = database.getReference("patients")
+    private val bookingsRef: DatabaseReference = database.getReference("bookings")
+    private val specializationsRef: DatabaseReference = database.getReference("specializations")
 
     // ===============================
     // 👨‍⚕️ DOCTORS
     // ===============================
 
-    /**
-     * Get all doctors
-     */
     suspend fun getAllDoctors(): List<Doctor> {
         return try {
-            val snapshot = db.collection(COLLECTION_DOCTORS)
-                .get()
-                .await()
-
-            snapshot.documents.mapNotNull { doc ->
-                Doctor(
-                    id = doc.getLong("id")?.toInt() ?: 0,
-                    name = doc.getString("name") ?: "",
-                    specialization = doc.getString("specialization") ?: "",
-                    schedule = doc.getString("schedule") ?: ""
-                )
-            }
+            val snapshot = doctorsRef.get().await()
+            snapshot.children.mapNotNull { it.getValue(Doctor::class.java) }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting doctors: ${e.message}")
+            println("❌ Error getting doctors: ${e.message}")
             emptyList()
         }
     }
 
-    /**
-     * Get doctors by specialization
-     */
-    suspend fun getDoctorsBySpecialization(specializationName: String): List<Doctor> {
+    suspend fun getDoctorsBySpecialization(specialization: String): List<Doctor> {
         return try {
-            val snapshot = db.collection(COLLECTION_DOCTORS)
-                .whereEqualTo("specialization", specializationName)
+            val snapshot = doctorsRef
+                .orderByChild("specialization")
+                .equalTo(specialization)
                 .get()
                 .await()
-
-            snapshot.documents.mapNotNull { doc ->
-                Doctor(
-                    id = doc.getLong("id")?.toInt() ?: 0,
-                    name = doc.getString("name") ?: "",
-                    specialization = doc.getString("specialization") ?: "",
-                    schedule = doc.getString("schedule") ?: ""
-                )
-            }
+            snapshot.children.mapNotNull { it.getValue(Doctor::class.java) }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting doctors by spec: ${e.message}")
+            println("❌ Error getting doctors by spec: ${e.message}")
             emptyList()
         }
     }
 
-    /**
-     * Add doctor
-     */
     suspend fun addDoctor(doctor: Doctor): Boolean {
         return try {
-            db.collection(COLLECTION_DOCTORS)
-                .document(doctor.id.toString())
-                .set(doctor)
-                .await()
+            val id = doctor.id.toString()
+            doctorsRef.child(id).setValue(doctor).await()
+            println("✅ Doctor added: ${doctor.name}")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error adding doctor: ${e.message}")
+            println("❌ Error adding doctor: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun updateDoctor(doctor: Doctor): Boolean {
+        return try {
+            val id = doctor.id.toString()
+            doctorsRef.child(id).setValue(doctor).await()
+            true
+        } catch (e: Exception) {
+            println("❌ Error updating doctor: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun deleteDoctor(doctorId: Int): Boolean {
+        return try {
+            doctorsRef.child(doctorId.toString()).removeValue().await()
+            true
+        } catch (e: Exception) {
+            println("❌ Error deleting doctor: ${e.message}")
             false
         }
     }
@@ -96,42 +82,78 @@ class FirebaseRepository {
     // 🧍‍♀️ PATIENTS
     // ===============================
 
-    /**
-     * Get all patients
-     */
     suspend fun getAllPatients(): List<Patient> {
         return try {
-            val snapshot = db.collection(COLLECTION_PATIENTS)
-                .get()
-                .await()
-
-            snapshot.documents.mapNotNull { doc ->
-                Patient(
-                    id = doc.getLong("id")?.toInt() ?: 0,
-                    name = doc.getString("name") ?: "",
-                    gender = doc.getString("gender") ?: "",
-                    age = doc.getLong("age")?.toInt() ?: 0,
-                    address = doc.getString("address") ?: ""
-                )
-            }
+            val snapshot = patientsRef.get().await()
+            snapshot.children.mapNotNull { it.getValue(Patient::class.java) }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting patients: ${e.message}")
+            println("❌ Error getting patients: ${e.message}")
             emptyList()
         }
     }
 
-    /**
-     * Add patient
-     */
     suspend fun addPatient(patient: Patient): Boolean {
         return try {
-            db.collection(COLLECTION_PATIENTS)
-                .document(patient.id.toString())
-                .set(patient)
-                .await()
+            val id = patient.id.toString()
+            patientsRef.child(id).setValue(patient).await()
+            println("✅ Patient added: ${patient.name}")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error adding patient: ${e.message}")
+            println("❌ Error adding patient: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun updatePatient(patient: Patient): Boolean {
+        return try {
+            val id = patient.id.toString()
+            patientsRef.child(id).setValue(patient).await()
+            true
+        } catch (e: Exception) {
+            println("❌ Error updating patient: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun deletePatient(patientId: Int): Boolean {
+        return try {
+            patientsRef.child(patientId.toString()).removeValue().await()
+            true
+        } catch (e: Exception) {
+            println("❌ Error deleting patient: ${e.message}")
+            false
+        }
+    }
+
+    // ===============================
+    // 🏥 SPECIALIZATIONS
+    // ===============================
+
+    suspend fun getSpecializations(): List<Specialization> {
+        return try {
+            val snapshot = specializationsRef.get().await()
+            snapshot.children.mapNotNull { it.getValue(Specialization::class.java) }
+        } catch (e: Exception) {
+            println("❌ Error getting specializations: ${e.message}")
+            // Return default specializations if Firebase fails
+            listOf(
+                Specialization(1, "Layanan Umum", "Pelayanan kesehatan umum", "🏥"),
+                Specialization(2, "Layanan Gigi", "Perawatan gigi dan mulut", "🦷"),
+                Specialization(3, "Layanan Mata", "Kesehatan mata dan penglihatan", "👁️"),
+                Specialization(4, "Layanan Anak", "Kesehatan bayi dan anak-anak", "👶"),
+                Specialization(5, "Layanan Jantung", "Kesehatan jantung dan pembuluh darah", "❤️"),
+                Specialization(6, "Layanan Kandungan", "Kesehatan ibu dan anak", "🤰")
+            )
+        }
+    }
+
+    suspend fun addSpecialization(specialization: Specialization): Boolean {
+        return try {
+            val id = specialization.id.toString()
+            specializationsRef.child(id).setValue(specialization).await()
+            true
+        } catch (e: Exception) {
+            println("❌ Error adding specialization: ${e.message}")
             false
         }
     }
@@ -140,239 +162,117 @@ class FirebaseRepository {
     // 📋 BOOKINGS
     // ===============================
 
-    /**
-     * Create new booking
-     */
-    suspend fun createBooking(booking: Booking): Boolean {
-        return try {
-            val bookingData = hashMapOf(
-                "id" to booking.id,
-                "queueNumber" to booking.queueNumber,
-                "patientName" to booking.patientName,
-                "doctorName" to booking.doctorName,
-                "specialization" to booking.specialization,
-                "date" to booking.date,
-                "time" to booking.time,
-                "complaint" to booking.complaint,
-                "diagnosis" to booking.diagnosis,
-                "prescription" to booking.prescription,
-                "status" to booking.status.name,
-                "createdAt" to booking.createdAt,
-                "calledAt" to 0L,
-                "completedAt" to 0L
-            )
-
-            db.collection(COLLECTION_BOOKINGS)
-                .document(booking.id)
-                .set(bookingData)
-                .await()
-
-            Log.d(TAG, "✅ Booking created: ${booking.id}")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error creating booking: ${e.message}")
-            false
-        }
-    }
-
-    /**
-     * Get booking history (all bookings)
-     */
     suspend fun getBookingHistory(): List<Booking> {
         return try {
-            val snapshot = db.collection(COLLECTION_BOOKINGS)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
+            val snapshot = bookingsRef
+                .orderByChild("createdAt")
                 .get()
                 .await()
-
-            snapshot.documents.mapNotNull { doc ->
-                Booking(
-                    id = doc.getString("id") ?: "",
-                    queueNumber = doc.getLong("queueNumber")?.toInt() ?: 0,
-                    patientName = doc.getString("patientName") ?: "",
-                    doctorName = doc.getString("doctorName") ?: "",
-                    specialization = doc.getString("specialization") ?: "",
-                    date = doc.getString("date") ?: "",
-                    time = doc.getString("time") ?: "",
-                    complaint = doc.getString("complaint") ?: "",
-                    diagnosis = doc.getString("diagnosis") ?: "",
-                    prescription = doc.getString("prescription") ?: "",
-                    status = BookingStatus.valueOf(doc.getString("status") ?: "WAITING"),
-                    createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
-                )
-            }
+            snapshot.children.mapNotNull { it.getValue(Booking::class.java) }
+                .sortedByDescending { it.createdAt }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting bookings: ${e.message}")
+            println("❌ Error getting booking history: ${e.message}")
             emptyList()
         }
     }
 
-    /**
-     * Get bookings by date
-     */
-    suspend fun getBookingsByDate(date: String): List<Booking> {
+    suspend fun createBooking(booking: Booking): Boolean {
         return try {
-            val snapshot = db.collection(COLLECTION_BOOKINGS)
-                .whereEqualTo("date", date)
-                .orderBy("queueNumber", Query.Direction.ASCENDING)
-                .get()
-                .await()
-
-            snapshot.documents.mapNotNull { doc ->
-                Booking(
-                    id = doc.getString("id") ?: "",
-                    queueNumber = doc.getLong("queueNumber")?.toInt() ?: 0,
-                    patientName = doc.getString("patientName") ?: "",
-                    doctorName = doc.getString("doctorName") ?: "",
-                    specialization = doc.getString("specialization") ?: "",
-                    date = doc.getString("date") ?: "",
-                    time = doc.getString("time") ?: "",
-                    complaint = doc.getString("complaint") ?: "",
-                    diagnosis = doc.getString("diagnosis") ?: "",
-                    prescription = doc.getString("prescription") ?: "",
-                    status = BookingStatus.valueOf(doc.getString("status") ?: "WAITING"),
-                    createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
-                )
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting bookings by date: ${e.message}")
-            emptyList()
-        }
-    }
-
-    /**
-     * Update booking status
-     */
-    suspend fun updateBookingStatus(bookingId: String, newStatus: BookingStatus): Boolean {
-        return try {
-            val updates = hashMapOf<String, Any>(
-                "status" to newStatus.name
-            )
-
-            // Add timestamp
-            when (newStatus) {
-                BookingStatus.CALLED -> updates["calledAt"] = System.currentTimeMillis()
-                BookingStatus.COMPLETED -> updates["completedAt"] = System.currentTimeMillis()
-                else -> {}
-            }
-
-            db.collection(COLLECTION_BOOKINGS)
-                .document(bookingId)
-                .update(updates)
-                .await()
-
-            Log.d(TAG, "✅ Booking status updated: $bookingId -> $newStatus")
+            bookingsRef.child(booking.id).setValue(booking).await()
+            println("✅ Booking created: ${booking.id}")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error updating booking status: ${e.message}")
+            println("❌ Error creating booking: ${e.message}")
             false
         }
     }
 
-    /**
-     * Update booking diagnosis & prescription (saat selesai pemeriksaan)
-     */
+    suspend fun updateBookingStatus(bookingId: String, status: BookingStatus): Boolean {
+        return try {
+            bookingsRef.child(bookingId).child("status").setValue(status.name).await()
+            true
+        } catch (e: Exception) {
+            println("❌ Error updating booking status: ${e.message}")
+            false
+        }
+    }
+
     suspend fun updateBookingDiagnosis(
         bookingId: String,
         diagnosis: String,
         prescription: String
     ): Boolean {
         return try {
-            val updates = hashMapOf<String, Any>(
+            val updates = mapOf(
                 "diagnosis" to diagnosis,
                 "prescription" to prescription,
-                "status" to BookingStatus.COMPLETED.name,
-                "completedAt" to System.currentTimeMillis()
+                "status" to BookingStatus.COMPLETED.name
             )
-
-            db.collection(COLLECTION_BOOKINGS)
-                .document(bookingId)
-                .update(updates)
-                .await()
-
-            Log.d(TAG, "✅ Booking diagnosis updated: $bookingId")
+            bookingsRef.child(bookingId).updateChildren(updates).await()
             true
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error updating diagnosis: ${e.message}")
+            println("❌ Error updating diagnosis: ${e.message}")
             false
         }
     }
 
-    /**
-     * Get today's bookings
-     */
     suspend fun getTodayBookings(): List<Booking> {
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        return getBookingsByDate(today)
-    }
-
-    /**
-     * Get active queues (WAITING or CALLED)
-     */
-    suspend fun getActiveQueues(): List<Booking> {
+        val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
         return try {
-            val snapshot = db.collection(COLLECTION_BOOKINGS)
-                .whereIn("status", listOf(BookingStatus.WAITING.name, BookingStatus.CALLED.name))
-                .orderBy("queueNumber", Query.Direction.ASCENDING)
+            val snapshot = bookingsRef
+                .orderByChild("date")
+                .equalTo(today)
                 .get()
                 .await()
-
-            snapshot.documents.mapNotNull { doc ->
-                Booking(
-                    id = doc.getString("id") ?: "",
-                    queueNumber = doc.getLong("queueNumber")?.toInt() ?: 0,
-                    patientName = doc.getString("patientName") ?: "",
-                    doctorName = doc.getString("doctorName") ?: "",
-                    specialization = doc.getString("specialization") ?: "",
-                    date = doc.getString("date") ?: "",
-                    time = doc.getString("time") ?: "",
-                    complaint = doc.getString("complaint") ?: "",
-                    diagnosis = doc.getString("diagnosis") ?: "",
-                    prescription = doc.getString("prescription") ?: "",
-                    status = BookingStatus.valueOf(doc.getString("status") ?: "WAITING"),
-                    createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
-                )
-            }
+            snapshot.children.mapNotNull { it.getValue(Booking::class.java) }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting active queues: ${e.message}")
+            println("❌ Error getting today bookings: ${e.message}")
             emptyList()
         }
     }
 
-    /**
-     * Get next queue number for today
-     */
+    suspend fun getActiveQueues(): List<Booking> {
+        return try {
+            val allBookings = getBookingHistory()
+            allBookings.filter {
+                it.status == BookingStatus.WAITING || it.status == BookingStatus.CALLED
+            }
+        } catch (e: Exception) {
+            println("❌ Error getting active queues: ${e.message}")
+            emptyList()
+        }
+    }
+
     suspend fun getNextQueueNumber(): Int {
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val todayBookings = getBookingsByDate(today)
-        val maxQueue = todayBookings.maxOfOrNull { it.queueNumber } ?: 0
-        return maxQueue + 1
+        return try {
+            val snapshot = bookingsRef
+                .orderByChild("queueNumber")
+                .limitToLast(1)
+                .get()
+                .await()
+            val maxQueue = snapshot.children.mapNotNull {
+                it.getValue(Booking::class.java)?.queueNumber
+            }.maxOrNull() ?: 0
+            maxQueue + 1
+        } catch (e: Exception) {
+            println("❌ Error getting next queue number: ${e.message}")
+            1
+        }
     }
 
     // ===============================
-    // 🏥 SPECIALIZATIONS
+    // 🗑️ UTILITY - Clear all data
     // ===============================
 
-    /**
-     * Get all specializations
-     */
-    suspend fun getSpecializations(): List<Specialization> {
-        return try {
-            val snapshot = db.collection(COLLECTION_SPECIALIZATIONS)
-                .get()
-                .await()
-
-            snapshot.documents.mapNotNull { doc ->
-                Specialization(
-                    id = doc.getLong("id")?.toInt() ?: 0,
-                    name = doc.getString("name") ?: "",
-                    description = doc.getString("description") ?: "",
-                    emoji = doc.getString("emoji") ?: ""
-                )
-            }
+    suspend fun clearAllData() {
+        try {
+            doctorsRef.removeValue().await()
+            patientsRef.removeValue().await()
+            bookingsRef.removeValue().await()
+            specializationsRef.removeValue().await()
+            println("✅ All Firebase data cleared")
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting specializations: ${e.message}")
-            emptyList()
+            println("❌ Error clearing data: ${e.message}")
         }
     }
 }

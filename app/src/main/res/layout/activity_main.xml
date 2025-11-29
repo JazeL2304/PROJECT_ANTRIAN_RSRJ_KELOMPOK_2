@@ -6,42 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- 🔹 Header/Toolbar dengan Profile Icon -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="#2196F3"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:elevation="4dp">
-
-        <!-- 🏥 Title yang bisa diubah dari MainActivity -->
-        <TextView
-            android:id="@+id/toolbarTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="🏥 Antrian Rumah Sakit"
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:ellipsize="end"
-            android:singleLine="true" />
-
-        <!-- 👤 Profile Icon Button -->
-        <ImageView
-            android:id="@+id/btnProfileIcon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@android:drawable/ic_menu_myplaces"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="8dp"
-            android:tint="@android:color/white"
-            android:contentDescription="Profile" />
-
-    </LinearLayout>
+    <!-- ❌ REMOVED: Header/Toolbar biru dengan Profile Icon sudah dihapus -->
 
     <!-- 🔹 Fragment Container -->
     <FrameLayout

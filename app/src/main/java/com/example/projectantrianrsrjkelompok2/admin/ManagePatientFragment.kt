@@ -21,6 +21,7 @@ class ManagePatientFragment : Fragment() {
     private lateinit var listViewPatients: ListView
 
     private var patientList = mutableListOf<Patient>()
+    private lateinit var adapter: PatientAdapter // ✅ Simpan reference adapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,7 +45,8 @@ class ManagePatientFragment : Fragment() {
     }
 
     private fun loadPatients() {
-        patientList = DataSource.getAllPatients().toMutableList()
+        patientList.clear()
+        patientList.addAll(DataSource.getAllPatients())
 
         if (patientList.isEmpty()) {
             val emptyAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, listOf("Belum ada pasien terdaftar."))
@@ -52,33 +54,8 @@ class ManagePatientFragment : Fragment() {
             return
         }
 
-        val adapter = object : ArrayAdapter<Patient>(requireContext(), R.layout.item_patient, patientList) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.item_patient, parent, false)
-                val patient = getItem(position)!!
-
-                val tvInfo = view.findViewById<TextView>(R.id.tvPatientInfo)
-                val btnDelete = view.findViewById<ImageButton>(R.id.btnDeletePatient)
-
-                tvInfo.text = "${patient.name} (${patient.gender}, ${patient.age} th)\nAlamat: ${patient.address}"
-
-                btnDelete.setOnClickListener {
-                    AlertDialog.Builder(requireContext())
-                        .setTitle("Hapus Pasien")
-                        .setMessage("Apakah Anda yakin ingin menghapus ${patient.name}?")
-                        .setPositiveButton("Hapus") { _, _ ->
-                            DataSource.removePatient(patient)
-                            Toast.makeText(requireContext(), "🗑️ ${patient.name} dihapus", Toast.LENGTH_SHORT).show()
-                            loadPatients()
-                        }
-                        .setNegativeButton("Batal", null)
-                        .show()
-                }
-
-                return view
-            }
-        }
-
+        // ✅ Create custom adapter dan simpan reference-nya
+        adapter = PatientAdapter(requireContext(), patientList)
         listViewPatients.adapter = adapter
     }
 
@@ -122,5 +99,45 @@ class ManagePatientFragment : Fragment() {
         etGender.text.clear()
         etAge.text.clear()
         etAddress.text.clear()
+    }
+
+    // ✅ CUSTOM ADAPTER dengan proper delete handling
+    inner class PatientAdapter(
+        private val context: android.content.Context,
+        private val patients: MutableList<Patient>
+    ) : ArrayAdapter<Patient>(context, 0, patients) {
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val view = convertView ?: LayoutInflater.from(context)
+                .inflate(R.layout.item_patient, parent, false)
+
+            val patient = patients[position]
+            val tvInfo = view.findViewById<TextView>(R.id.tvPatientInfo)
+            val btnDelete = view.findViewById<ImageButton>(R.id.btnDeletePatient)
+
+            tvInfo.text = "${patient.name} (${patient.gender}, ${patient.age} th)\nAlamat: ${patient.address}"
+
+            btnDelete.setOnClickListener {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Hapus Pasien")
+                    .setMessage("Apakah Anda yakin ingin menghapus ${patient.name}?")
+                    .setPositiveButton("Hapus") { _, _ ->
+                        // ✅ FIXED: Hapus dari DataSource
+                        DataSource.removePatient(patient)
+
+                        // ✅ FIXED: Hapus dari list lokal
+                        patients.removeAt(position)
+
+                        // ✅ FIXED: Notify adapter untuk update UI
+                        notifyDataSetChanged()
+
+                        Toast.makeText(requireContext(), "🗑️ ${patient.name} dihapus", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Batal", null)
+                    .show()
+            }
+
+            return view
+        }
     }
 }
