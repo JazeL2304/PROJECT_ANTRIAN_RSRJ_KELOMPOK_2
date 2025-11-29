@@ -5,11 +5,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.example.projectantrianrsrjkelompok2.BookingStatus
 import com.example.projectantrianrsrjkelompok2.DataSource
 import com.example.projectantrianrsrjkelompok2.MainActivity
+import com.example.projectantrianrsrjkelompok2.ProfileFragment
 import com.example.projectantrianrsrjkelompok2.R
 import com.example.projectantrianrsrjkelompok2.toDisplayString
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
@@ -21,6 +23,7 @@ class DoctorDashboardFragment : Fragment() {
 
     private lateinit var tvGreeting: TextView
     private lateinit var preferencesHelper: PreferencesHelper
+    private lateinit var ivProfileIcon: ImageView  // ✅ TAMBAHAN: Icon profile
 
     private lateinit var tvTotalPatientsToday: TextView
     private lateinit var tvActiveQueue: TextView
@@ -41,40 +44,41 @@ class DoctorDashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         preferencesHelper = PreferencesHelper(requireContext())
+
         tvGreeting = view.findViewById(R.id.tv_greeting)
         tvGreeting.text = "Selamat Datang, $DOCTOR_NAME! 👋"
+
+        ivProfileIcon = view.findViewById(R.id.ivProfileIcon)  // ✅ TAMBAHAN
 
         tvTotalPatientsToday = view.findViewById(R.id.tv_total_patients_today)
         tvActiveQueue = view.findViewById(R.id.tv_active_queue)
         tvCompletedToday = view.findViewById(R.id.tv_completed_today)
         tvRecentPatients = view.findViewById(R.id.tv_recent_patients)
 
+        // ✅ TAMBAHAN: Profile icon click listener
+        ivProfileIcon.setOnClickListener {
+            (activity as MainActivity).navigateToFragment(ProfileFragment())
+        }
+
         val btnViewQueue = view.findViewById<Button>(R.id.btnViewQueue)
         val btnPatientHistory = view.findViewById<Button>(R.id.btnPatientHistory)
         val btnUpdateStatus = view.findViewById<Button>(R.id.btnUpdateStatus)
 
-        // ✅ FIXED: Update BottomNavigation dengan ID yang BENAR
         btnViewQueue.setOnClickListener {
-            // Navigate ke DoctorQueueFragment
             (activity as MainActivity).navigateToFragment(DoctorQueueFragment())
-
-            // ✅ Update BottomNav ke tab "Antrian"
             try {
                 val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
-                bottomNav?.selectedItemId = R.id.nav_doctor_queue  // ✅ ID YANG BENAR!
+                bottomNav?.selectedItemId = R.id.nav_doctor_queue
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
 
         btnPatientHistory.setOnClickListener {
-            // Navigate ke DoctorPatientHistoryFragment
             (activity as MainActivity).navigateToFragment(DoctorPatientHistoryFragment())
-
-            // ✅ Update BottomNav ke tab "Riwayat"
             try {
                 val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
-                bottomNav?.selectedItemId = R.id.nav_patient_history  // ✅ ID YANG BENAR!
+                bottomNav?.selectedItemId = R.id.nav_patient_history
             } catch (e: Exception) {
                 e.printStackTrace()
             }

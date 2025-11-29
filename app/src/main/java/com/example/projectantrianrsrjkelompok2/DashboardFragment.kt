@@ -4,11 +4,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
+import android.widget.ImageView
+import android.widget.LinearLayout  // ✅ TAMBAHKAN INI
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.cardview.widget.CardView
-import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper  // ← TAMBAHAN
+import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -18,9 +19,11 @@ class DashboardFragment : Fragment() {
     private lateinit var tvCurrentDate: TextView
     private lateinit var tvActiveQueue: TextView
 
-    // ✅ UBAH: Ganti Button jadi LinearLayout atau View
-    private lateinit var btnQuickBooking: View  // atau LinearLayout
-    private lateinit var btnEmergency: View     // atau LinearLayout
+    // ✅ UBAH: Dari CardView ke LinearLayout
+    private lateinit var layoutQuickBooking: LinearLayout
+    private lateinit var layoutEmergency: LinearLayout
+
+    private lateinit var ivProfileIcon: ImageView
 
     // Cards untuk poli klinik
     private lateinit var cardPoliUmum: CardView
@@ -55,9 +58,11 @@ class DashboardFragment : Fragment() {
         tvCurrentDate = view.findViewById(R.id.tv_current_date)
         tvActiveQueue = view.findViewById(R.id.tv_active_queue)
 
-        // ✅ FIXED: Ganti Button jadi View/LinearLayout
-        btnQuickBooking = view.findViewById(R.id.btn_quick_booking)
-        btnEmergency = view.findViewById(R.id.btn_emergency)
+        // ✅ UBAH: Casting ke LinearLayout
+        layoutQuickBooking = view.findViewById(R.id.btn_quick_booking)
+        layoutEmergency = view.findViewById(R.id.btn_emergency)
+
+        ivProfileIcon = view.findViewById(R.id.ivProfileIcon)
 
         // Inisialisasi card poli
         cardPoliUmum = view.findViewById(R.id.card_poli_umum)
@@ -78,17 +83,22 @@ class DashboardFragment : Fragment() {
             .format(Date())
         tvCurrentDate.text = currentDate
 
-        // Tampilkan info antrian aktif (opsional)
+        // Tampilkan info antrian aktif (simulasi)
         showActiveQueueInfo()
     }
 
     private fun setupClickListeners() {
-        // ✅ FIXED: setOnClickListener tetap bisa digunakan untuk View/LinearLayout
-        btnQuickBooking.setOnClickListener {
-            navigateToBooking(0) // 0 = tanpa spesialisasi terpilih
+        // Profile icon click listener
+        ivProfileIcon.setOnClickListener {
+            (activity as MainActivity).navigateToFragment(ProfileFragment())
         }
 
-        btnEmergency.setOnClickListener {
+        // ✅ UBAH: Gunakan layoutQuickBooking dan layoutEmergency
+        layoutQuickBooking.setOnClickListener {
+            navigateToBooking(0)
+        }
+
+        layoutEmergency.setOnClickListener {
             showEmergencyInfo()
         }
 
@@ -102,43 +112,32 @@ class DashboardFragment : Fragment() {
     }
 
     private fun showActiveQueueInfo() {
-        // Cek apakah ada booking aktif
-        val activeBooking = DataSource.getActiveBooking()
+        // Simulasi antrian aktif
+        val hasActiveQueue = true
 
-        if (activeBooking != null) {
-            tvActiveQueue.text = "Antrian Aktif: ${activeBooking.specialization} - No. ${activeBooking.queueNumber}\n" +
-                    "Status: ${activeBooking.status.toDisplayString()} (estimasi 30 menit)"
-
-            // ✅ Tampilkan card active queue jika ada
-            val cardActiveQueue = view?.findViewById<CardView>(R.id.card_active_queue)
-            cardActiveQueue?.visibility = View.VISIBLE
+        if (hasActiveQueue) {
+            tvActiveQueue.text = "Antrian Aktif: Layanan Klinik Umum - No. 15\nStatus: Menunggu (estimasi 30 menit)"
+            tvActiveQueue.visibility = View.VISIBLE
         } else {
-            // Sembunyikan card jika tidak ada antrian aktif
-            val cardActiveQueue = view?.findViewById<CardView>(R.id.card_active_queue)
-            cardActiveQueue?.visibility = View.GONE
+            tvActiveQueue.visibility = View.GONE
         }
     }
 
     private fun showEmergencyInfo() {
-        // Show emergency dialog atau info
-        android.app.AlertDialog.Builder(requireContext())
-            .setTitle("🚨 Layanan Darurat")
-            .setMessage("Untuk kondisi darurat, segera hubungi:\n\n📞 (021) 1234-5678\n\natau datang langsung ke UGD")
-            .setPositiveButton("OK", null)
-            .show()
+        tvActiveQueue.text = "🚨 Untuk kondisi darurat, segera hubungi: \n(021) 1234-5678 atau datang langsung ke UGD"
+        tvActiveQueue.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+        tvActiveQueue.visibility = View.VISIBLE
     }
 
     private fun navigateToBooking(specializationId: Int) {
         val bookingFragment = BookingFragment()
 
-        // Jika ada spesialisasi yang dipilih, kirim via Bundle
         if (specializationId > 0) {
             val bundle = Bundle()
             bundle.putInt("selected_specialization_id", specializationId)
             bookingFragment.arguments = bundle
         }
 
-        // Navigate menggunakan MainActivity
         (activity as MainActivity).navigateToFragment(bookingFragment)
     }
 }

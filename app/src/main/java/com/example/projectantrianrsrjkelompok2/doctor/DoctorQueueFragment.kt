@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ListView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.example.projectantrianrsrjkelompok2.Booking
@@ -20,7 +19,7 @@ import java.util.*
 class DoctorQueueFragment : Fragment() {
 
     private lateinit var listViewQueue: ListView
-    private lateinit var emptyText: TextView
+    private lateinit var emptyStateLayout: ViewGroup  // ✅ FIXED: TextView → ViewGroup
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -31,8 +30,10 @@ class DoctorQueueFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // ✅ FIXED: Ambil view dengan tipe yang benar
         listViewQueue = view.findViewById(R.id.listDoctorQueue)
-        emptyText = view.findViewById(R.id.tvEmptyQueue)
+        emptyStateLayout = view.findViewById(R.id.tvEmptyQueue)  // ✅ Ini LinearLayout di layout XML
 
         loadTodayQueue()
     }
@@ -52,15 +53,16 @@ class DoctorQueueFragment : Fragment() {
                     BookingStatus.COMPLETED -> 2
                     BookingStatus.CANCELLED -> 3
                     BookingStatus.MISSED -> 3
-                    else -> 4  // ← TAMBAHAN untuk case lainnya
                 }
             }.thenBy { it.queueNumber })
 
         if (bookingsToday.isEmpty()) {
-            emptyText.visibility = View.VISIBLE
+            // ✅ FIXED: Show empty state layout (LinearLayout)
+            emptyStateLayout.visibility = View.VISIBLE
             listViewQueue.visibility = View.GONE
         } else {
-            emptyText.visibility = View.GONE
+            // ✅ FIXED: Show list
+            emptyStateLayout.visibility = View.GONE
             listViewQueue.visibility = View.VISIBLE
 
             // ✅ Tampilkan daftar booking
@@ -71,7 +73,6 @@ class DoctorQueueFragment : Fragment() {
                     BookingStatus.COMPLETED -> "✅"
                     BookingStatus.CANCELLED -> "❌"
                     BookingStatus.MISSED -> "⚠️"
-                    else -> "❓"
                 }
 
                 """
@@ -86,12 +87,35 @@ class DoctorQueueFragment : Fragment() {
             val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, displayList)
             listViewQueue.adapter = adapter
 
+            // ✅ OPTIONAL: Fix ListView height jika ada di dalam ScrollView
+            setListViewHeightBasedOnChildren(listViewQueue)
+
             // ✅ Klik item untuk ubah status dengan VALIDASI
             listViewQueue.setOnItemClickListener { _, _, position, _ ->
                 val selected = bookingsToday[position]
                 handleStatusChange(selected)
             }
         }
+    }
+
+    // ✅ HELPER FUNCTION: Fix ListView height di dalam ScrollView
+    private fun setListViewHeightBasedOnChildren(listView: ListView) {
+        val listAdapter = listView.adapter ?: return
+
+        var totalHeight = 0
+        for (i in 0 until listAdapter.count) {
+            val listItem = listAdapter.getView(i, null, listView)
+            listItem.measure(
+                View.MeasureSpec.makeMeasureSpec(listView.width, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            totalHeight += listItem.measuredHeight
+        }
+
+        val params = listView.layoutParams
+        params.height = totalHeight + (listView.dividerHeight * (listAdapter.count - 1))
+        listView.layoutParams = params
+        listView.requestLayout()
     }
 
     private fun handleStatusChange(booking: Booking) {

@@ -1,78 +1,44 @@
 package com.example.projectantrianrsrjkelompok2
 
-
 import android.os.Bundle
-import android.util.Log
 import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-
-// ========== FRAGMENT PASIEN ==========
-import com.example.projectantrianrsrjkelompok2.BookingFragment
-import com.example.projectantrianrsrjkelompok2.DashboardFragment
-import com.example.projectantrianrsrjkelompok2.EmptyQueueFragment
-import com.example.projectantrianrsrjkelompok2.HistoryFragment
-import com.example.projectantrianrsrjkelompok2.LoginFragment
-import com.example.projectantrianrsrjkelompok2.ProfileFragment
-import com.example.projectantrianrsrjkelompok2.QueueFragment
-import com.example.projectantrianrsrjkelompok2.fragment_news
-
-// ========== FRAGMENT ADMIN ==========
 import com.example.projectantrianrsrjkelompok2.admin.AdminDashboardFragment
 import com.example.projectantrianrsrjkelompok2.admin.AdminSettingsFragment
-import com.example.projectantrianrsrjkelompok2.admin.ManageDoctorFragment
-import com.example.projectantrianrsrjkelompok2.admin.ManagePatientFragment
-import com.example.projectantrianrsrjkelompok2.admin.ManageScheduleFragment
 import com.example.projectantrianrsrjkelompok2.admin.ViewReportFragment
-
-// ========== FRAGMENT DOKTER ==========
 import com.example.projectantrianrsrjkelompok2.doctor.DoctorDashboardFragment
 import com.example.projectantrianrsrjkelompok2.doctor.DoctorQueueFragment
 import com.example.projectantrianrsrjkelompok2.doctor.DoctorPatientHistoryFragment
-
-// ========== UTILS ==========
 import com.example.projectantrianrsrjkelompok2.utils.NotificationHelper
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
-
-// ========== MATERIAL COMPONENTS ==========
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var preferencesHelper: PreferencesHelper
-    private lateinit var btnProfileIcon: ImageView
-    private var tvToolbarTitle: TextView? = null
+    // ✅ DIHAPUS: tvToolbarTitle sudah tidak diperlukan
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // 🔧 Inisialisasi helper & komponen UI
         preferencesHelper = PreferencesHelper(this)
         NotificationHelper.createNotificationChannel(this)
 
         bottomNavigation = findViewById(R.id.bottom_navigation)
-        btnProfileIcon = findViewById(R.id.btnProfileIcon)
-        tvToolbarTitle = findViewById(R.id.toolbarTitle)
+        // ✅ DIHAPUS: tvToolbarTitle = findViewById(R.id.toolbarTitle)
 
-        setupProfileIcon()
-
-        // ✅ FIXED: Clear session SAJA (jangan clear data booking)
         preferencesHelper.clearSession()
-        // ❌ DIHAPUS: DataSource.clearActiveBooking()
 
-        // ✅ Langsung tampilkan halaman login
-        setToolbarTitle("Login Akun")
+        // ✅ DIHAPUS: setToolbarTitle("Login Akun")
         loadFragment(LoginFragment())
         hideBottomNavigation()
 
         handleNotificationIntent()
     }
 
-    // 🔔 Jika notifikasi membuka QueueFragment
     private fun handleNotificationIntent() {
         if (intent.getBooleanExtra("open_queue_fragment", false)) {
             if (DataSource.hasActiveBooking()) {
@@ -84,7 +50,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ⚙️ Setup Bottom Navigation untuk PASIEN
     private fun setupPatientNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu)
@@ -93,19 +58,19 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard -> {
                     showBottomNavigation()
-                    setToolbarTitle("Antrian Rumah Sakit")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(DashboardFragment())
                     true
                 }
                 R.id.nav_booking -> {
                     showBottomNavigation()
-                    setToolbarTitle("Booking Dokter")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(BookingFragment())
                     true
                 }
                 R.id.nav_queue -> {
                     showBottomNavigation()
-                    setToolbarTitle("Antrian Anda")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     if (DataSource.hasActiveBooking()) {
                         loadFragment(QueueFragment())
                     } else {
@@ -115,13 +80,13 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_history -> {
                     showBottomNavigation()
-                    setToolbarTitle("Riwayat Kunjungan")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(HistoryFragment())
                     true
                 }
                 R.id.nav_profile -> {
                     showBottomNavigation()
-                    setToolbarTitle("Berita Kesehatan")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(fragment_news())
                     true
                 }
@@ -130,7 +95,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ⚙️ ← BARU! Setup Bottom Navigation untuk ADMIN
     private fun setupAdminNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu_admin)
@@ -140,19 +104,19 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard_admin -> {
                     showBottomNavigation()
-                    setToolbarTitle("Dashboard Admin")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(AdminDashboardFragment())
                     true
                 }
                 R.id.nav_reports -> {
                     showBottomNavigation()
-                    setToolbarTitle("Laporan Rumah Sakit")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(ViewReportFragment())
                     true
                 }
                 R.id.nav_settings -> {
                     showBottomNavigation()
-                    setToolbarTitle("Pengaturan")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(AdminSettingsFragment())
                     true
                 }
@@ -161,7 +125,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ⚙️ ← BARU! Setup Bottom Navigation untuk DOKTER
     private fun setupDoctorNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu_doctor)
@@ -171,19 +134,19 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard_doctor -> {
                     showBottomNavigation()
-                    setToolbarTitle("Dashboard Dokter")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(DoctorDashboardFragment())
                     true
                 }
                 R.id.nav_doctor_queue -> {
                     showBottomNavigation()
-                    setToolbarTitle("Antrian Pasien")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(DoctorQueueFragment())
                     true
                 }
                 R.id.nav_patient_history -> {
                     showBottomNavigation()
-                    setToolbarTitle("Riwayat Pasien")
+                    // ✅ DIHAPUS: setToolbarTitle()
                     loadFragment(DoctorPatientHistoryFragment())
                     true
                 }
@@ -192,45 +155,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 🧍 Tombol profil di pojok atas
-    private fun setupProfileIcon() {
-        btnProfileIcon.setOnClickListener {
-            showBottomNavigation()
-            setToolbarTitle("Profil Pengguna")
-            loadFragment(ProfileFragment())
-
-            // Hilangkan highlight menu di bottom navigation
-            bottomNavigation.menu.setGroupCheckable(0, true, false)
-            for (i in 0 until bottomNavigation.menu.size()) {
-                bottomNavigation.menu.getItem(i).isChecked = false
-            }
-            bottomNavigation.menu.setGroupCheckable(0, true, true)
-        }
-    }
-
-    // ✅ Cek status login & arahkan sesuai role (TETAP ADA, dipanggil saat login berhasil)
-    private fun checkLoginStatus() {
-        val isLoggedIn = preferencesHelper.isLoggedIn()
-        val userRole = preferencesHelper.getUserRole()
-
-        Log.d("ROLE_DEBUG", "LoggedIn=$isLoggedIn, Role=$userRole")
-
-        if (!isLoggedIn) {
-            setToolbarTitle("Login Akun")
-            loadFragment(LoginFragment())
-            hideBottomNavigation()
-            return
-        }
-
-        when (userRole) {
-            "PATIENT" -> showPatientDashboard()
-            "DOCTOR" -> showDoctorDashboard()
-            "ADMIN" -> showAdminDashboard()
-            else -> showPatientDashboard()
-        }
-    }
-
-    // 📦 Ganti fragment dengan animasi lembut
     private fun loadFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(
@@ -241,69 +165,54 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    // Navigasi manual antar fragment
     fun navigateToFragment(fragment: Fragment) {
         loadFragment(fragment)
         showBottomNavigation()
     }
 
-    // Navigasi ke login/signup
     fun navigateToLoginOrSignup(fragment: Fragment) {
         loadFragment(fragment)
         hideBottomNavigation()
     }
 
-    // 🔹 Sembunyikan bottom navigation
     fun hideBottomNavigation() {
         bottomNavigation.visibility = View.GONE
-        btnProfileIcon.visibility = View.GONE
     }
 
-    // 🔹 Tampilkan bottom navigation
     fun showBottomNavigation() {
         bottomNavigation.visibility = View.VISIBLE
-        btnProfileIcon.visibility = View.VISIBLE
     }
 
-    // 🚪 Logout user
-    // ✅ FIXED: Jangan hapus bookingHistory saat logout!
     fun logout() {
         preferencesHelper.clearSession()
-        // ❌ DIHAPUS: DataSource.clearActiveBooking()
         hideBottomNavigation()
-        setToolbarTitle("Login Akun")
+        // ✅ DIHAPUS: setToolbarTitle()
         loadFragment(LoginFragment())
     }
 
-    // 👤 ← UPDATE! Pasien → dashboard pasien + setup nav pasien
     fun showPatientDashboard() {
-        setupPatientNavigation()  // ← Setup menu pasien
+        setupPatientNavigation()
         showBottomNavigation()
-        setToolbarTitle("Antrian Rumah Sakit")
+        // ✅ DIHAPUS: setToolbarTitle()
         loadFragment(DashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard
     }
 
-    // 🩺 ← UPDATE! Dokter → dashboard dokter + setup nav dokter
     fun showDoctorDashboard() {
-        setupDoctorNavigation()  // ← Setup menu dokter
+        setupDoctorNavigation()
         showBottomNavigation()
-        setToolbarTitle("Dashboard Dokter")
+        // ✅ DIHAPUS: setToolbarTitle()
         loadFragment(DoctorDashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard_doctor
     }
 
-    // 🧾 ← UPDATE! Admin → dashboard admin + setup nav admin
     fun showAdminDashboard() {
-        setupAdminNavigation()  // ← Setup menu admin (TANPA booking, queue, history)
+        setupAdminNavigation()
         showBottomNavigation()
-        setToolbarTitle("Dashboard Admin")
+        // ✅ DIHAPUS: setToolbarTitle()
         loadFragment(AdminDashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard_admin
     }
 
-    // 🆕 Ubah judul toolbar utama
-    private fun setToolbarTitle(title: String) {
-        tvToolbarTitle?.text = title
-    }
+    // ✅ DIHAPUS: Method setToolbarTitle() sudah tidak diperlukan
 }

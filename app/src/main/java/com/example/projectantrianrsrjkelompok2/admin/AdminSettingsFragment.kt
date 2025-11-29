@@ -5,16 +5,17 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.Toast
+import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import com.example.projectantrianrsrjkelompok2.R
 
 class AdminSettingsFragment : Fragment() {
 
-    private lateinit var btnBackupData: Button
-    private lateinit var btnClearCache: Button
-    private lateinit var btnAbout: Button
+    // ✅ FIXED: CardView bukan Button!
+    private lateinit var cardBackupData: CardView
+    private lateinit var cardClearCache: CardView
+    private lateinit var cardAbout: CardView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -27,24 +28,25 @@ class AdminSettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize buttons
-        btnBackupData = view.findViewById(R.id.btnBackupData)
-        btnClearCache = view.findViewById(R.id.btnClearCache)
-        btnAbout = view.findViewById(R.id.btnAbout)
+        // ✅ FIXED: Initialize CardView dengan tipe yang benar
+        cardBackupData = view.findViewById(R.id.btnBackupData)
+        cardClearCache = view.findViewById(R.id.btnClearCache)
+        cardAbout = view.findViewById(R.id.btnAbout)
 
         setupClickListeners()
     }
 
     private fun setupClickListeners() {
-        btnBackupData.setOnClickListener {
+        // ✅ Click listener untuk CardView
+        cardBackupData.setOnClickListener {
             showBackupDialog()
         }
 
-        btnClearCache.setOnClickListener {
+        cardClearCache.setOnClickListener {
             showClearCacheDialog()
         }
 
-        btnAbout.setOnClickListener {
+        cardAbout.setOnClickListener {
             showAboutDialog()
         }
     }
@@ -94,7 +96,7 @@ class AdminSettingsFragment : Fragment() {
                 📱 Aplikasi Antrian RS Raja Jaya
                 
                 Version: 1.0.0
-                Build: 2025.10.17
+                Build: 2025.11.29
                 
                 Developed by:
                 Kelompok 2

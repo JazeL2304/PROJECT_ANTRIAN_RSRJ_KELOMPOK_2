@@ -33,7 +33,7 @@
 
     </LinearLayout>
 
-    <!-- Empty State -->
+    <!-- Empty State (LinearLayout) -->
     <LinearLayout
         android:id="@+id/tvEmptyQueue"
         android:layout_width="match_parent"
@@ -69,46 +69,41 @@
 
     </LinearLayout>
 
-    <!-- Queue List -->
-    <ScrollView
+    <!-- ✅ BETTER: LinearLayout container tanpa ScrollView -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <LinearLayout
+        <!-- Info Card -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="#E3F2FD">
 
-            <!-- Info Card -->
-            <androidx.cardview.widget.CardView
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="#E3F2FD">
+                android:text="💡 Tap pada pasien untuk mengubah status:\n• Menunggu → Dipanggil → Selesai"
+                android:textSize="12sp"
+                android:textColor="#1976D2"
+                android:padding="12dp"
+                android:lineSpacingExtra="2dp"/>
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="💡 Tap pada pasien untuk mengubah status:\n• Menunggu → Dipanggil → Selesai"
-                    android:textSize="12sp"
-                    android:textColor="#1976D2"
-                    android:padding="12dp"
-                    android:lineSpacingExtra="2dp"/>
+        </androidx.cardview.widget.CardView>
 
-            </androidx.cardview.widget.CardView>
+        <!-- ✅ ListView langsung tanpa ScrollView -->
+        <ListView
+            android:id="@+id/listDoctorQueue"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="8dp"/>
 
-            <ListView
-                android:id="@+id/listDoctorQueue"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:divider="@android:color/transparent"
-                android:dividerHeight="8dp"/>
-
-        </LinearLayout>
-
-    </ScrollView>
+    </LinearLayout>
 
 </LinearLayout>

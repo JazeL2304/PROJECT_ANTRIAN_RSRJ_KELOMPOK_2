@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ListView
-import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.example.projectantrianrsrjkelompok2.BookingStatus
 import com.example.projectantrianrsrjkelompok2.DataSource
@@ -16,7 +15,7 @@ import com.example.projectantrianrsrjkelompok2.toDisplayString
 class DoctorPatientHistoryFragment : Fragment() {
 
     private lateinit var listView: ListView
-    private lateinit var emptyText: TextView
+    private lateinit var emptyStateLayout: ViewGroup  // ✅ CHANGED: LinearLayout → ViewGroup
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,8 +28,9 @@ class DoctorPatientHistoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // ✅ FIXED: Ambil sebagai ViewGroup (kompatibel dengan LinearLayout di layout XML)
         listView = view.findViewById(R.id.listPatientHistory)
-        emptyText = view.findViewById(R.id.tvEmptyHistory)
+        emptyStateLayout = view.findViewById(R.id.tvEmptyHistory)  // ✅ Ini LinearLayout di ui-design
 
         loadPatientHistory()
     }
@@ -43,10 +43,12 @@ class DoctorPatientHistoryFragment : Fragment() {
             .sortedByDescending { it.date } // Urutkan dari terbaru
 
         if (completedBookings.isEmpty()) {
-            emptyText.visibility = View.VISIBLE
+            // ✅ FIXED: Show empty state layout (LinearLayout)
+            emptyStateLayout.visibility = View.VISIBLE
             listView.visibility = View.GONE
         } else {
-            emptyText.visibility = View.GONE
+            // ✅ FIXED: Show list
+            emptyStateLayout.visibility = View.GONE
             listView.visibility = View.VISIBLE
 
             // ✅ Format tampilan yang RAPI & CLEAN
