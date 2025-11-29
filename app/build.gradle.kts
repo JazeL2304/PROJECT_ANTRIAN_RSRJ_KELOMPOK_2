@@ -1,12 +1,12 @@
+// app/build.gradle.kts
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("com.google.gms.google-services")  // ← ADD THIS LINE
+    id("com.google.gms.google-services") // ← TAMBAHKAN
 }
 
 android {
     namespace = "com.example.projectantrianrsrjkelompok2"
-
     compileSdk = 34
 
     defaultConfig {
@@ -78,6 +78,13 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     implementation("com.google.code.gson:gson:2.10.1")
 
+    // ✅ FIREBASE DEPENDENCIES
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
@@ -86,10 +93,4 @@ dependencies {
     // ZXing untuk QR Code
     implementation("com.google.zxing:core:3.5.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
-
-    // ✅ FIREBASE - ADD THESE LINES
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx")  // Optional untuk auth
 }

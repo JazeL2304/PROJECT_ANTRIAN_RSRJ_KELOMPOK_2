@@ -1,188 +1,77 @@
 package com.example.projectantrianrsrjkelompok2
 
-import android.app.ProgressDialog
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Toast
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+
+// ========== FRAGMENT PASIEN ==========
+import com.example.projectantrianrsrjkelompok2.BookingFragment
+import com.example.projectantrianrsrjkelompok2.DashboardFragment
+import com.example.projectantrianrsrjkelompok2.EmptyQueueFragment
+import com.example.projectantrianrsrjkelompok2.HistoryFragment
+import com.example.projectantrianrsrjkelompok2.LoginFragment
+import com.example.projectantrianrsrjkelompok2.ProfileFragment
+import com.example.projectantrianrsrjkelompok2.QueueFragment
+import com.example.projectantrianrsrjkelompok2.fragment_news
+
+// ========== FRAGMENT ADMIN ==========
 import com.example.projectantrianrsrjkelompok2.admin.AdminDashboardFragment
 import com.example.projectantrianrsrjkelompok2.admin.AdminSettingsFragment
+import com.example.projectantrianrsrjkelompok2.admin.ManageDoctorFragment
+import com.example.projectantrianrsrjkelompok2.admin.ManagePatientFragment
+import com.example.projectantrianrsrjkelompok2.admin.ManageScheduleFragment
 import com.example.projectantrianrsrjkelompok2.admin.ViewReportFragment
+
+// ========== FRAGMENT DOKTER ==========
 import com.example.projectantrianrsrjkelompok2.doctor.DoctorDashboardFragment
 import com.example.projectantrianrsrjkelompok2.doctor.DoctorQueueFragment
 import com.example.projectantrianrsrjkelompok2.doctor.DoctorPatientHistoryFragment
+
+// ========== UTILS ==========
 import com.example.projectantrianrsrjkelompok2.utils.NotificationHelper
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
-import com.google.android.material.bottomnavigation.BottomNavigationView
 
-// ========== FIREBASE MIGRATION IMPORTS ==========
-import com.example.projectantrianrsrjkelompok2.data.FirebaseMigrator
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+// ========== MATERIAL COMPONENTS ==========
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var preferencesHelper: PreferencesHelper
+    private var btnProfileIcon: ImageView? = null  // ✅ FIXED: Nullable
+    private var tvToolbarTitle: TextView? = null   // ✅ FIXED: Sudah nullable
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // 🔧 Inisialisasi helper & komponen UI
         preferencesHelper = PreferencesHelper(this)
         NotificationHelper.createNotificationChannel(this)
 
+        // ✅ FIXED: Cek keberadaan views sebelum assign
         bottomNavigation = findViewById(R.id.bottom_navigation)
+        btnProfileIcon = findViewById(R.id.btnProfileIcon)
+        tvToolbarTitle = findViewById(R.id.toolbarTitle)
 
+        setupProfileIcon()
+
+        // ✅ FIXED: Clear session SAJA (jangan clear data booking)
         preferencesHelper.clearSession()
 
+        // ✅ Langsung tampilkan halaman login
+        setToolbarTitle("Login Akun")
         loadFragment(LoginFragment())
         hideBottomNavigation()
 
         handleNotificationIntent()
-
-        // ✅ TAMBAHAN BARU: Check dan jalankan migration jika belum pernah
-        checkAndRunMigration()
     }
 
-    // ========================================
-    // 🚀 FIREBASE MIGRATION FUNCTIONS
-    // ========================================
-
-    /**
-     * Check if migration needed and run it
-     * HANYA JALAN SEKALI saat pertama kali app dibuka
-     */
-    private fun checkAndRunMigration() {
-        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val isMigrated = prefs.getBoolean("is_data_migrated", false)
-
-        if (!isMigrated) {
-            // Show migration dialog
-            showMigrationDialog()
-        } else {
-            Log.d("MainActivity", "✅ Data already migrated")
-        }
-    }
-
-    /**
-     * Show dialog untuk migration
-     */
-    private fun showMigrationDialog() {
-        val builder = android.app.AlertDialog.Builder(this)
-        builder.setTitle("🔄 Setup Database")
-        builder.setMessage("Aplikasi perlu melakukan setup database pertama kali.\n\nProses ini hanya dilakukan sekali dan membutuhkan koneksi internet.\n\nLanjutkan?")
-        builder.setPositiveButton("Ya, Lanjutkan") { dialog, _ ->
-            dialog.dismiss()
-            runMigration()
-        }
-        builder.setNegativeButton("Nanti") { dialog, _ ->
-            dialog.dismiss()
-            Toast.makeText(this, "⚠️ App membutuhkan setup database untuk berfungsi", Toast.LENGTH_LONG).show()
-        }
-        builder.setCancelable(false)
-        builder.show()
-    }
-
-    /**
-     * Run migration process
-     */
-    private fun runMigration() {
-        val progressDialog = ProgressDialog(this)
-        progressDialog.setMessage("🔄 Migrasi data ke Firebase...\n\nMohon tunggu...")
-        progressDialog.setCancelable(false)
-        progressDialog.show()
-
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val migrator = FirebaseMigrator(this@MainActivity)
-
-                // Check if data already exists
-                val needsMigration = migrator.isMigrationNeeded()
-
-                if (!needsMigration) {
-                    withContext(Dispatchers.Main) {
-                        progressDialog.dismiss()
-                        Toast.makeText(
-                            this@MainActivity,
-                            "✅ Data sudah ada di Firebase",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        markMigrationComplete()
-                    }
-                    return@launch
-                }
-
-                // Run migration
-                val success = migrator.migrateAllData()
-
-                withContext(Dispatchers.Main) {
-                    progressDialog.dismiss()
-
-                    if (success) {
-                        val successBuilder = android.app.AlertDialog.Builder(this@MainActivity)
-                        successBuilder.setTitle("✅ Setup Berhasil!")
-                        successBuilder.setMessage(
-                            "Database berhasil disetup!\n\n" +
-                                    "Data yang telah dimigrasikan:\n" +
-                                    "• 4 Dokter\n" +
-                                    "• 3 Pasien\n" +
-                                    "• 6 Booking (contoh)\n\n" +
-                                    "Aplikasi siap digunakan!"
-                        )
-                        successBuilder.setPositiveButton("OK") { dialog, _ ->
-                            dialog.dismiss()
-                            markMigrationComplete()
-                        }
-                        successBuilder.setCancelable(false)
-                        successBuilder.show()
-                    } else {
-                        val errorBuilder = android.app.AlertDialog.Builder(this@MainActivity)
-                        errorBuilder.setTitle("❌ Setup Gagal")
-                        errorBuilder.setMessage("Terjadi kesalahan saat setup database.\n\nPastikan koneksi internet aktif dan coba lagi.")
-                        errorBuilder.setPositiveButton("Coba Lagi") { dialog, _ ->
-                            dialog.dismiss()
-                            runMigration()
-                        }
-                        errorBuilder.setNegativeButton("Batal") { dialog, _ ->
-                            dialog.dismiss()
-                        }
-                        errorBuilder.show()
-                    }
-                }
-
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    progressDialog.dismiss()
-                    Toast.makeText(
-                        this@MainActivity,
-                        "❌ Error: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    Log.e("MainActivity", "Migration error: ${e.message}", e)
-                }
-            }
-        }
-    }
-
-    /**
-     * Mark migration as complete
-     */
-    private fun markMigrationComplete() {
-        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("is_data_migrated", true).apply()
-        Log.d("MainActivity", "✅ Migration marked as complete")
-    }
-
-    // ========================================
-    // 🔔 NOTIFICATION HANDLER
-    // ========================================
-
+    // 🔔 Jika notifikasi membuka QueueFragment
     private fun handleNotificationIntent() {
         if (intent.getBooleanExtra("open_queue_fragment", false)) {
             if (DataSource.hasActiveBooking()) {
@@ -194,10 +83,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ========================================
-    // ⚙️ SETUP NAVIGATION
-    // ========================================
-
+    // ⚙️ Setup Bottom Navigation untuk PASIEN
     private fun setupPatientNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu)
@@ -206,16 +92,19 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard -> {
                     showBottomNavigation()
+                    setToolbarTitle("Antrian Rumah Sakit")
                     loadFragment(DashboardFragment())
                     true
                 }
                 R.id.nav_booking -> {
                     showBottomNavigation()
+                    setToolbarTitle("Booking Dokter")
                     loadFragment(BookingFragment())
                     true
                 }
                 R.id.nav_queue -> {
                     showBottomNavigation()
+                    setToolbarTitle("Antrian Anda")
                     if (DataSource.hasActiveBooking()) {
                         loadFragment(QueueFragment())
                     } else {
@@ -225,11 +114,13 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_history -> {
                     showBottomNavigation()
+                    setToolbarTitle("Riwayat Kunjungan")
                     loadFragment(HistoryFragment())
                     true
                 }
                 R.id.nav_profile -> {
                     showBottomNavigation()
+                    setToolbarTitle("Berita Kesehatan")
                     loadFragment(fragment_news())
                     true
                 }
@@ -238,6 +129,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ⚙️ Setup Bottom Navigation untuk ADMIN
     private fun setupAdminNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu_admin)
@@ -247,16 +139,19 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard_admin -> {
                     showBottomNavigation()
+                    setToolbarTitle("Dashboard Admin")
                     loadFragment(AdminDashboardFragment())
                     true
                 }
                 R.id.nav_reports -> {
                     showBottomNavigation()
+                    setToolbarTitle("Laporan Rumah Sakit")
                     loadFragment(ViewReportFragment())
                     true
                 }
                 R.id.nav_settings -> {
                     showBottomNavigation()
+                    setToolbarTitle("Pengaturan")
                     loadFragment(AdminSettingsFragment())
                     true
                 }
@@ -265,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ⚙️ Setup Bottom Navigation untuk DOKTER
     private fun setupDoctorNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu_doctor)
@@ -274,16 +170,19 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard_doctor -> {
                     showBottomNavigation()
+                    setToolbarTitle("Dashboard Dokter")
                     loadFragment(DoctorDashboardFragment())
                     true
                 }
                 R.id.nav_doctor_queue -> {
                     showBottomNavigation()
+                    setToolbarTitle("Antrian Pasien")
                     loadFragment(DoctorQueueFragment())
                     true
                 }
                 R.id.nav_patient_history -> {
                     showBottomNavigation()
+                    setToolbarTitle("Riwayat Pasien")
                     loadFragment(DoctorPatientHistoryFragment())
                     true
                 }
@@ -292,10 +191,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ========================================
-    // 📦 FRAGMENT NAVIGATION
-    // ========================================
+    // 🧍 Tombol profil di pojok atas
+    private fun setupProfileIcon() {
+        btnProfileIcon?.setOnClickListener {  // ✅ Safe call
+            showBottomNavigation()
+            setToolbarTitle("Profil Pengguna")
+            loadFragment(ProfileFragment())
 
+            // Hilangkan highlight menu di bottom navigation
+            bottomNavigation.menu.setGroupCheckable(0, true, false)
+            for (i in 0 until bottomNavigation.menu.size()) {
+                bottomNavigation.menu.getItem(i).isChecked = false
+            }
+            bottomNavigation.menu.setGroupCheckable(0, true, true)
+        }
+    }
+
+    // 📦 Ganti fragment dengan animasi lembut
     private fun loadFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(
@@ -306,56 +218,67 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
+    // Navigasi manual antar fragment
     fun navigateToFragment(fragment: Fragment) {
         loadFragment(fragment)
         showBottomNavigation()
     }
 
+    // Navigasi ke login/signup
     fun navigateToLoginOrSignup(fragment: Fragment) {
         loadFragment(fragment)
         hideBottomNavigation()
     }
 
-    // ========================================
-    // 🔹 BOTTOM NAVIGATION VISIBILITY
-    // ========================================
-
+    // 🔹 Sembunyikan bottom navigation
     fun hideBottomNavigation() {
         bottomNavigation.visibility = View.GONE
+        btnProfileIcon?.visibility = View.GONE  // ✅ Safe call
     }
 
+    // 🔹 Tampilkan bottom navigation
     fun showBottomNavigation() {
         bottomNavigation.visibility = View.VISIBLE
+        btnProfileIcon?.visibility = View.VISIBLE  // ✅ Safe call
     }
 
-    // ========================================
-    // 🚪 LOGOUT & DASHBOARD FUNCTIONS
-    // ========================================
-
+    // 🚪 Logout user
     fun logout() {
         preferencesHelper.clearSession()
         hideBottomNavigation()
+        setToolbarTitle("Login Akun")
         loadFragment(LoginFragment())
     }
 
+    // 👤 Pasien → dashboard pasien + setup nav pasien
     fun showPatientDashboard() {
         setupPatientNavigation()
         showBottomNavigation()
+        setToolbarTitle("Antrian Rumah Sakit")
         loadFragment(DashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard
     }
 
+    // 🩺 Dokter → dashboard dokter + setup nav dokter
     fun showDoctorDashboard() {
         setupDoctorNavigation()
         showBottomNavigation()
+        setToolbarTitle("Dashboard Dokter")
         loadFragment(DoctorDashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard_doctor
     }
 
+    // 🧾 Admin → dashboard admin + setup nav admin
     fun showAdminDashboard() {
         setupAdminNavigation()
         showBottomNavigation()
+        setToolbarTitle("Dashboard Admin")
         loadFragment(AdminDashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard_admin
+    }
+
+    // 🆕 Ubah judul toolbar utama
+    private fun setToolbarTitle(title: String) {
+        tvToolbarTitle?.text = title
     }
 }
