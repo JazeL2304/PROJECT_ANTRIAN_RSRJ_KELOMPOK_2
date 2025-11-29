@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    id("com.google.gms.google-services")  // ← ADD THIS LINE
 }
 
 android {
@@ -43,7 +44,7 @@ android {
 }
 
 dependencies {
-    // ✅ TAMBAHAN BARU: GridLayout Support
+    // ✅ TAMBAHKAN INI untuk GridLayout
     implementation("androidx.gridlayout:gridlayout:1.0.0")
 
     // AndroidX Core
@@ -70,7 +71,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // Retrofit & Networking (TAMBAHAN BARU)
+    // Retrofit & Networking
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
@@ -85,4 +86,10 @@ dependencies {
     // ZXing untuk QR Code
     implementation("com.google.zxing:core:3.5.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    // ✅ FIREBASE - ADD THESE LINES
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx")  // Optional untuk auth
 }
