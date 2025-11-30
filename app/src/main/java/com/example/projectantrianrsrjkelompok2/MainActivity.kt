@@ -3,6 +3,7 @@ package com.example.projectantrianrsrjkelompok2
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -45,8 +46,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var preferencesHelper: PreferencesHelper
 
-    // ❌ REMOVED: btnProfileIcon dan tvToolbarTitle (toolbar sudah dihapus)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -75,23 +74,50 @@ class MainActivity : AppCompatActivity() {
         val isFirstLaunch = preferencesHelper.isFirstLaunch()
 
         if (isFirstLaunch) {
-            // ✅ FIXED: Use lifecycleScope with Dispatchers.IO
+            // ✅ FIXED: Use lifecycleScope with proper error handling
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     Log.d("MainActivity", "🌱 Starting Firebase seed...")
+
+                    // Seed all data
                     com.example.projectantrianrsrjkelompok2.utils.FirebaseSeedData.seedAllData()
 
                     // Mark as complete
                     withContext(Dispatchers.Main) {
                         preferencesHelper.setFirstLaunchComplete()
                         Log.d("MainActivity", "✅ Firebase seed completed!")
+
+                        // Show toast
+                        Toast.makeText(
+                            this@MainActivity,
+                            "✅ Data berhasil dimuat!",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 } catch (e: Exception) {
-                    Log.e("MainActivity", "❌ Firebase seed failed: ${e.message}", e)
+                    withContext(Dispatchers.Main) {
+                        Log.e("MainActivity", "❌ Firebase seed failed: ${e.message}", e)
+                        Toast.makeText(
+                            this@MainActivity,
+                            "⚠️ Error loading data: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
         } else {
-            Log.d("MainActivity", "ℹ️ Not first launch, skipping seed")
+            // ✅ IMPORTANT: Still load cache even if not first launch
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    Log.d("MainActivity", "📥 Loading existing data from Firebase...")
+                    DataSource.forceLoadFromFirebase()
+                    withContext(Dispatchers.Main) {
+                        Log.d("MainActivity", "✅ Data loaded from Firebase!")
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "❌ Error loading data: ${e.message}", e)
+                }
+            }
         }
     }
 
@@ -230,13 +256,11 @@ class MainActivity : AppCompatActivity() {
     // 🔹 Sembunyikan bottom navigation
     fun hideBottomNavigation() {
         bottomNavigation.visibility = View.GONE
-        // ❌ REMOVED: btnProfileIcon visibility (sudah tidak ada)
     }
 
     // 🔹 Tampilkan bottom navigation
     fun showBottomNavigation() {
         bottomNavigation.visibility = View.VISIBLE
-        // ❌ REMOVED: btnProfileIcon visibility (sudah tidak ada)
     }
 
     // 🚪 Logout user
@@ -253,7 +277,7 @@ class MainActivity : AppCompatActivity() {
         loadFragment(DashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard
 
-        // ✅ Preload data from Firebase
+        // ✅ CRITICAL: Preload data from Firebase after login
         preloadDataFromFirebase()
     }
 
@@ -264,7 +288,7 @@ class MainActivity : AppCompatActivity() {
         loadFragment(DoctorDashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard_doctor
 
-        // ✅ Preload data from Firebase
+        // ✅ Preload data from Firebase after login
         preloadDataFromFirebase()
     }
 
@@ -275,7 +299,7 @@ class MainActivity : AppCompatActivity() {
         loadFragment(AdminDashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard_admin
 
-        // ✅ Preload data from Firebase
+        // ✅ Preload data from Firebase after login
         preloadDataFromFirebase()
     }
 
@@ -287,12 +311,26 @@ class MainActivity : AppCompatActivity() {
                 DataSource.forceLoadFromFirebase()
                 withContext(Dispatchers.Main) {
                     Log.d("MainActivity", "✅ Data preloaded successfully!")
+
+                    // Optional: Show toast to user
+                    Toast.makeText(
+                        this@MainActivity,
+                        "✅ Data dimuat",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "❌ Preload failed: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Log.e("MainActivity", "❌ Preload failed: ${e.message}", e)
+
+                    // Show error to user
+                    Toast.makeText(
+                        this@MainActivity,
+                        "⚠️ Gagal memuat data",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     }
-
-    // ❌ REMOVED: setToolbarTitle() - tidak ada lagi toolbar
 }

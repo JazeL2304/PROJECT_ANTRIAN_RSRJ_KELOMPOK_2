@@ -29,21 +29,13 @@ object DataSource {
     // ===============================
 
     fun getAllDoctors(): List<Doctor> {
-        // Return cache immediately if valid
-        if (!shouldRefreshCache() && cachedDoctors != null) {
+        // Return cache if available
+        if (cachedDoctors != null && cachedDoctors!!.isNotEmpty()) {
             return cachedDoctors!!
         }
 
-        // If no cache, return empty and fetch in background
-        if (cachedDoctors == null) {
-            scope.launch {
-                cachedDoctors = firebaseRepo.getAllDoctors()
-                lastCacheTime = System.currentTimeMillis()
-            }
-            return emptyList()
-        }
-
-        return cachedDoctors ?: emptyList()
+        // If no cache, return empty (will be loaded async)
+        return emptyList()
     }
 
     fun getDoctorsBySpecialization(specId: Int): List<Doctor> {
@@ -57,10 +49,18 @@ object DataSource {
             else -> return emptyList()
         }
 
-        // Filter from cache
-        return cachedDoctors?.filter {
+        // Get all doctors (with cache)
+        val allDoctors = getAllDoctors()
+
+        // If cache empty, return empty list
+        if (allDoctors.isEmpty()) {
+            return emptyList()
+        }
+
+        // Filter by specialization
+        return allDoctors.filter {
             it.specialization.contains(specName, true)
-        } ?: emptyList()
+        }
     }
 
     fun addDoctor(doctor: Doctor) {
@@ -71,13 +71,20 @@ object DataSource {
     }
 
     fun removeDoctor(doctor: Doctor) {
-        // TODO: Implement in FirebaseRepository
-        println("⚠️ Remove doctor not yet implemented in Firebase")
+        scope.launch {
+            firebaseRepo.deleteDoctor(doctor.id)
+            cachedDoctors = null
+        }
     }
 
     fun updateDoctorSchedule(id: Int, newSchedule: String) {
-        // TODO: Implement in FirebaseRepository
-        println("⚠️ Update schedule not yet implemented in Firebase")
+        scope.launch {
+            val allDoctors = cachedDoctors ?: return@launch
+            val doctor = allDoctors.find { it.id == id } ?: return@launch
+            val updatedDoctor = doctor.copy(schedule = newSchedule)
+            firebaseRepo.updateDoctor(updatedDoctor)
+            cachedDoctors = null
+        }
     }
 
     fun getDoctorById(id: Int): Doctor? {
@@ -112,7 +119,10 @@ object DataSource {
     }
 
     fun removePatient(patient: Patient) {
-        println("⚠️ Remove patient not yet implemented in Firebase")
+        scope.launch {
+            firebaseRepo.deletePatient(patient.id)
+            cachedPatients = null
+        }
     }
 
     fun findPatientsByName(nameQuery: String): List<Patient> {
@@ -276,10 +286,16 @@ object DataSource {
      * Call this ONCE after seed completes
      */
     suspend fun forceLoadFromFirebase() = withContext(Dispatchers.IO) {
-        cachedDoctors = firebaseRepo.getAllDoctors()
-        cachedPatients = firebaseRepo.getAllPatients()
-        cachedSpecializations = firebaseRepo.getSpecializations()
-        cachedBookings = firebaseRepo.getBookingHistory()
-        lastCacheTime = System.currentTimeMillis()
+        try {
+            cachedDoctors = firebaseRepo.getAllDoctors()
+            cachedPatients = firebaseRepo.getAllPatients()
+            cachedSpecializations = firebaseRepo.getSpecializations()
+            cachedBookings = firebaseRepo.getBookingHistory()
+            lastCacheTime = System.currentTimeMillis()
+
+            println("✅ DataSource cache loaded: ${cachedDoctors?.size ?: 0} doctors, ${cachedPatients?.size ?: 0} patients")
+        } catch (e: Exception) {
+            println("❌ Error loading cache: ${e.message}")
+        }
     }
 }

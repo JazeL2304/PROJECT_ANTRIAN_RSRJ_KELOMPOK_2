@@ -1,6 +1,7 @@
 package com.example.projectantrianrsrjkelompok2.utils
 
 import android.util.Log
+import com.example.projectantrianrsrjkelompok2.DataSource
 import com.example.projectantrianrsrjkelompok2.data.FirebaseMigrator
 import kotlinx.coroutines.runBlocking
 
@@ -27,11 +28,21 @@ object FirebaseSeedData {
                 if (status.isComplete) {
                     Log.d(TAG, "ℹ️ Data already exists in Firebase, skipping seed")
                     Log.d(TAG, status.toString())
+
+                    // ✅ CRITICAL: Force load to cache even if data exists
+                    Log.d(TAG, "📥 Loading existing data to cache...")
+                    DataSource.forceLoadFromFirebase()
+                    Log.d(TAG, "✅ Cache loaded!")
                     return@runBlocking
                 }
 
                 // Migrate all data
+                Log.d(TAG, "🚀 Migrating data to Firebase...")
                 FirebaseMigrator.migrateAllData()
+
+                // ✅ CRITICAL: Force load after migration
+                Log.d(TAG, "📥 Loading migrated data to cache...")
+                DataSource.forceLoadFromFirebase()
 
                 // Check status after migration
                 val finalStatus = FirebaseMigrator.checkMigrationStatus()
@@ -67,6 +78,7 @@ object FirebaseSeedData {
             try {
                 Log.d(TAG, "⚠️ Clearing all Firebase data...")
                 FirebaseMigrator.clearFirebaseData()
+                DataSource.invalidateCache()
                 Log.d(TAG, "✅ All data cleared")
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Clear failed: ${e.message}", e)

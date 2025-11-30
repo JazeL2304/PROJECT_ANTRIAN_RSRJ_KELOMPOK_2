@@ -38,15 +38,41 @@ class BookingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initViews(view)
+
+        // Debug: Check data availability
+        checkDataAvailability()
+
+        // Setup UI
         setupSpinners()
         setupDatePicker()
         setupBookingButton()
 
+        // Handle pre-selected specialization
         arguments?.getInt("selected_specialization_id")?.let { specId ->
             if (specId > 0) {
                 selectedSpecializationId = specId
-                spinnerSpecialization.setSelection(specId)
-                loadDoctors(specId)
+                view.post {
+                    spinnerSpecialization.setSelection(specId)
+                }
+            }
+        }
+    }
+
+    private fun checkDataAvailability() {
+        val allDoctors = DataSource.getAllDoctors()
+        android.util.Log.d("BookingFragment", "=== DATA CHECK ===")
+        android.util.Log.d("BookingFragment", "Total doctors in cache: ${allDoctors.size}")
+
+        if (allDoctors.isEmpty()) {
+            android.util.Log.e("BookingFragment", "❌ NO DOCTORS IN CACHE!")
+            Toast.makeText(
+                requireContext(),
+                "⚠️ Data dokter belum dimuat. Menggunakan data dummy.",
+                Toast.LENGTH_LONG
+            ).show()
+        } else {
+            allDoctors.forEach { doctor ->
+                android.util.Log.d("BookingFragment", "  - ${doctor.name} (${doctor.specialization})")
             }
         }
     }
@@ -64,10 +90,15 @@ class BookingFragment : Fragment() {
 
     private fun setupSpinners() {
         val specializations = DataSource.getSpecializations()
+
         val specNames = mutableListOf("Pilih Layanan Klinik")
         specNames.addAll(specializations.map { "${it.emoji} ${it.name}" })
 
-        val specAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, specNames)
+        val specAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            specNames
+        )
         specAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerSpecialization.adapter = specAdapter
 
@@ -75,38 +106,115 @@ class BookingFragment : Fragment() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (position > 0) {
                     selectedSpecializationId = specializations[position - 1].id
+                    android.util.Log.d("BookingFragment", "Selected specialization ID: $selectedSpecializationId")
                     loadDoctors(selectedSpecializationId)
                 } else {
                     clearDoctorSpinner()
                 }
             }
 
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                clearDoctorSpinner()
+            }
         }
 
+        // Setup time slots
         val timeSlots = mutableListOf("Pilih Jam")
         timeSlots.addAll(DataSource.getTimeSlots())
 
-        val timeAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, timeSlots)
+        val timeAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            timeSlots
+        )
         timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerTime.adapter = timeAdapter
+
+        // Initialize doctor spinner
+        clearDoctorSpinner()
     }
 
     private fun loadDoctors(specializationId: Int) {
         doctors.clear()
-        doctors.addAll(DataSource.getDoctorsBySpecialization(specializationId))
 
+        android.util.Log.d("BookingFragment", "=== LOADING DOCTORS ===")
+        android.util.Log.d("BookingFragment", "Specialization ID: $specializationId")
+
+        // Get doctors from cache
+        val filteredDoctors = DataSource.getDoctorsBySpecialization(specializationId)
+
+        android.util.Log.d("BookingFragment", "Filtered doctors: ${filteredDoctors.size}")
+
+        // ✅ FALLBACK: If no doctors from Firebase, use dummy data
+        if (filteredDoctors.isEmpty()) {
+            android.util.Log.w("BookingFragment", "⚠️ No doctors from Firebase, using DUMMY DATA")
+
+            val dummyDoctors = getDummyDoctors(specializationId)
+            doctors.addAll(dummyDoctors)
+
+            android.util.Log.d("BookingFragment", "Using ${doctors.size} dummy doctors")
+        } else {
+            doctors.addAll(filteredDoctors)
+            android.util.Log.d("BookingFragment", "Using ${doctors.size} Firebase doctors")
+        }
+
+        // Update spinner
         val doctorNames = mutableListOf("Pilih Dokter")
         doctorNames.addAll(doctors.map { "${it.name} (${it.schedule})" })
 
-        val doctorAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, doctorNames)
+        android.util.Log.d("BookingFragment", "Doctor names for spinner: $doctorNames")
+
+        val doctorAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            doctorNames
+        )
         doctorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerDoctor.adapter = doctorAdapter
+
+        // Show toast if using dummy
+        if (filteredDoctors.isEmpty() && doctors.isNotEmpty()) {
+            Toast.makeText(
+                requireContext(),
+                "ℹ️ Menampilkan data dokter sementara",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun getDummyDoctors(specializationId: Int): List<Doctor> {
+        return when (specializationId) {
+            1 -> listOf(
+                Doctor(1, "Dr. Ahmad Santoso", "Dokter Umum", "Senin-Jumat 08:00-15:00")
+            )
+            2 -> listOf(
+                Doctor(2, "Dr. Budi Dental", "Dokter Gigi", "Senin-Kamis 09:00-16:00")
+            )
+            3 -> listOf(
+                Doctor(3, "Dr. Indra Mata", "Dokter Mata", "Senin-Jumat 08:00-14:00")
+            )
+            4 -> listOf(
+                Doctor(4, "Dr. Ani Pediatri", "Dokter Anak", "Setiap Hari 24 Jam")
+            )
+            5 -> listOf(
+                Doctor(5, "Dr. Siti Jantung", "Dokter Jantung", "Senin-Jumat 10:00-16:00")
+            )
+            6 -> listOf(
+                Doctor(6, "Dr. Rina Kandungan", "Dokter Kandungan", "Senin-Sabtu 09:00-15:00")
+            )
+            else -> listOf(
+                Doctor(1, "Dr. Ahmad Santoso", "Dokter Umum", "Senin-Jumat 08:00-15:00")
+            )
+        }
     }
 
     private fun clearDoctorSpinner() {
         doctors.clear()
-        val emptyAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, listOf("Pilih Dokter"))
+        val emptyAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            listOf("Pilih Dokter")
+        )
         emptyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerDoctor.adapter = emptyAdapter
     }
@@ -181,15 +289,9 @@ class BookingFragment : Fragment() {
     }
 
     private fun createBooking() {
-        // ✅ FIXED: Generate random queue number (5-50) + current bookings
         val selectedDateBookings = DataSource.getBookingHistory().filter { it.date == selectedDate }
-
-        // ✅ Base random number (5-50) + existing bookings untuk avoid duplicate
         val baseQueueNumber = (5..50).random()
         val queueNumber = baseQueueNumber + selectedDateBookings.size
-
-        // ✅ ATAU kalau mau pure random 5-50:
-        // val queueNumber = (5..50).random()
 
         val selectedDoctor = doctors[spinnerDoctor.selectedItemPosition - 1]
         val specialization = DataSource.getSpecializations().find { it.id == selectedSpecializationId }
@@ -218,5 +320,4 @@ class BookingFragment : Fragment() {
 
         (activity as MainActivity).navigateToFragment(QueueFragment())
     }
-
 }
