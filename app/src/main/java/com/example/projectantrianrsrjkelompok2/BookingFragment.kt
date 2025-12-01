@@ -67,27 +67,42 @@ class BookingFragment : Fragment() {
         progressBar = view.findViewById(R.id.progress_bar)
     }
 
+    // ✅ FIXED: Load data dengan retry mechanism
     private fun loadDataAndSetupUI() {
         showLoading(true)
 
         lifecycleScope.launch {
             try {
-                // Force load from Firebase
+                // Force load from Firebase dengan retry mechanism
                 withContext(Dispatchers.IO) {
                     Log.d(TAG, "🔄 Loading data from Firebase...")
                     DataSource.forceLoadFromFirebase()
+
+                    // Tunggu sampai data benar-benar ter-load
+                    var retryCount = 0
+                    while (DataSource.getAllDoctors().isEmpty() && retryCount < 5) {
+                        Log.d(TAG, "⏳ Waiting for data... retry $retryCount")
+                        delay(500)
+                        retryCount++
+                    }
                 }
 
-                // Small delay to ensure data is loaded
-                delay(1000)
+                // Delay tambahan untuk memastikan
+                delay(500)
 
-                // Check data
+                // Check data dengan logging detail
                 val allDoctors = DataSource.getAllDoctors()
                 val specializations = DataSource.getSpecializations()
 
                 Log.d(TAG, "=== DATA LOADED ===")
                 Log.d(TAG, "Doctors: ${allDoctors.size}")
+                allDoctors.forEach {
+                    Log.d(TAG, "  - ${it.name} (${it.specialization})")
+                }
                 Log.d(TAG, "Specializations: ${specializations.size}")
+                specializations.forEach {
+                    Log.d(TAG, "  - ${it.name}")
+                }
 
                 withContext(Dispatchers.Main) {
                     showLoading(false)
@@ -95,10 +110,13 @@ class BookingFragment : Fragment() {
                     if (allDoctors.isNotEmpty() && specializations.isNotEmpty()) {
                         isDataLoaded = true
 
-                        // Setup UI components
+                        // Setup UI components dengan delay
                         setupSpecializationSpinner()
+                        delay(100)
                         setupTimeSpinner()
+                        delay(100)
                         setupDatePicker()
+                        delay(100)
                         setupBookingButton()
 
                         // Initialize doctor spinner
@@ -108,10 +126,17 @@ class BookingFragment : Fragment() {
                         handlePreSelectedSpecialization()
 
                         Log.d(TAG, "✅ UI Setup Complete")
-                    } else {
+
                         Toast.makeText(
                             requireContext(),
-                            "❌ Gagal memuat data. Coba restart aplikasi.",
+                            "✅ Data berhasil dimuat",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Log.e(TAG, "❌ Data masih kosong setelah load!")
+                        Toast.makeText(
+                            requireContext(),
+                            "❌ Gagal memuat data. Doctors: ${allDoctors.size}, Specs: ${specializations.size}",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -131,12 +156,23 @@ class BookingFragment : Fragment() {
         }
     }
 
+    // ✅ FIXED: Setup spinner dengan proper adapter dan clickable
     private fun setupSpecializationSpinner() {
         try {
             val specializations = DataSource.getSpecializations()
 
             Log.d(TAG, "=== SETUP SPECIALIZATION SPINNER ===")
             Log.d(TAG, "Specializations count: ${specializations.size}")
+
+            if (specializations.isEmpty()) {
+                Log.e(TAG, "❌ No specializations available!")
+                Toast.makeText(
+                    requireContext(),
+                    "❌ Data spesialisasi kosong!",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
 
             val specNames = mutableListOf<String>()
             specNames.add("Pilih Layanan Klinik")
@@ -145,17 +181,20 @@ class BookingFragment : Fragment() {
                 Log.d(TAG, "Added: ${spec.emoji} ${spec.name}")
             }
 
+            // ✅ CRITICAL: Gunakan layout yang benar untuk dropdown
             val specAdapter = ArrayAdapter(
                 requireContext(),
-                android.R.layout.simple_spinner_dropdown_item, // ✅ Use dropdown item for both
+                android.R.layout.simple_spinner_item,
                 specNames
             )
+            specAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
             spinnerSpecialization.adapter = specAdapter
 
-            // ✅ Enable spinner
+            // ✅ CRITICAL: Enable spinner
             spinnerSpecialization.isEnabled = true
             spinnerSpecialization.isClickable = true
+            spinnerSpecialization.isFocusable = true
 
             spinnerSpecialization.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -182,9 +221,15 @@ class BookingFragment : Fragment() {
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error setting up specialization spinner: ${e.message}", e)
+            Toast.makeText(
+                requireContext(),
+                "❌ Error setup spinner: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
+    // ✅ FIXED: Setup time spinner dengan adapter yang benar
     private fun setupTimeSpinner() {
         try {
             val timeSlots = mutableListOf<String>()
@@ -193,13 +238,15 @@ class BookingFragment : Fragment() {
 
             val timeAdapter = ArrayAdapter(
                 requireContext(),
-                android.R.layout.simple_spinner_dropdown_item,
+                android.R.layout.simple_spinner_item,
                 timeSlots
             )
+            timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
             spinnerTime.adapter = timeAdapter
             spinnerTime.isEnabled = true
             spinnerTime.isClickable = true
+            spinnerTime.isFocusable = true
 
             Log.d(TAG, "✅ Time spinner setup complete: ${timeSlots.size} slots")
 
@@ -240,6 +287,7 @@ class BookingFragment : Fragment() {
         }
     }
 
+    // ✅ FIXED: Update doctor spinner dengan adapter yang benar
     private fun updateDoctorSpinner() {
         try {
             val doctorNames = mutableListOf<String>()
@@ -251,13 +299,15 @@ class BookingFragment : Fragment() {
 
             val doctorAdapter = ArrayAdapter(
                 requireContext(),
-                android.R.layout.simple_spinner_dropdown_item,
+                android.R.layout.simple_spinner_item,
                 doctorNames
             )
+            doctorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
             spinnerDoctor.adapter = doctorAdapter
             spinnerDoctor.isEnabled = true
             spinnerDoctor.isClickable = true
+            spinnerDoctor.isFocusable = true
 
             Log.d(TAG, "✅ Doctor spinner updated: ${doctorNames.size} items")
 
@@ -271,9 +321,10 @@ class BookingFragment : Fragment() {
 
         val emptyAdapter = ArrayAdapter(
             requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
+            android.R.layout.simple_spinner_item,
             listOf("Pilih Dokter")
         )
+        emptyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
         spinnerDoctor.adapter = emptyAdapter
         spinnerDoctor.isEnabled = false
