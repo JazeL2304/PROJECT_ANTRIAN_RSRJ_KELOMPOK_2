@@ -37,6 +37,7 @@ import com.example.projectantrianrsrjkelompok2.doctor.DoctorPatientHistoryFragme
 // ========== UTILS ==========
 import com.example.projectantrianrsrjkelompok2.utils.NotificationHelper
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
+import com.example.projectantrianrsrjkelompok2.utils.FirebaseSeedData  // ✅ TAMBAHKAN INI
 
 // ========== MATERIAL COMPONENTS ==========
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -73,21 +74,26 @@ class MainActivity : AppCompatActivity() {
     private fun seedFirebaseDataIfNeeded() {
         val isFirstLaunch = preferencesHelper.isFirstLaunch()
 
+        // ⚠️ UNCOMMENT UNTUK FORCE RESET DATABASE
+         preferencesHelper.resetFirstLaunch()
+         lifecycleScope.launch(Dispatchers.IO) {
+            FirebaseSeedData.clearAllData()
+         }
+
         if (isFirstLaunch) {
-            // ✅ FIXED: Use lifecycleScope with proper error handling
+            // ✅ First launch - seed data
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
-                    Log.d("MainActivity", "🌱 Starting Firebase seed...")
+                    Log.d("MainActivity", "🌱 Starting Firebase seed (FIRST LAUNCH)...")
 
                     // Seed all data
-                    com.example.projectantrianrsrjkelompok2.utils.FirebaseSeedData.seedAllData()
+                    FirebaseSeedData.seedAllData()
 
                     // Mark as complete
                     withContext(Dispatchers.Main) {
                         preferencesHelper.setFirstLaunchComplete()
                         Log.d("MainActivity", "✅ Firebase seed completed!")
 
-                        // Show toast
                         Toast.makeText(
                             this@MainActivity,
                             "✅ Data berhasil dimuat!",
@@ -106,13 +112,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } else {
-            // ✅ IMPORTANT: Still load cache even if not first launch
+            // ✅ Not first launch - just load cache
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     Log.d("MainActivity", "📥 Loading existing data from Firebase...")
                     DataSource.forceLoadFromFirebase()
+
                     withContext(Dispatchers.Main) {
                         Log.d("MainActivity", "✅ Data loaded from Firebase!")
+
+                        // Optional: Show data status in log
+                        val status = FirebaseSeedData.getDataStatus()
+                        Log.d("MainActivity", status)
                     }
                 } catch (e: Exception) {
                     Log.e("MainActivity", "❌ Error loading data: ${e.message}", e)
