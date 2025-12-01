@@ -1,5 +1,6 @@
 package com.example.projectantrianrsrjkelompok2
 
+import android.util.Log  // ✅ TAMBAHKAN INI
 import com.example.projectantrianrsrjkelompok2.data.FirebaseRepository
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
@@ -9,6 +10,8 @@ import java.util.*
  * ✅ FIXED: DataSource sekarang menggunakan Firebase TANPA blocking Main Thread
  */
 object DataSource {
+
+    private const val TAG = "DataSource"  // ✅ TAMBAHKAN INI JUGA
 
     private val firebaseRepo = FirebaseRepository()
     private var activeBooking: Booking? = null
@@ -39,6 +42,7 @@ object DataSource {
     }
 
     fun getDoctorsBySpecialization(specId: Int): List<Doctor> {
+        // Mapping ID ke nama spesialisasi yang EXACT seperti di Firebase
         val specName = when (specId) {
             1 -> "Dokter Umum"
             2 -> "Dokter Gigi"
@@ -49,18 +53,34 @@ object DataSource {
             else -> return emptyList()
         }
 
+        Log.d(TAG, "=== getDoctorsBySpecialization ===")
+        Log.d(TAG, "Spec ID: $specId -> Spec Name: $specName")
+
         // Get all doctors (with cache)
         val allDoctors = getAllDoctors()
+        Log.d(TAG, "Total doctors in cache: ${allDoctors.size}")
 
         // If cache empty, return empty list
         if (allDoctors.isEmpty()) {
+            Log.w(TAG, "⚠️ Cache is empty!")
             return emptyList()
         }
 
-        // Filter by specialization
-        return allDoctors.filter {
-            it.specialization.contains(specName, true)
+        // Filter by specialization (case insensitive)
+        val filteredDoctors = allDoctors.filter { doctor ->
+            val matches = doctor.specialization.equals(specName, ignoreCase = true) ||
+                    doctor.specialization.contains(specName, ignoreCase = true)
+
+            if (matches) {
+                Log.d(TAG, "✅ MATCH: ${doctor.name} - ${doctor.specialization}")
+            }
+
+            matches
         }
+
+        Log.d(TAG, "Filtered doctors: ${filteredDoctors.size}")
+
+        return filteredDoctors
     }
 
     fun addDoctor(doctor: Doctor) {
@@ -287,15 +307,22 @@ object DataSource {
      */
     suspend fun forceLoadFromFirebase() = withContext(Dispatchers.IO) {
         try {
+            Log.d(TAG, "📥 Force loading data from Firebase...")
+
             cachedDoctors = firebaseRepo.getAllDoctors()
             cachedPatients = firebaseRepo.getAllPatients()
             cachedSpecializations = firebaseRepo.getSpecializations()
             cachedBookings = firebaseRepo.getBookingHistory()
             lastCacheTime = System.currentTimeMillis()
 
-            println("✅ DataSource cache loaded: ${cachedDoctors?.size ?: 0} doctors, ${cachedPatients?.size ?: 0} patients")
+            Log.d(TAG, "✅ DataSource cache loaded:")
+            Log.d(TAG, "  - Doctors: ${cachedDoctors?.size ?: 0}")
+            Log.d(TAG, "  - Patients: ${cachedPatients?.size ?: 0}")
+            Log.d(TAG, "  - Specializations: ${cachedSpecializations?.size ?: 0}")
+            Log.d(TAG, "  - Bookings: ${cachedBookings?.size ?: 0}")
+
         } catch (e: Exception) {
-            println("❌ Error loading cache: ${e.message}")
+            Log.e(TAG, "❌ Error loading cache: ${e.message}", e)
         }
     }
 }

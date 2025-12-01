@@ -111,6 +111,8 @@ object FirebaseSeedData {
     /**
      * 👨‍⚕️ Seed Doctors
      */
+    // app/src/main/java/com/example/projectantrianrsrjkelompok2/utils/FirebaseSeedData.kt
+
     private suspend fun seedDoctors() {
         val doctors = listOf(
             // Dokter Umum
@@ -158,7 +160,6 @@ object FirebaseSeedData {
 
         Log.d(TAG, "✅ Doctors: $successCount/${doctors.size} added")
     }
-
     /**
      * 🧍‍♀️ Seed Patients
      */

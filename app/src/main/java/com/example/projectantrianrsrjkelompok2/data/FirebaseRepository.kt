@@ -47,13 +47,21 @@ class FirebaseRepository {
     suspend fun getDoctorsBySpecialization(specialization: String): List<Doctor> {
         return try {
             Log.d(TAG, "📥 Fetching doctors for specialization: $specialization")
-            val snapshot = doctorsRef
-                .orderByChild("specialization")
-                .equalTo(specialization)
-                .get()
-                .await()
-            val doctors = snapshot.children.mapNotNull { it.getValue(Doctor::class.java) }
+            val snapshot = doctorsRef.get().await()
+
+            val doctors = snapshot.children.mapNotNull {
+                it.getValue(Doctor::class.java)
+            }.filter { doctor ->
+                // Filter berdasarkan specialization yang cocok
+                doctor.specialization.equals(specialization, ignoreCase = true) ||
+                        doctor.specialization.contains(specialization, ignoreCase = true)
+            }
+
             Log.d(TAG, "✅ Found ${doctors.size} doctors for $specialization")
+            doctors.forEach { doctor ->
+                Log.d(TAG, "  - ${doctor.name} (${doctor.specialization})")
+            }
+
             doctors
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error getting doctors by spec: ${e.message}", e)

@@ -71,62 +71,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 🌱 Seed Firebase with dummy data on first launch (ASYNC)
+    // app/src/main/java/com/example/projectantrianrsrjkelompok2/MainActivity.kt
+
+// app/src/main/java/com/example/projectantrianrsrjkelompok2/MainActivity.kt
+
     private fun seedFirebaseDataIfNeeded() {
         val isFirstLaunch = preferencesHelper.isFirstLaunch()
 
-        // ⚠️ UNCOMMENT UNTUK FORCE RESET DATABASE
-         preferencesHelper.resetFirstLaunch()
-         lifecycleScope.launch(Dispatchers.IO) {
-            FirebaseSeedData.clearAllData()
-         }
+        // ⚠️ UNCOMMENT UNTUK FORCE RESET DATABASE (TESTING)
+        //preferencesHelper.resetFirstLaunch()
+        //lifecycleScope.launch(Dispatchers.IO) {
+        //     FirebaseSeedData.clearAllData()
+        //}
 
         if (isFirstLaunch) {
-            // ✅ First launch - seed data
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     Log.d("MainActivity", "🌱 Starting Firebase seed (FIRST LAUNCH)...")
-
-                    // Seed all data
                     FirebaseSeedData.seedAllData()
 
-                    // Mark as complete
                     withContext(Dispatchers.Main) {
                         preferencesHelper.setFirstLaunchComplete()
                         Log.d("MainActivity", "✅ Firebase seed completed!")
-
-                        Toast.makeText(
-                            this@MainActivity,
-                            "✅ Data berhasil dimuat!",
-                            Toast.LENGTH_SHORT
-                        ).show()
                     }
                 } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        Log.e("MainActivity", "❌ Firebase seed failed: ${e.message}", e)
-                        Toast.makeText(
-                            this@MainActivity,
-                            "⚠️ Error loading data: ${e.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-        } else {
-            // ✅ Not first launch - just load cache
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    Log.d("MainActivity", "📥 Loading existing data from Firebase...")
-                    DataSource.forceLoadFromFirebase()
-
-                    withContext(Dispatchers.Main) {
-                        Log.d("MainActivity", "✅ Data loaded from Firebase!")
-
-                        // Optional: Show data status in log
-                        val status = FirebaseSeedData.getDataStatus()
-                        Log.d("MainActivity", status)
-                    }
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "❌ Error loading data: ${e.message}", e)
+                    Log.e("MainActivity", "❌ Firebase seed failed: ${e.message}", e)
                 }
             }
         }
@@ -285,11 +254,12 @@ class MainActivity : AppCompatActivity() {
     fun showPatientDashboard() {
         setupPatientNavigation()
         showBottomNavigation()
+
+        // ✅ CRITICAL: Preload data SEBELUM navigate
+        preloadDataFromFirebase()
+
         loadFragment(DashboardFragment())
         bottomNavigation.selectedItemId = R.id.nav_dashboard
-
-        // ✅ CRITICAL: Preload data from Firebase after login
-        preloadDataFromFirebase()
     }
 
     // 🩺 Dokter → dashboard dokter + setup nav dokter
@@ -320,10 +290,11 @@ class MainActivity : AppCompatActivity() {
             try {
                 Log.d("MainActivity", "📥 Preloading data from Firebase...")
                 DataSource.forceLoadFromFirebase()
-                withContext(Dispatchers.Main) {
-                    Log.d("MainActivity", "✅ Data preloaded successfully!")
 
-                    // Optional: Show toast to user
+                withContext(Dispatchers.Main) {
+                    val doctors = DataSource.getAllDoctors()
+                    Log.d("MainActivity", "✅ Data preloaded: ${doctors.size} doctors")
+
                     Toast.makeText(
                         this@MainActivity,
                         "✅ Data dimuat",
@@ -333,13 +304,6 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Log.e("MainActivity", "❌ Preload failed: ${e.message}", e)
-
-                    // Show error to user
-                    Toast.makeText(
-                        this@MainActivity,
-                        "⚠️ Gagal memuat data",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 }
             }
         }
