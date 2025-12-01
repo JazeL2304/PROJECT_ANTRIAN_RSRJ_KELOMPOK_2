@@ -1,6 +1,6 @@
 package com.example.projectantrianrsrjkelompok2
 
-import android.util.Log  // ✅ TAMBAHKAN INI
+import android.util.Log
 import com.example.projectantrianrsrjkelompok2.data.FirebaseRepository
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
@@ -11,7 +11,7 @@ import java.util.*
  */
 object DataSource {
 
-    private const val TAG = "DataSource"  // ✅ TAMBAHKAN INI JUGA
+    private const val TAG = "DataSource"
 
     private val firebaseRepo = FirebaseRepository()
     private var activeBooking: Booking? = null
@@ -161,34 +161,98 @@ object DataSource {
 
     fun getSpecializations(): List<Specialization> {
         // Return cache if valid
-        if (cachedSpecializations != null) {
+        if (cachedSpecializations != null && cachedSpecializations!!.isNotEmpty()) {
             return cachedSpecializations!!
         }
 
-        // Fetch in background if no cache
-        scope.launch {
-            cachedSpecializations = firebaseRepo.getSpecializations()
-        }
-
-        // Return default while loading
-        return listOf(
-            Specialization(1, "Layanan Umum", "Pelayanan kesehatan umum", "🏥"),
-            Specialization(2, "Layanan Gigi", "Perawatan gigi dan mulut", "🦷"),
-            Specialization(3, "Layanan Mata", "Kesehatan mata dan penglihatan", "👁️"),
-            Specialization(4, "Layanan Anak", "Kesehatan bayi dan anak-anak", "👶"),
-            Specialization(5, "Layanan Jantung", "Kesehatan jantung dan pembuluh darah", "❤️"),
-            Specialization(6, "Layanan Kandungan", "Kesehatan ibu dan anak", "🤰")
-        )
+        // Return empty while loading
+        return emptyList()
     }
 
     // ===============================
-    // ⏰ JAM PRAKTIK
+    // ⏰ JAM PRAKTIK - ✅ FIXED: Generate berdasarkan jadwal dokter
     // ===============================
 
-    fun getTimeSlots(): List<String> = listOf(
-        "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-        "11:00", "13:00", "13:30", "14:00", "14:30", "15:00"
-    )
+    /**
+     * ✅ Generate time slots berdasarkan jadwal dokter yang dipilih
+     * Format jadwal: "Senin–Jumat 08:00–15:00"
+     */
+    fun getTimeSlotsForDoctor(doctor: Doctor): List<String> {
+        val schedule = doctor.schedule
+
+        Log.d(TAG, "🕐 Generating time slots for ${doctor.name}: $schedule")
+
+        // Extract jam dari schedule (format: "Hari 08:00–15:00")
+        val timePattern = "(\\d{2}:\\d{2})".toRegex()
+        val times = timePattern.findAll(schedule).map { it.value }.toList()
+
+        if (times.size < 2) {
+            Log.w(TAG, "⚠️ Cannot parse schedule, using default slots")
+            return getDefaultTimeSlots()
+        }
+
+        val startTime = times[0] // e.g., "08:00"
+        val endTime = times[1]   // e.g., "15:00"
+
+        Log.d(TAG, "  Start: $startTime, End: $endTime")
+
+        return generateTimeSlots(startTime, endTime)
+    }
+
+    /**
+     * ✅ Generate time slots dari jam mulai sampai jam selesai (interval 30 menit)
+     */
+    private fun generateTimeSlots(startTime: String, endTime: String): List<String> {
+        val timeSlots = mutableListOf<String>()
+
+        try {
+            val format = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val calendar = Calendar.getInstance()
+
+            val start = format.parse(startTime)
+            val end = format.parse(endTime)
+
+            if (start == null || end == null) {
+                return getDefaultTimeSlots()
+            }
+
+            calendar.time = start
+            val endCalendar = Calendar.getInstance()
+            endCalendar.time = end
+
+            // Generate slots setiap 30 menit
+            while (calendar.time.before(endCalendar.time) || calendar.time == endCalendar.time) {
+                timeSlots.add(format.format(calendar.time))
+                calendar.add(Calendar.MINUTE, 30)
+            }
+
+            Log.d(TAG, "✅ Generated ${timeSlots.size} time slots: $timeSlots")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error generating time slots: ${e.message}")
+            return getDefaultTimeSlots()
+        }
+
+        return timeSlots
+    }
+
+    /**
+     * ✅ Default time slots (jika parsing gagal)
+     */
+    private fun getDefaultTimeSlots(): List<String> {
+        return listOf(
+            "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+            "11:00", "13:00", "13:30", "14:00", "14:30", "15:00"
+        )
+    }
+
+    /**
+     * ✅ DEPRECATED: Jangan pakai ini lagi, gunakan getTimeSlotsForDoctor()
+     */
+    @Deprecated("Use getTimeSlotsForDoctor(doctor) instead")
+    fun getTimeSlots(): List<String> {
+        return getDefaultTimeSlots()
+    }
 
     // ===============================
     // 📋 BOOKING / ANTRIAN

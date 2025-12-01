@@ -31,6 +31,7 @@ class BookingFragment : Fragment() {
 
     private var selectedDate: String = ""
     private var selectedSpecializationId: Int = 0
+    private var selectedDoctor: Doctor? = null  // ✅ Track selected doctor
     private val doctors = mutableListOf<Doctor>()
     private var isDataLoaded = false
 
@@ -115,14 +116,13 @@ class BookingFragment : Fragment() {
                         // Setup UI components
                         setupSpecializationSpinner()
                         delay(100)
-                        setupTimeSpinner()
-                        delay(100)
                         setupDatePicker()
                         delay(100)
                         setupBookingButton()
 
-                        // Initialize doctor spinner
+                        // Initialize doctor and time spinner (empty)
                         clearDoctorSpinner()
+                        clearTimeSpinner()
 
                         // Handle pre-selected specialization
                         handlePreSelectedSpecialization()
@@ -236,11 +236,13 @@ class BookingFragment : Fragment() {
                         loadDoctors(selectedSpecializationId)
                     } else {
                         clearDoctorSpinner()
+                        clearTimeSpinner()
                     }
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>?) {
                     clearDoctorSpinner()
+                    clearTimeSpinner()
                 }
             }
 
@@ -256,34 +258,9 @@ class BookingFragment : Fragment() {
         }
     }
 
-    // ✅ FIXED: Setup time spinner dengan adapter yang benar
-    private fun setupTimeSpinner() {
-        try {
-            val timeSlots = mutableListOf<String>()
-            timeSlots.add("Pilih Jam")
-            timeSlots.addAll(DataSource.getTimeSlots())
-
-            val timeAdapter = ArrayAdapter(
-                requireContext(),
-                android.R.layout.simple_spinner_item,
-                timeSlots
-            )
-            timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-
-            spinnerTime.adapter = timeAdapter
-            spinnerTime.isEnabled = true
-            spinnerTime.isClickable = true
-            spinnerTime.isFocusable = true
-
-            Log.d(TAG, "✅ Time spinner setup complete: ${timeSlots.size} slots")
-
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error setting up time spinner: ${e.message}", e)
-        }
-    }
-
     private fun loadDoctors(specializationId: Int) {
         doctors.clear()
+        selectedDoctor = null  // ✅ Reset selected doctor
 
         Log.d(TAG, "=== LOADING DOCTORS ===")
         Log.d(TAG, "Specialization ID: $specializationId")
@@ -302,12 +279,13 @@ class BookingFragment : Fragment() {
             ).show()
 
             clearDoctorSpinner()
+            clearTimeSpinner()
         } else {
             doctors.addAll(filteredDoctors)
 
             Log.d(TAG, "✅ Doctors loaded:")
             doctors.forEach { doctor ->
-                Log.d(TAG, "  - ${doctor.name} (${doctor.specialization})")
+                Log.d(TAG, "  - ${doctor.name} (${doctor.specialization}) - ${doctor.schedule}")
             }
 
             updateDoctorSpinner()
@@ -321,7 +299,7 @@ class BookingFragment : Fragment() {
             doctorNames.add("Pilih Dokter")
 
             doctors.forEach { doctor ->
-                doctorNames.add("${doctor.name} - ${doctor.schedule}")
+                doctorNames.add("${doctor.name}\n📅 ${doctor.schedule}")
             }
 
             val doctorAdapter = ArrayAdapter(
@@ -336,6 +314,27 @@ class BookingFragment : Fragment() {
             spinnerDoctor.isClickable = true
             spinnerDoctor.isFocusable = true
 
+            // ✅ CRITICAL: Setup listener untuk update jam sesuai dokter
+            spinnerDoctor.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    if (position > 0) {
+                        selectedDoctor = doctors[position - 1]
+                        Log.d(TAG, "Doctor selected: ${selectedDoctor?.name}")
+
+                        // ✅ Update time slots sesuai jadwal dokter
+                        updateTimeSpinner()
+                    } else {
+                        selectedDoctor = null
+                        clearTimeSpinner()
+                    }
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) {
+                    selectedDoctor = null
+                    clearTimeSpinner()
+                }
+            }
+
             Log.d(TAG, "✅ Doctor spinner updated: ${doctorNames.size} items")
 
         } catch (e: Exception) {
@@ -343,8 +342,43 @@ class BookingFragment : Fragment() {
         }
     }
 
+    // ✅ NEW: Update time spinner berdasarkan jadwal dokter yang dipilih
+    private fun updateTimeSpinner() {
+        try {
+            if (selectedDoctor == null) {
+                clearTimeSpinner()
+                return
+            }
+
+            val timeSlots = mutableListOf<String>()
+            timeSlots.add("Pilih Jam")
+
+            // ✅ Get time slots dari jadwal dokter
+            val doctorTimeSlots = DataSource.getTimeSlotsForDoctor(selectedDoctor!!)
+            timeSlots.addAll(doctorTimeSlots)
+
+            val timeAdapter = ArrayAdapter(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                timeSlots
+            )
+            timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+            spinnerTime.adapter = timeAdapter
+            spinnerTime.isEnabled = true
+            spinnerTime.isClickable = true
+            spinnerTime.isFocusable = true
+
+            Log.d(TAG, "✅ Time spinner updated: ${timeSlots.size} slots for ${selectedDoctor?.name}")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error updating time spinner: ${e.message}", e)
+        }
+    }
+
     private fun clearDoctorSpinner() {
         doctors.clear()
+        selectedDoctor = null
 
         val emptyAdapter = ArrayAdapter(
             requireContext(),
@@ -355,6 +389,19 @@ class BookingFragment : Fragment() {
 
         spinnerDoctor.adapter = emptyAdapter
         spinnerDoctor.isEnabled = false
+    }
+
+    // ✅ NEW: Clear time spinner
+    private fun clearTimeSpinner() {
+        val emptyAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            listOf("Pilih Jam")
+        )
+        emptyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        spinnerTime.adapter = emptyAdapter
+        spinnerTime.isEnabled = false
     }
 
     private fun setupDatePicker() {
@@ -422,7 +469,7 @@ class BookingFragment : Fragment() {
             return false
         }
 
-        if (doctors.isEmpty()) {
+        if (doctors.isEmpty() || selectedDoctor == null) {
             Toast.makeText(requireContext(), "❌ Tidak ada dokter tersedia", Toast.LENGTH_SHORT).show()
             return false
         }
@@ -465,29 +512,31 @@ class BookingFragment : Fragment() {
             showLoading(true)
             btnConfirmBooking.isEnabled = false
 
-            val selectedDoctorIndex = spinnerDoctor.selectedItemPosition - 1
-            if (selectedDoctorIndex < 0 || selectedDoctorIndex >= doctors.size) {
+            if (selectedDoctor == null) {
                 Toast.makeText(requireContext(), "❌ Dokter tidak valid", Toast.LENGTH_SHORT).show()
                 showLoading(false)
                 btnConfirmBooking.isEnabled = true
                 return
             }
 
-            val selectedDoctor = doctors[selectedDoctorIndex]
             val specialization = DataSource.getSpecializations().find { it.id == selectedSpecializationId }
 
             val selectedDateBookings = DataSource.getBookingHistory().filter { it.date == selectedDate }
             val baseQueueNumber = (5..50).random()
             val queueNumber = baseQueueNumber + selectedDateBookings.size
 
+            // ✅ Get selected time from spinner
+            val timeSlots = DataSource.getTimeSlotsForDoctor(selectedDoctor!!)
+            val selectedTime = timeSlots[spinnerTime.selectedItemPosition - 1]
+
             val booking = Booking(
                 id = "Q${queueNumber.toString().padStart(3, '0')}",
                 queueNumber = queueNumber,
                 patientName = etPatientName.text.toString().trim(),
-                doctorName = selectedDoctor.name,
+                doctorName = selectedDoctor!!.name,
                 specialization = specialization?.name ?: "",
                 date = selectedDate,
-                time = DataSource.getTimeSlots()[spinnerTime.selectedItemPosition - 1],
+                time = selectedTime,  // ✅ Use selected time
                 complaint = etComplaint.text.toString().trim(),
                 diagnosis = "",
                 prescription = "",
@@ -503,7 +552,7 @@ class BookingFragment : Fragment() {
 
             Toast.makeText(
                 requireContext(),
-                "✅ Booking berhasil!\nNo. ${queueNumber}",
+                "✅ Booking berhasil!\nNo. $queueNumber\nJam: $selectedTime",
                 Toast.LENGTH_LONG
             ).show()
 
