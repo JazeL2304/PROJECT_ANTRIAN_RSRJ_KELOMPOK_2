@@ -31,7 +31,7 @@ class BookingFragment : Fragment() {
 
     private var selectedDate: String = ""
     private var selectedSpecializationId: Int = 0
-    private var selectedDoctor: Doctor? = null  // ✅ Track selected doctor
+    private var selectedDoctor: Doctor? = null
     private val doctors = mutableListOf<Doctor>()
     private var isDataLoaded = false
 
@@ -51,8 +51,6 @@ class BookingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initViews(view)
-
-        // Load data and setup UI
         loadDataAndSetupUI()
     }
 
@@ -68,23 +66,18 @@ class BookingFragment : Fragment() {
         progressBar = view.findViewById(R.id.progress_bar)
     }
 
-    // ✅ FIXED: Load data dengan retry mechanism
+    // ✅ Load data dengan retry mechanism
     private fun loadDataAndSetupUI() {
         showLoading(true)
 
         lifecycleScope.launch {
             try {
-                // Force load from Firebase dengan retry mechanism
                 withContext(Dispatchers.IO) {
                     Log.d(TAG, "🔄 Loading data from Firebase...")
 
-                    // Clear cache dulu
                     DataSource.invalidateCache()
-
-                    // Force reload
                     DataSource.forceLoadFromFirebase()
 
-                    // Tunggu sampai data benar-benar ter-load
                     var retryCount = 0
                     while (DataSource.getAllDoctors().isEmpty() && retryCount < 10) {
                         Log.d(TAG, "⏳ Waiting for data... retry $retryCount")
@@ -93,7 +86,6 @@ class BookingFragment : Fragment() {
                     }
                 }
 
-                // Check data dengan logging detail
                 val allDoctors = DataSource.getAllDoctors()
                 val specializations = DataSource.getSpecializations()
 
@@ -113,18 +105,15 @@ class BookingFragment : Fragment() {
                     if (allDoctors.isNotEmpty() && specializations.isNotEmpty()) {
                         isDataLoaded = true
 
-                        // Setup UI components
                         setupSpecializationSpinner()
                         delay(100)
                         setupDatePicker()
                         delay(100)
                         setupBookingButton()
 
-                        // Initialize doctor and time spinner (empty)
                         clearDoctorSpinner()
                         clearTimeSpinner()
 
-                        // Handle pre-selected specialization
                         handlePreSelectedSpecialization()
 
                         Log.d(TAG, "✅ UI Setup Complete")
@@ -137,7 +126,6 @@ class BookingFragment : Fragment() {
                     } else {
                         Log.e(TAG, "❌ Data masih kosong setelah load!")
 
-                        // Show detailed error
                         val errorMsg = "❌ Gagal memuat data.\n" +
                                 "Doctors: ${allDoctors.size}\n" +
                                 "Specs: ${specializations.size}\n\n" +
@@ -149,7 +137,6 @@ class BookingFragment : Fragment() {
                             Toast.LENGTH_LONG
                         ).show()
 
-                        // Offer retry
                         showRetryDialog()
                     }
                 }
@@ -183,7 +170,7 @@ class BookingFragment : Fragment() {
             .show()
     }
 
-    // ✅ FIXED: Setup spinner dengan proper adapter dan clickable
+    // ✅ Setup spinner spesialisasi
     private fun setupSpecializationSpinner() {
         try {
             val specializations = DataSource.getSpecializations()
@@ -208,7 +195,6 @@ class BookingFragment : Fragment() {
                 Log.d(TAG, "Added: ${spec.emoji} ${spec.name}")
             }
 
-            // ✅ CRITICAL: Gunakan layout yang benar untuk dropdown
             val specAdapter = ArrayAdapter(
                 requireContext(),
                 android.R.layout.simple_spinner_item,
@@ -217,8 +203,6 @@ class BookingFragment : Fragment() {
             specAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
             spinnerSpecialization.adapter = specAdapter
-
-            // ✅ CRITICAL: Enable spinner
             spinnerSpecialization.isEnabled = true
             spinnerSpecialization.isClickable = true
             spinnerSpecialization.isFocusable = true
@@ -237,12 +221,17 @@ class BookingFragment : Fragment() {
                     } else {
                         clearDoctorSpinner()
                         clearTimeSpinner()
+                        selectedDoctor = null
+                        selectedDate = ""
+                        tvSelectedDate.text = ""
+                        tvSelectedDate.visibility = View.GONE
                     }
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>?) {
                     clearDoctorSpinner()
                     clearTimeSpinner()
+                    selectedDoctor = null
                 }
             }
 
@@ -258,9 +247,13 @@ class BookingFragment : Fragment() {
         }
     }
 
+    // ✅ Load doctors berdasarkan spesialisasi
     private fun loadDoctors(specializationId: Int) {
         doctors.clear()
-        selectedDoctor = null  // ✅ Reset selected doctor
+        selectedDoctor = null
+        selectedDate = ""
+        tvSelectedDate.text = ""
+        tvSelectedDate.visibility = View.GONE
 
         Log.d(TAG, "=== LOADING DOCTORS ===")
         Log.d(TAG, "Specialization ID: $specializationId")
@@ -292,7 +285,7 @@ class BookingFragment : Fragment() {
         }
     }
 
-    // ✅ FIXED: Update doctor spinner dengan adapter yang benar
+    // ✅ Update doctor spinner
     private fun updateDoctorSpinner() {
         try {
             val doctorNames = mutableListOf<String>()
@@ -314,15 +307,23 @@ class BookingFragment : Fragment() {
             spinnerDoctor.isClickable = true
             spinnerDoctor.isFocusable = true
 
-            // ✅ CRITICAL: Setup listener untuk update jam sesuai dokter
             spinnerDoctor.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                     if (position > 0) {
                         selectedDoctor = doctors[position - 1]
-                        Log.d(TAG, "Doctor selected: ${selectedDoctor?.name}")
+                        Log.d(TAG, "✅ Doctor selected: ${selectedDoctor?.name}")
 
-                        // ✅ Update time slots sesuai jadwal dokter
-                        updateTimeSpinner()
+                        // Reset tanggal dan jam saat dokter berubah
+                        selectedDate = ""
+                        tvSelectedDate.text = ""
+                        tvSelectedDate.visibility = View.GONE
+                        clearTimeSpinner()
+
+                        Toast.makeText(
+                            requireContext(),
+                            "Silakan pilih tanggal booking",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
                         selectedDoctor = null
                         clearTimeSpinner()
@@ -342,7 +343,7 @@ class BookingFragment : Fragment() {
         }
     }
 
-    // ✅ NEW: Update time spinner berdasarkan jadwal dokter yang dipilih
+    // ✅ Update time spinner berdasarkan jadwal dokter
     private fun updateTimeSpinner() {
         try {
             if (selectedDoctor == null) {
@@ -353,7 +354,6 @@ class BookingFragment : Fragment() {
             val timeSlots = mutableListOf<String>()
             timeSlots.add("Pilih Jam")
 
-            // ✅ Get time slots dari jadwal dokter
             val doctorTimeSlots = DataSource.getTimeSlotsForDoctor(selectedDoctor!!)
             timeSlots.addAll(doctorTimeSlots)
 
@@ -391,7 +391,6 @@ class BookingFragment : Fragment() {
         spinnerDoctor.isEnabled = false
     }
 
-    // ✅ NEW: Clear time spinner
     private fun clearTimeSpinner() {
         val emptyAdapter = ArrayAdapter(
             requireContext(),
@@ -404,17 +403,54 @@ class BookingFragment : Fragment() {
         spinnerTime.isEnabled = false
     }
 
+    // ✅ Setup date picker dengan validasi jadwal dokter
     private fun setupDatePicker() {
         btnSelectDate.setOnClickListener {
+            // Validasi: Harus pilih dokter dulu
+            if (selectedDoctor == null) {
+                Toast.makeText(
+                    requireContext(),
+                    "⚠️ Pilih dokter terlebih dahulu!",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
             val calendar = Calendar.getInstance()
             val datePickerDialog = DatePickerDialog(
                 requireContext(),
                 { _, year, month, dayOfMonth ->
                     calendar.set(year, month, dayOfMonth)
-                    selectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
-                    val displayDate = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID")).format(calendar.time)
-                    tvSelectedDate.text = displayDate
-                    tvSelectedDate.visibility = View.VISIBLE
+
+                    // Validasi: Cek apakah tanggal ini sesuai jadwal dokter
+                    if (isDoctorAvailableOnDate(calendar, selectedDoctor!!)) {
+                        selectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+                        val displayDate = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID")).format(calendar.time)
+                        tvSelectedDate.text = displayDate
+                        tvSelectedDate.visibility = View.VISIBLE
+
+                        // Update time spinner setelah tanggal valid dipilih
+                        updateTimeSpinner()
+
+                        Toast.makeText(
+                            requireContext(),
+                            "Silakan pilih jam booking",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        val dayName = SimpleDateFormat("EEEE", Locale("id", "ID")).format(calendar.time)
+                        Toast.makeText(
+                            requireContext(),
+                            "❌ ${selectedDoctor!!.name} tidak praktik pada hari $dayName!\n\nJadwal: ${selectedDoctor!!.schedule}",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        // Reset jika tanggal tidak valid
+                        selectedDate = ""
+                        tvSelectedDate.text = ""
+                        tvSelectedDate.visibility = View.GONE
+                        clearTimeSpinner()
+                    }
                 },
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
@@ -428,6 +464,108 @@ class BookingFragment : Fragment() {
             datePickerDialog.datePicker.maxDate = maxCalendar.timeInMillis
 
             datePickerDialog.show()
+        }
+    }
+
+    // ✅ Validasi hari praktik dokter
+    private fun isDoctorAvailableOnDate(calendar: Calendar, doctor: Doctor): Boolean {
+        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+        val schedule = doctor.schedule.lowercase()
+
+        Log.d(TAG, "=== VALIDASI HARI PRAKTIK ===")
+        Log.d(TAG, "Dokter: ${doctor.name}")
+        Log.d(TAG, "Jadwal: ${doctor.schedule}")
+        Log.d(TAG, "Hari dipilih: ${getDayName(dayOfWeek)}")
+
+        // CASE 1: Dokter praktik "Setiap Hari" atau "24 Jam"
+        if (schedule.contains("setiap hari") || schedule.contains("24 jam")) {
+            Log.d(TAG, "✅ Dokter praktik setiap hari")
+            return true
+        }
+
+        // CASE 2: Parse hari praktik dari schedule string
+        val availableDays = parseDoctorScheduleDays(schedule)
+
+        Log.d(TAG, "Hari praktik: $availableDays")
+
+        val isDayAvailable = when (dayOfWeek) {
+            Calendar.SUNDAY -> availableDays.contains("minggu")
+            Calendar.MONDAY -> availableDays.contains("senin")
+            Calendar.TUESDAY -> availableDays.contains("selasa")
+            Calendar.WEDNESDAY -> availableDays.contains("rabu")
+            Calendar.THURSDAY -> availableDays.contains("kamis")
+            Calendar.FRIDAY -> availableDays.contains("jumat")
+            Calendar.SATURDAY -> availableDays.contains("sabtu")
+            else -> false
+        }
+
+        Log.d(TAG, if (isDayAvailable) "✅ Hari tersedia" else "❌ Hari tidak tersedia")
+        return isDayAvailable
+    }
+
+    // ✅ Parse hari praktik dari schedule string
+    private fun parseDoctorScheduleDays(schedule: String): List<String> {
+        val scheduleLower = schedule.lowercase()
+        val days = mutableListOf<String>()
+
+        // Handle format "Senin-Jumat", "Senin–Sabtu", dll
+        when {
+            // Senin sampai Jumat
+            scheduleLower.contains("senin") && scheduleLower.contains("jumat") &&
+                    (scheduleLower.contains("-") || scheduleLower.contains("–")) -> {
+                days.addAll(listOf("senin", "selasa", "rabu", "kamis", "jumat"))
+            }
+            // Senin sampai Sabtu
+            scheduleLower.contains("senin") && scheduleLower.contains("sabtu") &&
+                    (scheduleLower.contains("-") || scheduleLower.contains("–")) -> {
+                days.addAll(listOf("senin", "selasa", "rabu", "kamis", "jumat", "sabtu"))
+            }
+            // Senin sampai Kamis
+            scheduleLower.contains("senin") && scheduleLower.contains("kamis") &&
+                    (scheduleLower.contains("-") || scheduleLower.contains("–")) -> {
+                days.addAll(listOf("senin", "selasa", "rabu", "kamis"))
+            }
+            // Selasa sampai Sabtu
+            scheduleLower.contains("selasa") && scheduleLower.contains("sabtu") &&
+                    (scheduleLower.contains("-") || scheduleLower.contains("–")) -> {
+                days.addAll(listOf("selasa", "rabu", "kamis", "jumat", "sabtu"))
+            }
+            // Rabu sampai Minggu
+            scheduleLower.contains("rabu") && scheduleLower.contains("minggu") &&
+                    (scheduleLower.contains("-") || scheduleLower.contains("–")) -> {
+                days.addAll(listOf("rabu", "kamis", "jumat", "sabtu", "minggu"))
+            }
+            // Jumat sampai Minggu
+            scheduleLower.contains("jumat") && scheduleLower.contains("minggu") &&
+                    (scheduleLower.contains("-") || scheduleLower.contains("–")) -> {
+                days.addAll(listOf("jumat", "sabtu", "minggu"))
+            }
+            // Parse individual days jika tidak ada range
+            else -> {
+                if (scheduleLower.contains("senin")) days.add("senin")
+                if (scheduleLower.contains("selasa")) days.add("selasa")
+                if (scheduleLower.contains("rabu")) days.add("rabu")
+                if (scheduleLower.contains("kamis")) days.add("kamis")
+                if (scheduleLower.contains("jumat")) days.add("jumat")
+                if (scheduleLower.contains("sabtu")) days.add("sabtu")
+                if (scheduleLower.contains("minggu")) days.add("minggu")
+            }
+        }
+
+        return days
+    }
+
+    // Helper: Get day name in Indonesian
+    private fun getDayName(dayOfWeek: Int): String {
+        return when (dayOfWeek) {
+            Calendar.SUNDAY -> "Minggu"
+            Calendar.MONDAY -> "Senin"
+            Calendar.TUESDAY -> "Selasa"
+            Calendar.WEDNESDAY -> "Rabu"
+            Calendar.THURSDAY -> "Kamis"
+            Calendar.FRIDAY -> "Jumat"
+            Calendar.SATURDAY -> "Sabtu"
+            else -> "Unknown"
         }
     }
 
@@ -445,7 +583,6 @@ class BookingFragment : Fragment() {
                 Log.d(TAG, "Pre-selected specialization: $specId")
                 selectedSpecializationId = specId
 
-                // Set selection after a small delay
                 view?.postDelayed({
                     spinnerSpecialization.setSelection(specId)
                 }, 300)
@@ -469,8 +606,8 @@ class BookingFragment : Fragment() {
             return false
         }
 
-        if (doctors.isEmpty() || selectedDoctor == null) {
-            Toast.makeText(requireContext(), "❌ Tidak ada dokter tersedia", Toast.LENGTH_SHORT).show()
+        if (selectedDoctor == null) {
+            Toast.makeText(requireContext(), "❌ Dokter tidak valid", Toast.LENGTH_SHORT).show()
             return false
         }
 
@@ -525,9 +662,14 @@ class BookingFragment : Fragment() {
             val baseQueueNumber = (5..50).random()
             val queueNumber = baseQueueNumber + selectedDateBookings.size
 
-            // ✅ Get selected time from spinner
+            // Get selected time from spinner
             val timeSlots = DataSource.getTimeSlotsForDoctor(selectedDoctor!!)
-            val selectedTime = timeSlots[spinnerTime.selectedItemPosition - 1]
+            val selectedTimeIndex = spinnerTime.selectedItemPosition - 1
+            val selectedTime = if (selectedTimeIndex >= 0 && selectedTimeIndex < timeSlots.size) {
+                timeSlots[selectedTimeIndex]
+            } else {
+                "08:00"
+            }
 
             val booking = Booking(
                 id = "Q${queueNumber.toString().padStart(3, '0')}",
@@ -536,7 +678,7 @@ class BookingFragment : Fragment() {
                 doctorName = selectedDoctor!!.name,
                 specialization = specialization?.name ?: "",
                 date = selectedDate,
-                time = selectedTime,  // ✅ Use selected time
+                time = selectedTime,
                 complaint = etComplaint.text.toString().trim(),
                 diagnosis = "",
                 prescription = "",
@@ -552,7 +694,7 @@ class BookingFragment : Fragment() {
 
             Toast.makeText(
                 requireContext(),
-                "✅ Booking berhasil!\nNo. $queueNumber\nJam: $selectedTime",
+                "✅ Booking berhasil!\nNo. Antrian: $queueNumber\nJam: $selectedTime",
                 Toast.LENGTH_LONG
             ).show()
 
