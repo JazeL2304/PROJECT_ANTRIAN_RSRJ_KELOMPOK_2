@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay  // ✅ TAMBAHKAN INI
 
 // ========== FRAGMENT PASIEN ==========
 import com.example.projectantrianrsrjkelompok2.BookingFragment
@@ -79,25 +80,46 @@ class MainActivity : AppCompatActivity() {
         val isFirstLaunch = preferencesHelper.isFirstLaunch()
 
         // ⚠️ UNCOMMENT UNTUK FORCE RESET DATABASE (TESTING)
-        //preferencesHelper.resetFirstLaunch()
-        //lifecycleScope.launch(Dispatchers.IO) {
+        // preferencesHelper.resetFirstLaunch()
+        // lifecycleScope.launch(Dispatchers.IO) {
         //     FirebaseSeedData.clearAllData()
-        //}
+        // }
+
+        Log.d("MainActivity", "🔍 First Launch: $isFirstLaunch")
 
         if (isFirstLaunch) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     Log.d("MainActivity", "🌱 Starting Firebase seed (FIRST LAUNCH)...")
+
+                    // Clear cache dulu
+                    DataSource.invalidateCache()
+
+                    // Seed data
                     FirebaseSeedData.seedAllData()
+
+                    // Wait for data to be written
+                    delay(2000)
+
+                    // Force load data
+                    DataSource.forceLoadFromFirebase()
 
                     withContext(Dispatchers.Main) {
                         preferencesHelper.setFirstLaunchComplete()
                         Log.d("MainActivity", "✅ Firebase seed completed!")
+
+                        // Verify data loaded
+                        val doctors = DataSource.getAllDoctors()
+                        val specs = DataSource.getSpecializations()
+                        Log.d("MainActivity", "📊 Verification - Doctors: ${doctors.size}, Specs: ${specs.size}")
                     }
                 } catch (e: Exception) {
                     Log.e("MainActivity", "❌ Firebase seed failed: ${e.message}", e)
                 }
             }
+        } else {
+            // Jika bukan first launch, tetap preload data
+            preloadDataFromFirebase()
         }
     }
 

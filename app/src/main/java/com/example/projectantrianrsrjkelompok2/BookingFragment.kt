@@ -76,19 +76,21 @@ class BookingFragment : Fragment() {
                 // Force load from Firebase dengan retry mechanism
                 withContext(Dispatchers.IO) {
                     Log.d(TAG, "🔄 Loading data from Firebase...")
+
+                    // Clear cache dulu
+                    DataSource.invalidateCache()
+
+                    // Force reload
                     DataSource.forceLoadFromFirebase()
 
                     // Tunggu sampai data benar-benar ter-load
                     var retryCount = 0
-                    while (DataSource.getAllDoctors().isEmpty() && retryCount < 5) {
+                    while (DataSource.getAllDoctors().isEmpty() && retryCount < 10) {
                         Log.d(TAG, "⏳ Waiting for data... retry $retryCount")
                         delay(500)
                         retryCount++
                     }
                 }
-
-                // Delay tambahan untuk memastikan
-                delay(500)
 
                 // Check data dengan logging detail
                 val allDoctors = DataSource.getAllDoctors()
@@ -110,7 +112,7 @@ class BookingFragment : Fragment() {
                     if (allDoctors.isNotEmpty() && specializations.isNotEmpty()) {
                         isDataLoaded = true
 
-                        // Setup UI components dengan delay
+                        // Setup UI components
                         setupSpecializationSpinner()
                         delay(100)
                         setupTimeSpinner()
@@ -134,11 +136,21 @@ class BookingFragment : Fragment() {
                         ).show()
                     } else {
                         Log.e(TAG, "❌ Data masih kosong setelah load!")
+
+                        // Show detailed error
+                        val errorMsg = "❌ Gagal memuat data.\n" +
+                                "Doctors: ${allDoctors.size}\n" +
+                                "Specs: ${specializations.size}\n\n" +
+                                "Coba restart aplikasi atau hubungi admin."
+
                         Toast.makeText(
                             requireContext(),
-                            "❌ Gagal memuat data. Doctors: ${allDoctors.size}, Specs: ${specializations.size}",
+                            errorMsg,
                             Toast.LENGTH_LONG
                         ).show()
+
+                        // Offer retry
+                        showRetryDialog()
                     }
                 }
 
@@ -151,9 +163,24 @@ class BookingFragment : Fragment() {
                         "❌ Error: ${e.message}",
                         Toast.LENGTH_LONG
                     ).show()
+
+                    showRetryDialog()
                 }
             }
         }
+    }
+
+    private fun showRetryDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Gagal Memuat Data")
+            .setMessage("Data tidak dapat dimuat dari server. Coba lagi?")
+            .setPositiveButton("Coba Lagi") { _, _ ->
+                loadDataAndSetupUI()
+            }
+            .setNegativeButton("Batal") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     // ✅ FIXED: Setup spinner dengan proper adapter dan clickable

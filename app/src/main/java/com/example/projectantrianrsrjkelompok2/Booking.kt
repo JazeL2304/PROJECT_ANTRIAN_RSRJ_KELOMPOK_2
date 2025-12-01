@@ -2,17 +2,17 @@ package com.example.projectantrianrsrjkelompok2
 
 // -------------------- MODEL BOOKING --------------------
 data class Booking(
-    val id: String,
-    val queueNumber: Int,
-    val patientName: String,
-    val doctorName: String,
-    val specialization: String,
-    val date: String,
-    val time: String,
+    val id: String = "",
+    val queueNumber: Int = 0,
+    val patientName: String = "",
+    val doctorName: String = "",
+    val specialization: String = "",
+    val date: String = "",
+    val time: String = "",
     val complaint: String = "",
-    val diagnosis: String = "",       // ✅ Tambahan
-    val prescription: String = "",    // ✅ Tambahan
-    val status: BookingStatus,
+    val diagnosis: String = "",
+    val prescription: String = "",
+    val status: BookingStatus = BookingStatus.WAITING,
     val createdAt: Long = System.currentTimeMillis()
 )
 
