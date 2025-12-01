@@ -30,6 +30,7 @@ class QueueFragment : Fragment() {
     private lateinit var btnRefresh: Button
     private lateinit var btnDownloadReceipt: Button
     private lateinit var btnCancelQueue: Button
+    private lateinit var btnCompleteQueue: Button  // ✅ NEW: Tombol selesai
     private lateinit var progressBar: ProgressBar
     private lateinit var cardMyQueue: View
     private lateinit var tvQueueList: TextView
@@ -41,6 +42,10 @@ class QueueFragment : Fragment() {
     private var hasShownNotification3 = false
     private var hasShownNotification1 = false
     private var hasShownNotificationReady = false
+
+    companion object {
+        private const val TAG = "QueueFragment"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -71,6 +76,7 @@ class QueueFragment : Fragment() {
         setupRefreshButton()
         setupDownloadButton()
         setupCancelButton()
+        setupCompleteButton()  // ✅ NEW
         updateQueueDisplay()
         startAutoRefresh()
     }
@@ -90,12 +96,12 @@ class QueueFragment : Fragment() {
         btnRefresh = view.findViewById(R.id.btn_refresh)
         btnDownloadReceipt = view.findViewById(R.id.btn_download_receipt)
         btnCancelQueue = view.findViewById(R.id.btn_cancel_queue)
+        btnCompleteQueue = view.findViewById(R.id.btn_complete_queue)  // ✅ NEW
         progressBar = view.findViewById(R.id.progress_bar)
         cardMyQueue = view.findViewById(R.id.card_my_queue)
         tvQueueList = view.findViewById(R.id.tv_queue_list)
     }
 
-    // ← UPDATED: Tambah cardMyQueue.visibility = View.VISIBLE
     private fun loadBookingData() {
         val activeBooking = DataSource.getActiveBooking()
 
@@ -114,7 +120,6 @@ class QueueFragment : Fragment() {
 
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             if (activeBooking.date == today) {
-                // ✅ FIXED: Current queue minimal 2, maksimal myQueueNumber - 3
                 currentQueueNumber = maxOf(2, (myQueueNumber - (7..12).random()))
             } else {
                 currentQueueNumber = 1
@@ -131,7 +136,6 @@ class QueueFragment : Fragment() {
             cardMyQueue.visibility = View.GONE
         }
     }
-
 
     private fun formatDateIndonesia(dateString: String): String {
         return try {
@@ -178,6 +182,51 @@ class QueueFragment : Fragment() {
                     dialog.dismiss()
                 }
                 .show()
+        }
+    }
+
+    // ✅ NEW: Setup tombol selesai
+    private fun setupCompleteButton() {
+        btnCompleteQueue.setOnClickListener {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Selesaikan Antrian")
+                .setMessage("Apakah pemeriksaan Anda sudah selesai?\n\nAntrian akan dipindahkan ke riwayat.")
+                .setPositiveButton("Ya, Sudah Selesai") { dialog, _ ->
+                    completeQueue()
+                    dialog.dismiss()
+                }
+                .setNegativeButton("Belum") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .show()
+        }
+    }
+
+    // ✅ NEW: Fungsi untuk menyelesaikan antrian
+    private fun completeQueue() {
+        DataSource.getActiveBooking()?.let { booking ->
+            // Update status menjadi COMPLETED
+            val completedBooking = booking.copy(
+                status = BookingStatus.COMPLETED
+            )
+
+            // Update di history
+            DataSource.addToHistory(completedBooking)
+
+            // Clear active booking
+            DataSource.clearActiveBooking()
+
+            // Hide card
+            cardMyQueue.visibility = View.GONE
+
+            Toast.makeText(
+                requireContext(),
+                "✅ Antrian selesai!\nTerima kasih telah menggunakan layanan kami.",
+                Toast.LENGTH_LONG
+            ).show()
+
+            // Navigasi ke History Fragment untuk melihat hasil
+            (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
         }
     }
 
@@ -353,26 +402,31 @@ class QueueFragment : Fragment() {
                 hasShownNotificationReady = false
             }
 
+            // ✅ UPDATE: Tampilkan/sembunyikan tombol berdasarkan status
             when {
                 myQueueNumber < currentQueueNumber -> {
                     myQueueStatus = "Terlewat"
                     tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                     tvEstimatedTime.text = "Silakan hubungi petugas"
+                    btnCompleteQueue.visibility = View.GONE
                 }
                 myQueueNumber == currentQueueNumber -> {
                     myQueueStatus = "Dipanggil"
                     tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
                     tvEstimatedTime.text = "Silakan menuju ruang dokter"
+                    btnCompleteQueue.visibility = View.VISIBLE  // ✅ Tampilkan tombol selesai
                 }
                 myQueueNumber == currentQueueNumber + 1 -> {
                     myQueueStatus = "Siap-siap"
                     tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark))
                     tvEstimatedTime.text = "Bersiap, giliran Anda selanjutnya!"
+                    btnCompleteQueue.visibility = View.GONE
                 }
                 else -> {
                     myQueueStatus = "Menunggu"
                     tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark))
                     calculateEstimatedTime()
+                    btnCompleteQueue.visibility = View.GONE
                 }
             }
 
@@ -466,12 +520,6 @@ class QueueFragment : Fragment() {
             }
         }
         handler.post(refreshRunnable)
-    }
-
-    private fun getCurrentDate(): String {
-        val calendar = Calendar.getInstance()
-        val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
-        return dateFormat.format(calendar.time)
     }
 
     private fun showLoading(isLoading: Boolean) {
