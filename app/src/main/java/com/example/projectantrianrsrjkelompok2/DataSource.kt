@@ -175,14 +175,14 @@ object DataSource {
 
     /**
      * ✅ Generate time slots berdasarkan jadwal dokter yang dipilih
-     * Format jadwal: "Senin–Jumat 08:00–15:00"
+     * Support untuk shift malam (20:00-08:00)
      */
     fun getTimeSlotsForDoctor(doctor: Doctor): List<String> {
         val schedule = doctor.schedule
 
         Log.d(TAG, "🕐 Generating time slots for ${doctor.name}: $schedule")
 
-        // Extract jam dari schedule (format: "Hari 08:00–15:00")
+        // Extract jam dari schedule (format: "Hari 08:00–20:00")
         val timePattern = "(\\d{2}:\\d{2})".toRegex()
         val times = timePattern.findAll(schedule).map { it.value }.toList()
 
@@ -191,8 +191,8 @@ object DataSource {
             return getDefaultTimeSlots()
         }
 
-        val startTime = times[0] // e.g., "08:00"
-        val endTime = times[1]   // e.g., "15:00"
+        val startTime = times[0] // e.g., "08:00" or "20:00"
+        val endTime = times[1]   // e.g., "20:00" or "08:00"
 
         Log.d(TAG, "  Start: $startTime, End: $endTime")
 
@@ -200,7 +200,8 @@ object DataSource {
     }
 
     /**
-     * ✅ Generate time slots dari jam mulai sampai jam selesai (interval 30 menit)
+     * ✅ Generate time slots dari jam mulai sampai jam selesai
+     * Support untuk shift malam (melewati tengah malam)
      */
     private fun generateTimeSlots(startTime: String, endTime: String): List<String> {
         val timeSlots = mutableListOf<String>()
@@ -220,13 +221,46 @@ object DataSource {
             val endCalendar = Calendar.getInstance()
             endCalendar.time = end
 
-            // Generate slots setiap 30 menit
-            while (calendar.time.before(endCalendar.time) || calendar.time == endCalendar.time) {
-                timeSlots.add(format.format(calendar.time))
-                calendar.add(Calendar.MINUTE, 30)
+            // ✅ DETECT SHIFT MALAM (end time lebih kecil dari start time)
+            val isNightShift = endCalendar.before(calendar) || endCalendar.time == calendar.time
+
+            if (isNightShift) {
+                Log.d(TAG, "🌙 Night shift detected: $startTime to $endTime (next day)")
+
+                // Generate slots dari start time sampai 23:30
+                while (calendar.get(Calendar.HOUR_OF_DAY) < 24) {
+                    timeSlots.add(format.format(calendar.time))
+                    calendar.add(Calendar.MINUTE, 30)
+
+                    // Stop at 23:30
+                    if (calendar.get(Calendar.HOUR_OF_DAY) == 23 && calendar.get(Calendar.MINUTE) > 30) {
+                        break
+                    }
+                }
+
+                // Reset ke 00:00 untuk hari berikutnya
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+
+                // Generate slots dari 00:00 sampai end time
+                while (calendar.time.before(endCalendar.time) || calendar.time == endCalendar.time) {
+                    timeSlots.add(format.format(calendar.time))
+                    calendar.add(Calendar.MINUTE, 30)
+                }
+
+            } else {
+                // ✅ NORMAL SHIFT (day shift)
+                Log.d(TAG, "☀️ Day shift: $startTime to $endTime")
+
+                while (calendar.time.before(endCalendar.time) || calendar.time == endCalendar.time) {
+                    timeSlots.add(format.format(calendar.time))
+                    calendar.add(Calendar.MINUTE, 30)
+                }
             }
 
-            Log.d(TAG, "✅ Generated ${timeSlots.size} time slots: $timeSlots")
+            Log.d(TAG, "✅ Generated ${timeSlots.size} time slots")
+            Log.d(TAG, "   First slot: ${timeSlots.firstOrNull()}")
+            Log.d(TAG, "   Last slot: ${timeSlots.lastOrNull()}")
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error generating time slots: ${e.message}")

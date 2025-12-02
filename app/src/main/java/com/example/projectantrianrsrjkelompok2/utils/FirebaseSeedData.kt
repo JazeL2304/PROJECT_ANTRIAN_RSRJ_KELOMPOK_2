@@ -113,34 +113,36 @@ object FirebaseSeedData {
      */
     // app/src/main/java/com/example/projectantrianrsrjkelompok2/utils/FirebaseSeedData.kt
 
+// app/src/main/java/com/example/projectantrianrsrjkelompok2/utils/FirebaseSeedData.kt
+
     private suspend fun seedDoctors() {
         val doctors = listOf(
-            // Dokter Umum
-            Doctor(1, "Dr. Ahmad Santoso", "Dokter Umum", "Senin–Jumat 08:00–15:00"),
-            Doctor(2, "Dr. Siti Nurhaliza", "Dokter Umum", "Senin–Jumat 13:00–20:00"),
+            // ✅ Dokter Umum - SHIFT BERSELINGAN
+            Doctor(1, "Dr. Ahmad Santoso", "Dokter Umum", "Senin–Jumat 08:00–20:00"),
+            Doctor(2, "Dr. Siti Nurhaliza", "Dokter Umum", "Senin–Jumat 20:00–08:00"), // Shift malam
 
-            // Dokter Gigi
-            Doctor(3, "Dr. Budi Hartono", "Dokter Gigi", "Senin–Kamis 09:00–16:00"),
-            Doctor(4, "Dr. Dewi Lestari", "Dokter Gigi", "Jumat–Minggu 10:00–17:00"),
+            // ✅ Dokter Gigi - SHIFT BERSELINGAN
+            Doctor(3, "Dr. Budi Hartono", "Dokter Gigi", "Senin–Kamis 08:00–20:00"),
+            Doctor(4, "Dr. Dewi Lestari", "Dokter Gigi", "Senin–Kamis 20:00–08:00"), // Shift malam
 
-            // Dokter Mata
-            Doctor(5, "Dr. Indra Wijaya", "Dokter Mata", "Senin–Jumat 08:00–14:00"),
-            Doctor(6, "Dr. Maya Anggraini", "Dokter Mata", "Selasa–Sabtu 10:00–16:00"),
+            // ✅ Dokter Mata - SHIFT BERSELINGAN
+            Doctor(5, "Dr. Indra Wijaya", "Dokter Mata", "Senin–Jumat 08:00–20:00"),
+            Doctor(6, "Dr. Maya Anggraini", "Dokter Mata", "Senin–Jumat 20:00–08:00"), // Shift malam
 
-            // Dokter Anak
-            Doctor(7, "Dr. Ani Kusuma", "Dokter Anak", "Setiap Hari 24 Jam"),
-            Doctor(8, "Dr. Rina Permata", "Dokter Anak", "Senin–Sabtu 08:00–16:00"),
+            // ✅ Dokter Anak - 24 JAM (2 dokter cover semua waktu)
+            Doctor(7, "Dr. Ani Kusuma", "Dokter Anak", "Senin–Minggu 08:00–20:00"),
+            Doctor(8, "Dr. Rina Permata", "Dokter Anak", "Senin–Minggu 20:00–08:00"), // Shift malam
 
-            // Dokter Jantung
-            Doctor(9, "Dr. Joko Widodo", "Dokter Jantung", "Senin–Jumat 10:00–16:00"),
-            Doctor(10, "Dr. Andi Cahyono", "Dokter Jantung", "Rabu–Minggu 09:00–15:00"),
+            // ✅ Dokter Jantung - SHIFT BERSELINGAN
+            Doctor(9, "Dr. Joko Widodo", "Dokter Jantung", "Senin–Jumat 08:00–20:00"),
+            Doctor(10, "Dr. Andi Cahyono", "Dokter Jantung", "Senin–Jumat 20:00–08:00"), // Shift malam
 
-            // Dokter Kandungan
-            Doctor(11, "Dr. Maya Sari", "Dokter Kandungan", "Senin–Sabtu 09:00–15:00"),
-            Doctor(12, "Dr. Ratna Dewi", "Dokter Kandungan", "Senin–Jumat 13:00–19:00")
+            // ✅ Dokter Kandungan - SHIFT BERSELINGAN
+            Doctor(11, "Dr. Maya Sari", "Dokter Kandungan", "Senin–Sabtu 08:00–20:00"),
+            Doctor(12, "Dr. Ratna Dewi", "Dokter Kandungan", "Senin–Sabtu 20:00–08:00") // Shift malam
         )
 
-        Log.d(TAG, "📤 Seeding ${doctors.size} doctors...")
+        Log.d(TAG, "📤 Seeding ${doctors.size} doctors with shift schedules...")
         var successCount = 0
 
         doctors.forEach { doctor ->
@@ -148,11 +150,11 @@ object FirebaseSeedData {
                 val success = firebaseRepo.addDoctor(doctor)
                 if (success) {
                     successCount++
-                    Log.d(TAG, "  ✅ Added: ${doctor.name} (${doctor.specialization})")
+                    Log.d(TAG, "  ✅ Added: ${doctor.name} (${doctor.specialization}) - ${doctor.schedule}")
                 } else {
                     Log.e(TAG, "  ❌ Failed to add: ${doctor.name}")
                 }
-                delay(100) // Small delay between writes
+                delay(100)
             } catch (e: Exception) {
                 Log.e(TAG, "  ❌ Exception adding ${doctor.name}: ${e.message}")
             }
