@@ -16,8 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
+
 class BookingFragment : Fragment() {
 
     private lateinit var spinnerSpecialization: Spinner
@@ -35,6 +34,9 @@ class BookingFragment : Fragment() {
     private var selectedDoctor: Doctor? = null
     private val doctors = mutableListOf<Doctor>()
     private var isDataLoaded = false
+
+    // ✅ TAMBAHAN: Flag untuk prevent multiple clicks
+    private var isProcessing = false
 
     companion object {
         private const val TAG = "BookingFragment"
@@ -91,13 +93,7 @@ class BookingFragment : Fragment() {
 
                 Log.d(TAG, "=== DATA LOADED ===")
                 Log.d(TAG, "Doctors: ${allDoctors.size}")
-                allDoctors.forEach {
-                    Log.d(TAG, "  - ${it.name} (${it.specialization})")
-                }
                 Log.d(TAG, "Specializations: ${specializations.size}")
-                specializations.forEach {
-                    Log.d(TAG, "  - ${it.name}")
-                }
 
                 withContext(Dispatchers.Main) {
                     showLoading(false)
@@ -106,9 +102,7 @@ class BookingFragment : Fragment() {
                         isDataLoaded = true
 
                         setupSpecializationSpinner()
-                        delay(100)
                         setupDatePicker()
-                        delay(100)
                         setupBookingButton()
 
                         clearDoctorSpinner()
@@ -126,14 +120,9 @@ class BookingFragment : Fragment() {
                     } else {
                         Log.e(TAG, "❌ Data masih kosong setelah load!")
 
-                        val errorMsg = "❌ Gagal memuat data.\n" +
-                                "Doctors: ${allDoctors.size}\n" +
-                                "Specs: ${specializations.size}\n\n" +
-                                "Coba restart aplikasi atau hubungi admin."
-
                         Toast.makeText(
                             requireContext(),
-                            errorMsg,
+                            "❌ Gagal memuat data. Coba restart aplikasi.",
                             Toast.LENGTH_LONG
                         ).show()
 
@@ -191,7 +180,6 @@ class BookingFragment : Fragment() {
             specNames.add("Pilih Layanan Klinik")
             specializations.forEach { spec ->
                 specNames.add("${spec.emoji} ${spec.name}")
-                Log.d(TAG, "Added: ${spec.emoji} ${spec.name}")
             }
 
             val specAdapter = ArrayAdapter(
@@ -203,8 +191,6 @@ class BookingFragment : Fragment() {
 
             spinnerSpecialization.adapter = specAdapter
             spinnerSpecialization.isEnabled = true
-            spinnerSpecialization.isClickable = true
-            spinnerSpecialization.isFocusable = true
 
             spinnerSpecialization.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -238,11 +224,6 @@ class BookingFragment : Fragment() {
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error setting up specialization spinner: ${e.message}", e)
-            Toast.makeText(
-                requireContext(),
-                "❌ Error setup spinner: ${e.message}",
-                Toast.LENGTH_SHORT
-            ).show()
         }
     }
 
@@ -302,8 +283,6 @@ class BookingFragment : Fragment() {
 
             spinnerDoctor.adapter = doctorAdapter
             spinnerDoctor.isEnabled = true
-            spinnerDoctor.isClickable = true
-            spinnerDoctor.isFocusable = true
 
             spinnerDoctor.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -340,9 +319,6 @@ class BookingFragment : Fragment() {
         }
     }
 
-    /**
-     * ✅ Get shift label (Day/Night shift indicator)
-     */
     private fun getShiftLabel(schedule: String): String {
         val timePattern = "(\\d{2}:\\d{2})".toRegex()
         val times = timePattern.findAll(schedule).map { it.value }.toList()
@@ -358,71 +334,136 @@ class BookingFragment : Fragment() {
         }
     }
 
+    /**
+     * ✅ FIXED: Generate time slots berdasarkan jadwal dokter yang sebenarnya
+     */
     private fun updateTimeSpinner() {
-        lifecycleScope.launch {
-            try {
-                if (selectedDoctor == null) {
-                    clearTimeSpinner()
-                    return@launch
+        try {
+            if (selectedDoctor == null) {
+                clearTimeSpinner()
+                return
+            }
+
+            val timeSlots = mutableListOf<String>()
+            timeSlots.add("Pilih Jam")
+
+            // ✅ Parse jadwal dokter untuk mendapatkan jam mulai dan selesai
+            val schedule = selectedDoctor!!.schedule
+            Log.d(TAG, "Parsing schedule: $schedule")
+
+            // ✅ Extract jam dari format: "Senin-Jumat, 08:00-15:00"
+            val timePattern = "(\\d{1,2})[:\\.](\\d{2})".toRegex()
+            val matches = timePattern.findAll(schedule).toList()
+
+            Log.d(TAG, "Found ${matches.size} time patterns")
+
+            var generatedSlots = false
+
+            if (matches.size >= 2) {
+                // Ambil jam pertama (start time) dan jam kedua (end time)
+                val startHour = matches[0].groupValues[1].toInt()
+                val startMinute = matches[0].groupValues[2].toInt()
+                val endHour = matches[1].groupValues[1].toInt()
+                val endMinute = matches[1].groupValues[2].toInt()
+
+                val startMinutes = startHour * 60 + startMinute
+                var endMinutes = endHour * 60 + endMinute
+
+                // ✅ Handle shift malam (misal 20:00-02:00)
+                if (endHour < startHour) {
+                    endMinutes += 24 * 60 // tambah 24 jam
                 }
 
-                withContext(Dispatchers.Main) {
-                    // ✅ TEMPORARY FIX: Hardcode time slots untuk testing
-                    val timeSlots = mutableListOf<String>()
-                    timeSlots.add("Pilih Jam")
+                Log.d(TAG, "Time range: ${formatTime(startMinutes)} - ${formatTime(endMinutes)}")
+                Log.d(TAG, "Start: $startHour:$startMinute, End: $endHour:$endMinute")
 
-                    // Generate simple time slots based on doctor schedule
-                    val schedule = selectedDoctor!!.schedule.lowercase()
+                // ✅ Generate slot waktu setiap 30 menit
+                var currentMinutes = startMinutes
+                while (currentMinutes < endMinutes) {
+                    timeSlots.add(formatTime(currentMinutes))
+                    currentMinutes += 30
+                }
 
-                    if (schedule.contains("08:00") || schedule.contains("08.00")) {
-                        // Shift pagi
-                        timeSlots.addAll(listOf(
-                            "08:00", "08:30", "09:00", "09:30", "10:00",
-                            "10:30", "11:00", "11:30", "12:00", "12:30",
-                            "13:00", "13:30", "14:00"
-                        ))
-                    } else if (schedule.contains("20:00") || schedule.contains("20.00")) {
-                        // Shift malam
+                generatedSlots = true
+                Log.d(TAG, "✅ Generated ${timeSlots.size - 1} time slots from schedule")
+            }
+
+            // ✅ Fallback: Jika gagal parse atau slot kosong
+            if (!generatedSlots || timeSlots.size <= 1) {
+                Log.w(TAG, "⚠️ Could not parse schedule, using fallback slots")
+
+                // Cek keyword untuk shift malam atau siang
+                val scheduleLower = schedule.lowercase()
+
+                when {
+                    // Shift malam: 20:00 - 02:00
+                    scheduleLower.contains("20") ||
+                            scheduleLower.contains("malam") ||
+                            scheduleLower.contains("21") ||
+                            scheduleLower.contains("22") -> {
                         timeSlots.addAll(listOf(
                             "20:00", "20:30", "21:00", "21:30", "22:00",
                             "22:30", "23:00", "23:30", "00:00", "00:30",
                             "01:00", "01:30", "02:00"
                         ))
-                    } else {
-                        // Default slots
-                        timeSlots.addAll(listOf(
-                            "08:00", "09:00", "10:00", "11:00", "12:00",
-                            "13:00", "14:00", "15:00", "16:00"
-                        ))
+                        Log.d(TAG, "Using night shift slots")
                     }
-
-                    val timeAdapter = ArrayAdapter(
-                        requireContext(),
-                        android.R.layout.simple_spinner_item,
-                        timeSlots
-                    )
-                    timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-
-                    spinnerTime.adapter = timeAdapter
-                    spinnerTime.isEnabled = true
-                    spinnerTime.isClickable = true
-                    spinnerTime.isFocusable = true
-
-                    Log.d(TAG, "✅ Time spinner updated: ${timeSlots.size} slots (hardcoded)")
-                }
-
-            } catch (e: Exception) {
-                Log.e(TAG, "❌ Error updating time spinner: ${e.message}", e)
-                withContext(Dispatchers.Main) {
-                    clearTimeSpinner()
-                    Toast.makeText(
-                        requireContext(),
-                        "❌ Error loading time slots",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // Shift sore: 14:00 - 20:00
+                    scheduleLower.contains("14") ||
+                            scheduleLower.contains("sore") ||
+                            scheduleLower.contains("16") -> {
+                        timeSlots.addAll(listOf(
+                            "14:00", "14:30", "15:00", "15:30", "16:00",
+                            "16:30", "17:00", "17:30", "18:00", "18:30",
+                            "19:00", "19:30", "20:00"
+                        ))
+                        Log.d(TAG, "Using afternoon shift slots")
+                    }
+                    // Default shift pagi: 08:00 - 15:00
+                    else -> {
+                        timeSlots.addAll(listOf(
+                            "08:00", "08:30", "09:00", "09:30", "10:00",
+                            "10:30", "11:00", "11:30", "12:00", "12:30",
+                            "13:00", "13:30", "14:00", "14:30", "15:00"
+                        ))
+                        Log.d(TAG, "Using default morning shift slots")
+                    }
                 }
             }
+
+            // ✅ Update spinner dengan data yang sudah di-generate
+            val timeAdapter = ArrayAdapter(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                timeSlots
+            )
+            timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+            spinnerTime.adapter = timeAdapter
+            spinnerTime.isEnabled = true
+
+            Log.d(TAG, "✅ Time spinner updated with ${timeSlots.size - 1} slots")
+            Log.d(TAG, "Time slots: ${timeSlots.drop(1).joinToString(", ")}")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error updating time spinner: ${e.message}", e)
+            Toast.makeText(
+                requireContext(),
+                "Error: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+            clearTimeSpinner()
         }
+    }
+
+
+    /**
+     * ✅ Helper: Format minutes to HH:mm
+     */
+    private fun formatTime(minutes: Int): String {
+        val hour = (minutes / 60) % 24
+        val min = minutes % 60
+        return String.format("%02d:%02d", hour, min)
     }
 
     private fun clearDoctorSpinner() {
@@ -453,10 +494,20 @@ class BookingFragment : Fragment() {
     }
 
     /**
-     * ✅ PERBAIKAN: Setup date picker dengan coroutine untuk hindari ANR
+     * ✅ FIXED: Setup date picker - LIGHTWEIGHT, NO HEAVY PROCESSING
      */
     private fun setupDatePicker() {
         btnSelectDate.setOnClickListener {
+            // ✅ Prevent multiple clicks
+            if (isProcessing) {
+                Toast.makeText(
+                    requireContext(),
+                    "Mohon tunggu...",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
             if (selectedDoctor == null) {
                 Toast.makeText(
                     requireContext(),
@@ -467,26 +518,35 @@ class BookingFragment : Fragment() {
             }
 
             val calendar = Calendar.getInstance()
+
+            // ✅ Create DatePickerDialog - LIGHTWEIGHT
             val datePickerDialog = DatePickerDialog(
                 requireContext(),
                 { _, year, month, dayOfMonth ->
-                    // ✅ PINDAHKAN KE COROUTINE
+                    // ✅ CRITICAL FIX: Process di background thread
+                    isProcessing = true
+
                     lifecycleScope.launch {
                         try {
-                            // Tampilkan loading
+                            // Show loading
                             withContext(Dispatchers.Main) {
-                                showLoading(true)
+                                progressBar.visibility = View.VISIBLE
+                                btnSelectDate.isEnabled = false
                             }
 
-                            // ✅ Validasi di background thread
+                            // ✅ Validasi di background dengan timeout
                             val isAvailable = withContext(Dispatchers.Default) {
                                 calendar.set(year, month, dayOfMonth)
-                                isDoctorAvailableOnDate(calendar, selectedDoctor!!)
+
+                                // Simple validation - no heavy processing
+                                isDoctorAvailableOnDateSimple(calendar, selectedDoctor!!)
                             }
 
-                            // ✅ Update UI di Main thread
+                            // Update UI di Main thread
                             withContext(Dispatchers.Main) {
-                                showLoading(false)
+                                progressBar.visibility = View.GONE
+                                btnSelectDate.isEnabled = true
+                                isProcessing = false
 
                                 if (isAvailable) {
                                     selectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -510,8 +570,7 @@ class BookingFragment : Fragment() {
 
                                     Toast.makeText(
                                         requireContext(),
-                                        "❌ ${selectedDoctor!!.name} tidak praktik pada hari $dayName!\n\n" +
-                                                "Jadwal: ${selectedDoctor!!.schedule}",
+                                        "❌ ${selectedDoctor!!.name} tidak praktik pada hari $dayName!",
                                         Toast.LENGTH_LONG
                                     ).show()
 
@@ -525,7 +584,10 @@ class BookingFragment : Fragment() {
                         } catch (e: Exception) {
                             Log.e(TAG, "❌ Error validating date: ${e.message}", e)
                             withContext(Dispatchers.Main) {
-                                showLoading(false)
+                                progressBar.visibility = View.GONE
+                                btnSelectDate.isEnabled = true
+                                isProcessing = false
+
                                 Toast.makeText(
                                     requireContext(),
                                     "❌ Error: ${e.message}",
@@ -540,66 +602,47 @@ class BookingFragment : Fragment() {
                 calendar.get(Calendar.DAY_OF_MONTH)
             )
 
+            // Set date range
             datePickerDialog.datePicker.minDate = System.currentTimeMillis()
 
             val maxCalendar = Calendar.getInstance()
             maxCalendar.add(Calendar.DAY_OF_MONTH, 30)
             datePickerDialog.datePicker.maxDate = maxCalendar.timeInMillis
 
+            // ✅ Show dialog - ini ringan
             datePickerDialog.show()
         }
     }
 
     /**
-     * ✅ PERBAIKAN: Validasi hari praktik dokter yang lebih akurat
+     * ✅ SIMPLIFIED: Validasi hari praktik TANPA operasi berat
      */
-    private fun isDoctorAvailableOnDate(calendar: Calendar, doctor: Doctor): Boolean {
+    private fun isDoctorAvailableOnDateSimple(calendar: Calendar, doctor: Doctor): Boolean {
         val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
         val schedule = doctor.schedule.lowercase()
 
-        Log.d(TAG, "=== VALIDASI HARI PRAKTIK ===")
-        Log.d(TAG, "Dokter: ${doctor.name}")
-        Log.d(TAG, "Jadwal: ${doctor.schedule}")
+        Log.d(TAG, "Validating: ${getDayName(dayOfWeek)} for ${doctor.name}")
 
-        val selectedDayName = getDayName(dayOfWeek)
-        Log.d(TAG, "Hari dipilih: $selectedDayName")
-
-        // ✅ Parse hari praktik dari schedule
-        val isDayAvailable = when {
+        // ✅ Simple, fast validation
+        return when {
             // Senin-Minggu (7 hari)
-            schedule.contains("senin") && schedule.contains("minggu") &&
-                    (schedule.contains("–") || schedule.contains("-")) -> {
-                Log.d(TAG, "✅ Dokter praktik Senin-Minggu (semua hari)")
-                true
-            }
-            // Senin-Sabtu (6 hari, kecuali Minggu)
-            schedule.contains("senin") && schedule.contains("sabtu") &&
-                    (schedule.contains("–") || schedule.contains("-")) -> {
-                val isValid = dayOfWeek != Calendar.SUNDAY
-                Log.d(TAG, if (isValid) "✅ Valid (Senin-Sabtu)" else "❌ Invalid (Minggu tidak praktik)")
-                isValid
-            }
-            // Senin-Jumat (5 hari kerja)
-            schedule.contains("senin") && schedule.contains("jumat") &&
-                    (schedule.contains("–") || schedule.contains("-")) -> {
-                val isValid = dayOfWeek !in listOf(Calendar.SATURDAY, Calendar.SUNDAY)
-                Log.d(TAG, if (isValid) "✅ Valid (Senin-Jumat)" else "❌ Invalid (Weekend tidak praktik)")
-                isValid
-            }
-            // Senin-Kamis
-            schedule.contains("senin") && schedule.contains("kamis") &&
-                    (schedule.contains("–") || schedule.contains("-")) -> {
-                val isValid = dayOfWeek in listOf(Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY)
-                Log.d(TAG, if (isValid) "✅ Valid (Senin-Kamis)" else "❌ Invalid (Jumat-Minggu tidak praktik)")
-                isValid
-            }
-            else -> {
-                Log.w(TAG, "⚠️ Format jadwal tidak dikenali, izinkan semua hari")
-                true
-            }
-        }
+            schedule.contains("senin") && schedule.contains("minggu") -> true
 
-        return isDayAvailable
+            // Senin-Sabtu (kecuali Minggu)
+            schedule.contains("senin") && schedule.contains("sabtu") ->
+                dayOfWeek != Calendar.SUNDAY
+
+            // Senin-Jumat (hari kerja)
+            schedule.contains("senin") && schedule.contains("jumat") ->
+                dayOfWeek !in listOf(Calendar.SATURDAY, Calendar.SUNDAY)
+
+            // Senin-Kamis
+            schedule.contains("senin") && schedule.contains("kamis") ->
+                dayOfWeek in listOf(Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY)
+
+            // Default: allow all days
+            else -> true
+        }
     }
 
     private fun getDayName(dayOfWeek: Int): String {
@@ -690,9 +733,6 @@ class BookingFragment : Fragment() {
         return true
     }
 
-    /**
-     * ✅ Generate waktu booking yang realistis berdasarkan antrian
-     */
     private fun generateRealisticBookingTime(queueNumber: Int, selectedDate: String): String {
         val clinicOpenHour = 8
         val clinicOpenMinute = 0
@@ -760,8 +800,7 @@ class BookingFragment : Fragment() {
                 "✅ Booking berhasil!\n" +
                         "No. Antrian: $queueNumber\n" +
                         "Tanggal: $displayDate\n" +
-                        "Jam: $bookingTime WIB\n\n" +
-                        "Harap datang 15 menit sebelum jadwal",
+                        "Jam: $bookingTime WIB",
                 Toast.LENGTH_LONG
             ).show()
 
@@ -786,12 +825,12 @@ class BookingFragment : Fragment() {
                 progressBar.visibility = View.VISIBLE
                 btnConfirmBooking.alpha = 0.5f
                 btnConfirmBooking.isEnabled = false
-                btnSelectDate.isEnabled = false // ✅ Disable date picker saat loading
+                btnSelectDate.isEnabled = false
             } else {
                 progressBar.visibility = View.GONE
                 btnConfirmBooking.alpha = 1.0f
                 btnConfirmBooking.isEnabled = true
-                btnSelectDate.isEnabled = true // ✅ Enable kembali
+                btnSelectDate.isEnabled = true
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in showLoading: ${e.message}", e)
@@ -803,5 +842,11 @@ class BookingFragment : Fragment() {
         if (isDataLoaded && selectedSpecializationId > 0) {
             loadDoctors(selectedSpecializationId)
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // ✅ Reset flag
+        isProcessing = false
     }
 }

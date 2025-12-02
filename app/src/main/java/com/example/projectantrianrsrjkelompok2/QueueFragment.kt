@@ -310,21 +310,21 @@ class QueueFragment : Fragment() {
                 // Format estimasi yang lebih ringkas
                 val estimasiText = when {
                     patientsAhead == 0 -> "🎯 Giliran Anda SEKARANG!"
-                    waitMinutes < 5 -> "⚡ Segera dipanggil (~$waitMinutes menit)\n🕐 Estimasi: $turnTimeStr WITA"
-                    waitMinutes < 15 -> "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WITA"
+                    waitMinutes < 5 -> "⚡ Segera dipanggil (~$waitMinutes menit)\n🕐 Estimasi: $turnTimeStr WIB"
+                    waitMinutes < 15 -> "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WIB"
                     waitMinutes < 60 -> {
                         val hours = waitMinutes / 60
                         val mins = waitMinutes % 60
                         if (hours > 0) {
-                            "⏱️ Estimasi: ~$hours jam $mins menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WITA"
+                            "⏱️ Estimasi: ~$hours jam $mins menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WIB"
                         } else {
-                            "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WITA"
+                            "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WIB"
                         }
                     }
                     else -> {
                         val hours = waitMinutes / 60
                         val mins = waitMinutes % 60
-                        "⏱️ Estimasi: ~$hours jam $mins menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WITA"
+                        "⏱️ Estimasi: ~$hours jam $mins menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WIB"
                     }
                 }
 
@@ -349,7 +349,7 @@ class QueueFragment : Fragment() {
                     turnTime.add(Calendar.MINUTE, waitMinutes)
                     val turnTimeStr = SimpleDateFormat("HH:mm", Locale.getDefault())
                         .format(turnTime.time)
-                    tvEstimatedTime.text = "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WITA"
+                    tvEstimatedTime.text = "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WIB"
                 }
             }
 
@@ -360,13 +360,13 @@ class QueueFragment : Fragment() {
             if (patientsAhead == 0) {
                 val now = SimpleDateFormat("HH:mm", Locale.getDefault())
                     .format(Calendar.getInstance().time)
-                tvEstimatedTime.text = "🔔 Giliran Anda\n$now WITA"
+                tvEstimatedTime.text = "🔔 Giliran Anda\n$now WIB"
             } else {
                 val turnTime = Calendar.getInstance()
                 turnTime.add(Calendar.MINUTE, waitMinutes)
                 val turnTimeStr = SimpleDateFormat("HH:mm", Locale.getDefault())
                     .format(turnTime.time)
-                tvEstimatedTime.text = "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WITA"
+                tvEstimatedTime.text = "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WIB"
             }
         }
     }
