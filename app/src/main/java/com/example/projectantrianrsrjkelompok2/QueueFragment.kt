@@ -5,18 +5,14 @@ import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
-import com.example.projectantrianrsrjkelompok2.utils.QRCodeGenerator
-import com.example.projectantrianrsrjkelompok2.utils.ReceiptGenerator
-import com.example.projectantrianrsrjkelompok2.utils.NotificationHelper
+import com.example.projectantrianrsrjkelompok2.ml.QueuePredictionModel
+import com.example.projectantrianrsrjkelompok2.utils.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -27,21 +23,23 @@ class QueueFragment : Fragment() {
     private lateinit var tvMyQueueStatus: TextView
     private lateinit var tvEstimatedTime: TextView
     private lateinit var tvDoctorInfo: TextView
+    private lateinit var tvYourTurnTime: TextView
+    private lateinit var tvTimeUntilAppointment: TextView
     private lateinit var btnRefresh: Button
     private lateinit var btnDownloadReceipt: Button
     private lateinit var btnCancelQueue: Button
-    private lateinit var btnCompleteQueue: Button  // ✅ NEW: Tombol selesai
+    private lateinit var btnCompleteQueue: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var cardMyQueue: View
     private lateinit var tvQueueList: TextView
 
-    private var currentQueueNumber = 8
-    private var myQueueNumber = 15
+    // ML Model - Enhanced version
+    private var mlModel: EnhancedQueuePredictionModel? = null
+
+    // State
+    private var currentQueueNumber = 0
+    private var myQueueNumber = 0
     private var myQueueStatus = "Menunggu"
-    private val handler = Handler(Looper.getMainLooper())
-    private var hasShownNotification3 = false
-    private var hasShownNotification1 = false
-    private var hasShownNotificationReady = false
 
     companion object {
         private const val TAG = "QueueFragment"
@@ -58,6 +56,7 @@ class QueueFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Request notification permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     requireContext(),
@@ -72,18 +71,16 @@ class QueueFragment : Fragment() {
         }
 
         initViews(view)
+        initMLModel()
         loadBookingData()
-        setupRefreshButton()
-        setupDownloadButton()
-        setupCancelButton()
-        setupCompleteButton()  // ✅ NEW
-        updateQueueDisplay()
-        startAutoRefresh()
+        setupButtons()
+        startRealTimeMonitoring()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        handler.removeCallbacksAndMessages(null)
+        stopRealTimeMonitoring()
+        mlModel?.close()
         NotificationHelper.cancelAllNotifications(requireContext())
     }
 
@@ -96,31 +93,82 @@ class QueueFragment : Fragment() {
         btnRefresh = view.findViewById(R.id.btn_refresh)
         btnDownloadReceipt = view.findViewById(R.id.btn_download_receipt)
         btnCancelQueue = view.findViewById(R.id.btn_cancel_queue)
-        btnCompleteQueue = view.findViewById(R.id.btn_complete_queue)  // ✅ NEW
+        btnCompleteQueue = view.findViewById(R.id.btn_complete_queue)
         progressBar = view.findViewById(R.id.progress_bar)
         cardMyQueue = view.findViewById(R.id.card_my_queue)
         tvQueueList = view.findViewById(R.id.tv_queue_list)
     }
 
+    /**
+     * ✅ Initialize ML Model
+     */
+    private fun initMLModel() {
+        try {
+            mlModel = EnhancedQueuePredictionModel(requireContext())
+            val modelInfo = mlModel?.getModelInfo()
+
+            Toast.makeText(
+                requireContext(),
+                "✅ AI Model Active (${modelInfo?.inputSize} features)",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            Log.d(TAG, "Model Info: $modelInfo")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load model: ${e.message}", e)
+            Toast.makeText(
+                requireContext(),
+                "⚠️ Using standard estimation",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    /**
+     * ✅ Load booking data
+     */
     private fun loadBookingData() {
         val activeBooking = DataSource.getActiveBooking()
 
         if (activeBooking != null) {
             myQueueNumber = activeBooking.queueNumber
-            myQueueStatus = when(activeBooking.status) {
-                BookingStatus.WAITING -> "Menunggu"
-                BookingStatus.CALLED -> "Dipanggil"
-                BookingStatus.COMPLETED -> "Selesai"
-                BookingStatus.CANCELLED -> "Dibatalkan"
-                BookingStatus.MISSED -> "Terlewat"
-            }
+            myQueueStatus = activeBooking.status.toDisplayString()
 
-            tvDoctorInfo.text = "${activeBooking.doctorName} - ${activeBooking.specialization}\n" +
-                    "📅 ${formatDateIndonesia(activeBooking.date)} | 🕘 ${activeBooking.time}"
+            // Display doctor info dengan waktu real
+            val calendar = Calendar.getInstance()
+            val currentDate = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
+                .format(calendar.time)
+            val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+                .format(calendar.time)
 
+            tvDoctorInfo.text = """
+                ${activeBooking.doctorName} - ${activeBooking.specialization}
+                📅 ${formatDateIndonesia(activeBooking.date)} | 🕘 ${activeBooking.time}
+                
+                📆 Hari Ini: $currentDate
+                🕐 Waktu Sekarang: $currentTime WITA
+            """.trimIndent()
+
+            // Get today's bookings for current queue calculation
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             if (activeBooking.date == today) {
-                currentQueueNumber = maxOf(2, (myQueueNumber - (7..12).random()))
+                val todayBookings = DataSource.getBookingHistory()
+                    .filter { it.date == today }
+                    .sortedBy { it.queueNumber }
+
+                // Find current queue (booking yang CALLED)
+                currentQueueNumber = todayBookings
+                    .filter { it.status == BookingStatus.CALLED }
+                    .minByOrNull { it.queueNumber }
+                    ?.queueNumber ?: 0
+
+                // If no one called yet, use first waiting
+                if (currentQueueNumber == 0) {
+                    currentQueueNumber = todayBookings
+                        .filter { it.status == BookingStatus.WAITING }
+                        .minByOrNull { it.queueNumber }
+                        ?.queueNumber ?: 1
+                }
             } else {
                 currentQueueNumber = 1
                 Toast.makeText(
@@ -131,12 +179,264 @@ class QueueFragment : Fragment() {
             }
 
             cardMyQueue.visibility = View.VISIBLE
+            updateQueueDisplay()
         } else {
             myQueueNumber = 0
             cardMyQueue.visibility = View.GONE
         }
     }
 
+    /**
+     * ✅ Start real-time monitoring
+     */
+    private fun startRealTimeMonitoring() {
+        RealTimeQueueManager.startMonitoring { update ->
+            if (!isAdded) return@startMonitoring
+
+            currentQueueNumber = update.currentQueueNumber
+            myQueueNumber = update.myQueueNumber
+
+            when (update.status) {
+                RealTimeQueueManager.QueueStatus.CALLED -> {
+                    myQueueStatus = "Dipanggil"
+                    NotificationHelper.showQueueReadyNotification(
+                        requireContext(),
+                        myQueueNumber
+                    )
+                }
+                RealTimeQueueManager.QueueStatus.READY -> {
+                    myQueueStatus = "Siap-siap"
+                    NotificationHelper.showQueueAlmostReadyNotification(
+                        requireContext(),
+                        myQueueNumber,
+                        1
+                    )
+                }
+                RealTimeQueueManager.QueueStatus.WAITING -> {
+                    myQueueStatus = "Menunggu"
+                }
+                RealTimeQueueManager.QueueStatus.MISSED -> {
+                    myQueueStatus = "Terlewat"
+                }
+            }
+
+            updateQueueDisplay()
+        }
+    }
+
+    /**
+     * ✅ Stop real-time monitoring
+     */
+    private fun stopRealTimeMonitoring() {
+        RealTimeQueueManager.stopMonitoring()
+    }
+
+    /**
+     * ✅ Setup buttons
+     */
+    private fun setupButtons() {
+        btnRefresh.setOnClickListener {
+            refreshQueueData()
+        }
+
+        btnDownloadReceipt.setOnClickListener {
+            if (myQueueNumber <= 0) {
+                Toast.makeText(
+                    requireContext(),
+                    "Tidak ada antrian aktif",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+            showReceiptDialog()
+        }
+
+        btnCancelQueue.setOnClickListener {
+            showCancelDialog()
+        }
+
+        btnCompleteQueue.setOnClickListener {
+            showCompleteDialog()
+        }
+    }
+
+    /**
+     * ✅ Update queue display dengan ML prediction
+     */
+    private fun updateQueueDisplay() {
+        tvCurrentQueue.text = currentQueueNumber.toString()
+
+        if (myQueueNumber > 0) {
+            cardMyQueue.visibility = View.VISIBLE
+            tvMyQueueNumber.text = "No. $myQueueNumber"
+
+            val activeBooking = DataSource.getActiveBooking()
+
+            when {
+                myQueueNumber < currentQueueNumber -> {
+                    myQueueStatus = "Terlewat"
+                    tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                    tvEstimatedTime.text = "Silakan hubungi petugas"
+                    btnCompleteQueue.visibility = View.GONE
+                }
+                myQueueNumber == currentQueueNumber -> {
+                    myQueueStatus = "Dipanggil"
+                    tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
+                    tvEstimatedTime.text = "🔔 GILIRAN ANDA SEKARANG!\nSilakan menuju ruang dokter"
+                    btnCompleteQueue.visibility = View.VISIBLE
+                }
+                myQueueNumber == currentQueueNumber + 1 -> {
+                    myQueueStatus = "Siap-siap"
+                    tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark))
+                    tvEstimatedTime.text = "⚡ Bersiap! Giliran Anda selanjutnya!"
+                    btnCompleteQueue.visibility = View.GONE
+                }
+                else -> {
+                    myQueueStatus = "Menunggu"
+                    tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark))
+                    calculateMLEstimatedTime(activeBooking)
+                    btnCompleteQueue.visibility = View.GONE
+                }
+            }
+
+            tvMyQueueStatus.text = myQueueStatus
+
+            // Show time until appointment
+            activeBooking?.let {
+                val timeDiff = RealTimeQueueManager.getTimeUntilAppointment(it.time)
+                if (timeDiff != null) {
+                    val timeText = if (timeDiff.isPast) {
+                        "⏰ Jadwal: ${it.time} (Sudah lewat)"
+                    } else {
+                        "⏰ Jadwal: ${it.time} (${timeDiff.getFormattedTime()})"
+                    }
+
+                    // Update doctor info dengan info waktu
+                    val calendar = Calendar.getInstance()
+                    val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+                        .format(calendar.time)
+
+                    tvDoctorInfo.text = """
+                        ${it.doctorName} - ${it.specialization}
+                        📅 ${formatDateIndonesia(it.date)}
+                        $timeText
+                        🕐 Sekarang: $currentTime WITA
+                    """.trimIndent()
+                }
+            }
+        } else {
+            cardMyQueue.visibility = View.GONE
+        }
+
+        updateQueueList()
+    }
+
+    /**
+     * ✅ Calculate estimated time using ML
+     */
+    private fun calculateMLEstimatedTime(booking: Booking?) {
+        if (booking == null) {
+            tvEstimatedTime.text = "Estimasi tidak tersedia"
+            return
+        }
+
+        val patientsAhead = myQueueNumber - currentQueueNumber
+        if (patientsAhead <= 0) {
+            tvEstimatedTime.text = "Giliran Anda!"
+            return
+        }
+
+        try {
+            val calendar = Calendar.getInstance()
+            val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+            val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+
+            // Use Enhanced ML model for prediction
+            val prediction = mlModel?.predictWithConfidence(
+                patientsAhead = patientsAhead,
+                currentHour = currentHour,
+                dayOfWeek = dayOfWeek,
+                specialization = booking.specialization,
+                avgServiceTime = 10f,
+                queueNumber = myQueueNumber
+            )
+
+            if (prediction != null) {
+                val predictionSource = if (prediction.isMLPrediction) "🤖 Prediksi AI" else "📊 Estimasi"
+
+                val estimatedText = """
+                    $predictionSource:
+                    ⏱️ Perkiraan: ${prediction.getFormattedPrediction()}
+                    📊 Range: ${prediction.getFormattedRange()}
+                    ✅ Tingkat akurasi: ${prediction.getConfidenceLevel()}
+                    👥 Pasien di depan: $patientsAhead orang
+                    
+                    💡 ${mlModel?.getRecommendation(prediction.predictedMinutes) ?: ""}
+                """.trimIndent()
+
+                tvEstimatedTime.text = estimatedText
+
+                Log.d(TAG, "Prediction successful: ${prediction.predictedMinutes} minutes")
+            } else {
+                // Fallback to simple calculation
+                val simpleEstimate = patientsAhead * 10
+                tvEstimatedTime.text = """
+                    ⏱️ Estimasi: $simpleEstimate menit
+                    👥 $patientsAhead pasien di depan Anda
+                """.trimIndent()
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating ML estimate: ${e.message}", e)
+            // Fallback
+            val simpleEstimate = patientsAhead * 10
+            tvEstimatedTime.text = """
+                ⏱️ Estimasi: $simpleEstimate menit
+                👥 $patientsAhead pasien di depan Anda
+            """.trimIndent()
+        }
+    }
+
+    /**
+     * ✅ Update queue list
+     */
+    private fun updateQueueList() {
+        val queueListText = StringBuilder()
+        queueListText.append("📋 Daftar Antrian Hari Ini:\n\n")
+
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val todayBookings = DataSource.getBookingHistory()
+            .filter { it.date == today }
+            .sortedBy { it.queueNumber }
+
+        if (todayBookings.isEmpty()) {
+            queueListText.append("Tidak ada antrian hari ini")
+        } else {
+            todayBookings.take(15).forEach { booking ->
+                val statusIcon = when (booking.status) {
+                    BookingStatus.COMPLETED -> "✅"
+                    BookingStatus.CALLED -> "🔵"
+                    BookingStatus.WAITING -> "⏳"
+                    BookingStatus.CANCELLED -> "❌"
+                    BookingStatus.MISSED -> "⚠️"
+                }
+
+                val highlight = if (booking.queueNumber == myQueueNumber) " 👈 SAYA" else ""
+
+                queueListText.append("${booking.queueNumber}. $statusIcon ${booking.status.toDisplayString()}$highlight\n")
+            }
+
+            if (todayBookings.size > 15) {
+                queueListText.append("\n... dan ${todayBookings.size - 15} antrian lainnya")
+            }
+        }
+
+        tvQueueList.text = queueListText.toString()
+    }
+
+    /**
+     * Format date
+     */
     private fun formatDateIndonesia(dateString: String): String {
         return try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -148,94 +448,44 @@ class QueueFragment : Fragment() {
         }
     }
 
-    private fun setupRefreshButton() {
-        btnRefresh.setOnClickListener {
-            refreshQueueData()
-        }
+    /**
+     * Refresh queue data
+     */
+    private fun refreshQueueData() {
+        showLoading(true)
+
+        // Reload data
+        loadBookingData()
+        updateQueueDisplay()
+
+        showLoading(false)
+        Toast.makeText(requireContext(), "✅ Data diperbarui", Toast.LENGTH_SHORT).show()
     }
 
-    private fun setupDownloadButton() {
-        btnDownloadReceipt.setOnClickListener {
-            if (myQueueNumber <= 0) {
-                Toast.makeText(
-                    requireContext(),
-                    "Tidak ada antrian aktif",
-                    Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
+    /**
+     * Show cancel dialog
+     */
+    private fun showCancelDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Batalkan Antrian")
+            .setMessage("Apakah Anda yakin ingin membatalkan antrian?")
+            .setPositiveButton("Ya") { dialog, _ ->
+                cancelQueue()
+                dialog.dismiss()
             }
-
-            showReceiptDialog()
-        }
+            .setNegativeButton("Tidak") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
-    private fun setupCancelButton() {
-        btnCancelQueue.setOnClickListener {
-            AlertDialog.Builder(requireContext())
-                .setTitle("Batalkan Antrian")
-                .setMessage("Apakah Anda yakin ingin membatalkan antrian?")
-                .setPositiveButton("Ya") { dialog, _ ->
-                    cancelQueue()
-                    dialog.dismiss()
-                }
-                .setNegativeButton("Tidak") { dialog, _ ->
-                    dialog.dismiss()
-                }
-                .show()
-        }
-    }
-
-    // ✅ NEW: Setup tombol selesai
-    private fun setupCompleteButton() {
-        btnCompleteQueue.setOnClickListener {
-            AlertDialog.Builder(requireContext())
-                .setTitle("Selesaikan Antrian")
-                .setMessage("Apakah pemeriksaan Anda sudah selesai?\n\nAntrian akan dipindahkan ke riwayat.")
-                .setPositiveButton("Ya, Sudah Selesai") { dialog, _ ->
-                    completeQueue()
-                    dialog.dismiss()
-                }
-                .setNegativeButton("Belum") { dialog, _ ->
-                    dialog.dismiss()
-                }
-                .show()
-        }
-    }
-
-    // ✅ NEW: Fungsi untuk menyelesaikan antrian
-    private fun completeQueue() {
-        DataSource.getActiveBooking()?.let { booking ->
-            // Update status menjadi COMPLETED
-            val completedBooking = booking.copy(
-                status = BookingStatus.COMPLETED
-            )
-
-            // Update di history
-            DataSource.addToHistory(completedBooking)
-
-            // Clear active booking
-            DataSource.clearActiveBooking()
-
-            // Hide card
-            cardMyQueue.visibility = View.GONE
-
-            Toast.makeText(
-                requireContext(),
-                "✅ Antrian selesai!\nTerima kasih telah menggunakan layanan kami.",
-                Toast.LENGTH_LONG
-            ).show()
-
-            // Navigasi ke History Fragment untuk melihat hasil
-            (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
-        }
-    }
-
+    /**
+     * Cancel queue
+     */
     private fun cancelQueue() {
         DataSource.getActiveBooking()?.let { booking ->
-            val cancelledBooking = booking.copy(
-                status = BookingStatus.CANCELLED
-            )
-            DataSource.addToHistory(cancelledBooking)
+            val cancelled = booking.copy(status = BookingStatus.CANCELLED)
+            DataSource.addToHistory(cancelled)
         }
 
         DataSource.clearActiveBooking()
@@ -243,37 +493,53 @@ class QueueFragment : Fragment() {
 
         Toast.makeText(
             requireContext(),
-            "✅ Antrian berhasil dibatalkan dan dipindahkan ke riwayat",
+            "✅ Antrian dibatalkan",
             Toast.LENGTH_LONG
         ).show()
     }
 
-    private fun showReceiptDialog() {
-        val prefsHelper = PreferencesHelper(requireContext())
-        val activeBooking = DataSource.getActiveBooking()
+    /**
+     * Show complete dialog
+     */
+    private fun showCompleteDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Selesaikan Antrian")
+            .setMessage("Apakah pemeriksaan Anda sudah selesai?")
+            .setPositiveButton("Ya") { dialog, _ ->
+                completeQueue()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Belum") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
 
-        val booking = if (activeBooking != null) {
-            activeBooking
-        } else {
-            Booking(
-                id = "Q${myQueueNumber.toString().padStart(3, '0')}",
-                queueNumber = myQueueNumber,
-                patientName = prefsHelper.getUserFullName() ?: "Pasien",
-                doctorName = "Dr. Ahmad Santoso",
-                specialization = "Layanan Umum",
-                date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
-                time = "09:30",
-                complaint = "",
-                status = when (myQueueStatus) {
-                    "Menunggu" -> BookingStatus.WAITING
-                    "Dipanggil" -> BookingStatus.CALLED
-                    "Siap-siap" -> BookingStatus.WAITING
-                    "Terlewat" -> BookingStatus.MISSED
-                    else -> BookingStatus.WAITING
-                },
-                createdAt = System.currentTimeMillis()
-            )
+    /**
+     * Complete queue
+     */
+    private fun completeQueue() {
+        DataSource.getActiveBooking()?.let { booking ->
+            val completed = booking.copy(status = BookingStatus.COMPLETED)
+            DataSource.addToHistory(completed)
         }
+
+        DataSource.clearActiveBooking()
+
+        Toast.makeText(
+            requireContext(),
+            "✅ Terima kasih! Semoga lekas sembuh.",
+            Toast.LENGTH_LONG
+        ).show()
+
+        (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
+    }
+
+    /**
+     * Show receipt dialog
+     */
+    private fun showReceiptDialog() {
+        val activeBooking = DataSource.getActiveBooking() ?: return
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_receipt_options, null)
         val dialog = AlertDialog.Builder(requireContext())
@@ -281,7 +547,7 @@ class QueueFragment : Fragment() {
             .setCancelable(true)
             .create()
 
-        val qrContent = QRCodeGenerator.generateBookingQRContent(booking)
+        val qrContent = QRCodeGenerator.generateBookingQRContent(activeBooking)
         val qrBitmap = QRCodeGenerator.generateQRCode(qrContent, 512, 512)
 
         val ivQrCode = dialogView.findViewById<ImageView>(R.id.iv_qr_code)
@@ -291,39 +557,14 @@ class QueueFragment : Fragment() {
 
         if (qrBitmap != null) {
             ivQrCode.setImageBitmap(qrBitmap)
-        } else {
-            Toast.makeText(requireContext(), "Gagal generate QR Code", Toast.LENGTH_SHORT).show()
         }
 
-        tvQueueInfo.text = "Nomor Antrian: ${booking.queueNumber}"
+        tvQueueInfo.text = "Nomor Antrian: ${activeBooking.queueNumber}"
 
         btnDownloadPdf.setOnClickListener {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
-            ) {
-                if (ContextCompat.checkSelfPermission(
-                        requireContext(),
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    requestPermissions(
-                        arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                        100
-                    )
-                    dialog.dismiss()
-                    return@setOnClickListener
-                }
-            }
-
-            Toast.makeText(requireContext(), "Membuat PDF...", Toast.LENGTH_SHORT).show()
-            val success = ReceiptGenerator.generateAndSaveReceipt(requireContext(), booking)
-
+            val success = ReceiptGenerator.generateAndSaveReceipt(requireContext(), activeBooking)
             if (success) {
-                Toast.makeText(
-                    requireContext(),
-                    "✅ Struk berhasil diunduh!",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(requireContext(), "✅ Struk berhasil diunduh!", Toast.LENGTH_LONG).show()
                 dialog.dismiss()
             }
         }
@@ -335,193 +576,9 @@ class QueueFragment : Fragment() {
         dialog.show()
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            100 -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    showReceiptDialog()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Izin penyimpanan diperlukan untuk download struk",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-            200 -> {
-                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Izin notifikasi ditolak. Anda tidak akan menerima notifikasi antrian.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-        }
-    }
-
-    private fun updateQueueDisplay() {
-        val today = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID")).format(Date())
-        val activeBooking = DataSource.getActiveBooking()
-
-        if (activeBooking != null) {
-            tvDoctorInfo.text = "${activeBooking.doctorName} - ${activeBooking.specialization}\n" +
-                    "📅 ${formatDateIndonesia(activeBooking.date)} | 🕘 ${activeBooking.time}\n\n" +
-                    "📆 Antrian Hari Ini: $today"
-        }
-
-        tvCurrentQueue.text = currentQueueNumber.toString()
-
-        if (myQueueNumber > 0) {
-            cardMyQueue.visibility = View.VISIBLE
-            tvMyQueueNumber.text = "No. $myQueueNumber"
-
-            if (myQueueNumber < currentQueueNumber - 5) {
-                myQueueNumber = currentQueueNumber + 10
-                myQueueStatus = "Terlambat - Dipindahkan"
-
-                Toast.makeText(
-                    requireContext(),
-                    "⚠️ Anda terlambat! Antrian dipindahkan ke nomor $myQueueNumber",
-                    Toast.LENGTH_LONG
-                ).show()
-
-                DataSource.getActiveBooking()?.let {
-                    val updated = it.copy(queueNumber = myQueueNumber)
-                    DataSource.setActiveBooking(updated)
-                }
-
-                hasShownNotification3 = false
-                hasShownNotification1 = false
-                hasShownNotificationReady = false
-            }
-
-            // ✅ UPDATE: Tampilkan/sembunyikan tombol berdasarkan status
-            when {
-                myQueueNumber < currentQueueNumber -> {
-                    myQueueStatus = "Terlewat"
-                    tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))
-                    tvEstimatedTime.text = "Silakan hubungi petugas"
-                    btnCompleteQueue.visibility = View.GONE
-                }
-                myQueueNumber == currentQueueNumber -> {
-                    myQueueStatus = "Dipanggil"
-                    tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
-                    tvEstimatedTime.text = "Silakan menuju ruang dokter"
-                    btnCompleteQueue.visibility = View.VISIBLE  // ✅ Tampilkan tombol selesai
-                }
-                myQueueNumber == currentQueueNumber + 1 -> {
-                    myQueueStatus = "Siap-siap"
-                    tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark))
-                    tvEstimatedTime.text = "Bersiap, giliran Anda selanjutnya!"
-                    btnCompleteQueue.visibility = View.GONE
-                }
-                else -> {
-                    myQueueStatus = "Menunggu"
-                    tvMyQueueStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark))
-                    calculateEstimatedTime()
-                    btnCompleteQueue.visibility = View.GONE
-                }
-            }
-
-            tvMyQueueStatus.text = myQueueStatus
-        } else {
-            cardMyQueue.visibility = View.GONE
-        }
-
-        updateQueueList()
-    }
-
-    private fun calculateEstimatedTime() {
-        val queueAhead = myQueueNumber - currentQueueNumber
-        if (queueAhead <= 0) {
-            tvEstimatedTime.text = "Giliran Anda!"
-        } else {
-            val estimatedMinutes = queueAhead * 5
-            tvEstimatedTime.text = "Estimasi: $estimatedMinutes menit lagi\n($queueAhead pasien di depan Anda)"
-        }
-    }
-
-    private fun updateQueueList() {
-        val queueListText = StringBuilder()
-        queueListText.append("📋 Daftar Antrian Hari Ini:\n\n")
-
-        for (i in 1..25) {
-            when {
-                i < currentQueueNumber -> queueListText.append("$i. ✅ Selesai\n")
-                i == currentQueueNumber -> queueListText.append("$i. 🔵 Sedang Dilayani\n")
-                i == myQueueNumber -> queueListText.append("$i. 🟡 Saya (${myQueueStatus})\n")
-                i <= currentQueueNumber + 5 -> queueListText.append("$i. ⏳ Menunggu\n")
-                else -> break
-            }
-        }
-
-        tvQueueList.text = queueListText.toString()
-    }
-
-    private fun refreshQueueData() {
-        showLoading(true)
-
-        handler.postDelayed({
-            if ((1..3).random() == 1) {
-                currentQueueNumber++
-            }
-
-            updateQueueDisplay()
-            showLoading(false)
-
-            Toast.makeText(requireContext(), "Data antrian diperbarui", Toast.LENGTH_SHORT).show()
-        }, 1500)
-    }
-
-    private fun startAutoRefresh() {
-        val refreshRunnable = object : Runnable {
-            override fun run() {
-                if ((1..2).random() == 1) {
-                    currentQueueNumber++
-                    updateQueueDisplay()
-
-                    val queueAhead = myQueueNumber - currentQueueNumber
-
-                    when {
-                        myQueueNumber == currentQueueNumber && !hasShownNotificationReady -> {
-                            NotificationHelper.showQueueReadyNotification(
-                                requireContext(),
-                                myQueueNumber
-                            )
-                            hasShownNotificationReady = true
-                        }
-                        queueAhead == 3 && !hasShownNotification3 -> {
-                            NotificationHelper.showQueueAlmostReadyNotification(
-                                requireContext(),
-                                myQueueNumber,
-                                queueAhead
-                            )
-                            hasShownNotification3 = true
-                        }
-                        queueAhead == 1 && !hasShownNotification1 -> {
-                            NotificationHelper.showQueueAlmostReadyNotification(
-                                requireContext(),
-                                myQueueNumber,
-                                queueAhead
-                            )
-                            hasShownNotification1 = true
-                        }
-                    }
-                }
-
-                handler.postDelayed(this, 5000)
-            }
-        }
-        handler.post(refreshRunnable)
-    }
-
+    /**
+     * Show/hide loading
+     */
     private fun showLoading(isLoading: Boolean) {
         if (isLoading) {
             progressBar.visibility = View.VISIBLE
