@@ -168,26 +168,6 @@
                         android:gravity="center"
                         android:lineSpacingExtra="2dp"/>
 
-                    <!-- "Your Turn At" Label -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="📌 Giliran Anda"
-                        android:textSize="12sp"
-                        android:textColor="#2E7D32"
-                        android:gravity="center"
-                        android:layout_marginTop="12dp"
-                        android:layout_marginBottom="4dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="11:12 WITA"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="#1B5E20"
-                        android:gravity="center"/>
-
                 </LinearLayout>
 
             </androidx.cardview.widget.CardView>

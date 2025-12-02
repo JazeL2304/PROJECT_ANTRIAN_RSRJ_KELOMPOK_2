@@ -185,12 +185,9 @@ class QueueFragment : Fragment() {
         if (bookings.isEmpty()) return 1
 
         val now = Calendar.getInstance()
-        val currentHour = now.get(Calendar.HOUR_OF_DAY)
-        val currentMinute = now.get(Calendar.MINUTE)
+        val currentTime = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) // dalam menit
 
-        // Cari booking yang sedang dilayani berdasarkan jam
-        val currentTime = currentHour * 60 + currentMinute // dalam menit
-
+        // Cari antrian yang seharusnya sedang berjalan
         var currentQueue = 1
 
         for (booking in bookings) {
@@ -200,12 +197,22 @@ class QueueFragment : Fragment() {
                 val bookingMinute = bookingTimeParts[1].toIntOrNull() ?: 0
                 val bookingTime = bookingHour * 60 + bookingMinute
 
-                // Jika waktu booking sudah lewat, maka ini current queue
-                if (currentTime >= bookingTime) {
+                // ✅ Jika waktu booking + service time (8 menit) sudah lewat,
+                // berarti antrian ini sudah selesai dilayani
+                val serviceEndTime = bookingTime + AVG_SERVICE_TIME.toInt()
+
+                if (currentTime >= serviceEndTime) {
+                    // Antrian ini sudah selesai, lanjut ke antrian berikutnya
+                    currentQueue = (booking.queueNumber + 1).coerceAtMost(bookings.size)
+                } else if (currentTime >= bookingTime) {
+                    // Antrian ini sedang dilayani
                     currentQueue = booking.queueNumber
+                    break
                 }
             }
         }
+
+        Log.d(TAG, "Current time: ${now.get(Calendar.HOUR_OF_DAY)}:${now.get(Calendar.MINUTE)} → Current Queue: $currentQueue")
 
         return currentQueue
     }
@@ -303,44 +310,64 @@ class QueueFragment : Fragment() {
                 // Format estimasi yang lebih ringkas
                 val estimasiText = when {
                     patientsAhead == 0 -> "🎯 Giliran Anda SEKARANG!"
-                    waitMinutes < 5 -> "⚡ Segera dipanggil (~$waitMinutes menit)"
-                    waitMinutes < 15 -> "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)"
+                    waitMinutes < 5 -> "⚡ Segera dipanggil (~$waitMinutes menit)\n🕐 Estimasi: $turnTimeStr WITA"
+                    waitMinutes < 15 -> "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WITA"
                     waitMinutes < 60 -> {
                         val hours = waitMinutes / 60
                         val mins = waitMinutes % 60
                         if (hours > 0) {
-                            "⏱️ Estimasi: ~$hours jam $mins menit ($patientsAhead pasien)"
+                            "⏱️ Estimasi: ~$hours jam $mins menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WITA"
                         } else {
-                            "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien)"
+                            "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WITA"
                         }
                     }
                     else -> {
                         val hours = waitMinutes / 60
                         val mins = waitMinutes % 60
-                        "⏱️ Estimasi: ~$hours jam $mins menit ($patientsAhead pasien)"
+                        "⏱️ Estimasi: ~$hours jam $mins menit ($patientsAhead pasien)\n🕐 Giliran Anda: $turnTimeStr WITA"
                     }
                 }
 
                 tvEstimatedTime.text = estimasiText
 
                 Log.d(TAG, """
-                    ✅ Prediction:
-                    - Patients ahead: $patientsAhead
-                    - Wait time: $waitMinutes min
-                    - Your turn: $turnTimeStr WIB
-                    - Confidence: ${prediction.confidence}
-                """.trimIndent())
+                ✅ Prediction:
+                - Patients ahead: $patientsAhead
+                - Wait time: $waitMinutes min
+                - Your turn: $turnTimeStr WIB
+                - Confidence: ${prediction.confidence}
+            """.trimIndent())
 
             } else {
                 // Fallback heuristic
                 val waitMinutes = (patientsAhead * AVG_SERVICE_TIME).toInt()
-                tvEstimatedTime.text = "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)"
+
+                if (patientsAhead == 0) {
+                    tvEstimatedTime.text = "🎯 Giliran Anda SEKARANG!"
+                } else {
+                    val turnTime = Calendar.getInstance()
+                    turnTime.add(Calendar.MINUTE, waitMinutes)
+                    val turnTimeStr = SimpleDateFormat("HH:mm", Locale.getDefault())
+                        .format(turnTime.time)
+                    tvEstimatedTime.text = "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WITA"
+                }
             }
 
         } catch (e: Exception) {
             Log.e(TAG, "Error predicting: ${e.message}", e)
             val waitMinutes = (patientsAhead * AVG_SERVICE_TIME).toInt()
-            tvEstimatedTime.text = "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)"
+
+            if (patientsAhead == 0) {
+                val now = SimpleDateFormat("HH:mm", Locale.getDefault())
+                    .format(Calendar.getInstance().time)
+                tvEstimatedTime.text = "🔔 Giliran Anda\n$now WITA"
+            } else {
+                val turnTime = Calendar.getInstance()
+                turnTime.add(Calendar.MINUTE, waitMinutes)
+                val turnTimeStr = SimpleDateFormat("HH:mm", Locale.getDefault())
+                    .format(turnTime.time)
+                tvEstimatedTime.text = "⏱️ Estimasi: ~$waitMinutes menit ($patientsAhead pasien di depan)\n🕐 Giliran Anda: $turnTimeStr WITA"
+            }
         }
     }
 

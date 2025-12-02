@@ -254,9 +254,9 @@ object DataSource {
         return getDefaultTimeSlots()
     }
 
-    // ===============================
-    // 📋 BOOKING / ANTRIAN
-    // ===============================
+// ===============================
+// 📋 BOOKING / ANTRIAN
+// ===============================
 
     fun getBookingHistory(): List<Booking> {
         if (!shouldRefreshCache() && cachedBookings != null) {
@@ -290,6 +290,25 @@ object DataSource {
 
     fun clearActiveBooking() {
         activeBooking = null
+    }
+
+    // ✅ TAMBAHKAN FUNGSI INI
+    fun completeActiveBooking() {
+        activeBooking?.let { booking ->
+            // Update status menjadi COMPLETED
+            val completedBooking = booking.copy(status = BookingStatus.COMPLETED)
+
+            // Update di Firebase
+            scope.launch {
+                firebaseRepo.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
+                cachedBookings = null // Invalidate cache
+            }
+
+            // Clear active booking
+            activeBooking = null
+
+            Log.d(TAG, "✅ Booking ${booking.id} completed and moved to history")
+        }
     }
 
     fun clearActiveBookingOnly() {
