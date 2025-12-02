@@ -644,6 +644,37 @@ class BookingFragment : Fragment() {
         return true
     }
 
+    // Tambahkan fungsi ini ke BookingFragment.kt untuk generate jam yang realistis
+
+    /**
+     * ✅ Generate waktu booking yang realistis berdasarkan antrian
+     */
+    private fun generateRealisticBookingTime(
+        queueNumber: Int,
+        selectedDate: String
+    ): String {
+        // Jam buka klinik: 08:00
+        val clinicOpenHour = 8
+        val clinicOpenMinute = 0
+
+        // Waktu per pasien: 8 menit (lebih realistis dari 10 menit)
+        val minutesPerPatient = 8
+
+        // Calculate total minutes dari jam buka
+        val totalMinutes = (queueNumber - 1) * minutesPerPatient
+
+        // Calculate jam dan menit
+        val bookingHour = clinicOpenHour + (totalMinutes / 60)
+        val bookingMinute = clinicOpenMinute + (totalMinutes % 60)
+
+        // Format ke HH:mm
+        return String.format("%02d:%02d", bookingHour, bookingMinute)
+    }
+
+    /**
+     * ✅ Modifikasi fungsi createBooking di BookingFragment
+     * Ganti bagian yang generate selectedTime dengan ini:
+     */
     private fun createBooking() {
         try {
             showLoading(true)
@@ -658,18 +689,15 @@ class BookingFragment : Fragment() {
 
             val specialization = DataSource.getSpecializations().find { it.id == selectedSpecializationId }
 
-            val selectedDateBookings = DataSource.getBookingHistory().filter { it.date == selectedDate }
-            val baseQueueNumber = (5..50).random()
-            val queueNumber = baseQueueNumber + selectedDateBookings.size
+            // Hitung queue number berdasarkan booking hari ini
+            val selectedDateBookings = DataSource.getBookingHistory()
+                .filter { it.date == selectedDate }
 
-            // Get selected time from spinner
-            val timeSlots = DataSource.getTimeSlotsForDoctor(selectedDoctor!!)
-            val selectedTimeIndex = spinnerTime.selectedItemPosition - 1
-            val selectedTime = if (selectedTimeIndex >= 0 && selectedTimeIndex < timeSlots.size) {
-                timeSlots[selectedTimeIndex]
-            } else {
-                "08:00"
-            }
+            // Queue number mulai dari 1
+            val queueNumber = selectedDateBookings.size + 1
+
+            // ✅ PERBAIKAN: Generate waktu yang realistis
+            val bookingTime = generateRealisticBookingTime(queueNumber, selectedDate)
 
             val booking = Booking(
                 id = "Q${queueNumber.toString().padStart(3, '0')}",
@@ -678,7 +706,7 @@ class BookingFragment : Fragment() {
                 doctorName = selectedDoctor!!.name,
                 specialization = specialization?.name ?: "",
                 date = selectedDate,
-                time = selectedTime,
+                time = bookingTime, // Menggunakan waktu realistis
                 complaint = etComplaint.text.toString().trim(),
                 diagnosis = "",
                 prescription = "",
@@ -692,9 +720,22 @@ class BookingFragment : Fragment() {
             showLoading(false)
             btnConfirmBooking.isEnabled = true
 
+            // Format tanggal untuk ditampilkan
+            val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
+            val displayDate = try {
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(selectedDate)
+                dateFormat.format(date ?: Date())
+            } catch (e: Exception) {
+                selectedDate
+            }
+
             Toast.makeText(
                 requireContext(),
-                "✅ Booking berhasil!\nNo. Antrian: $queueNumber\nJam: $selectedTime",
+                "✅ Booking berhasil!\n" +
+                        "No. Antrian: $queueNumber\n" +
+                        "Tanggal: $displayDate\n" +
+                        "Jam: $bookingTime WIB\n\n" +
+                        "Harap datang 15 menit sebelum jadwal",
                 Toast.LENGTH_LONG
             ).show()
 
@@ -712,6 +753,20 @@ class BookingFragment : Fragment() {
             ).show()
         }
     }
+
+    /**
+     * ✅ Contoh hasil:
+     * - Antrian 1  → 08:00 WIB
+     * - Antrian 2  → 08:08 WIB
+     * - Antrian 3  → 08:16 WIB
+     * - Antrian 4  → 08:24 WIB
+     * - Antrian 5  → 08:32 WIB
+     * - Antrian 10 → 09:12 WIB
+     * - Antrian 15 → 09:52 WIB
+     * - Antrian 20 → 10:32 WIB
+     *
+     * Sangat realistis dengan interval 8 menit per pasien!
+     */
 
     private fun showLoading(isLoading: Boolean) {
         if (isLoading) {
