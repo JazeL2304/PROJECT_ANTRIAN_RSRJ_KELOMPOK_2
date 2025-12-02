@@ -20,9 +20,9 @@ object ModelAnalyzer {
      */
     fun analyzeModel(context: Context, modelFileName: String = "prediksi_antrian_rumahsakit.tflite") {
         try {
-            Log.d(TAG, "=" .repeat(60))
+            Log.d(TAG, "=".repeat(60))
             Log.d(TAG, "🔍 ANALYZING MODEL: $modelFileName")
-            Log.d(TAG, "=" .repeat(60))
+            Log.d(TAG, "=".repeat(60))
 
             val modelBuffer = loadModelFile(context, modelFileName)
             val interpreter = Interpreter(modelBuffer)
@@ -64,9 +64,9 @@ object ModelAnalyzer {
                 else -> Log.d(TAG, "  Custom model with $inputSize features")
             }
 
-            Log.d(TAG, "\n" + "=" .repeat(60))
+            Log.d(TAG, "\n" + "=".repeat(60))
             Log.d(TAG, "✅ ANALYSIS COMPLETE")
-            Log.d(TAG, "=" .repeat(60))
+            Log.d(TAG, "=".repeat(60))
 
             interpreter.close()
 
@@ -85,7 +85,7 @@ object ModelAnalyzer {
     ) {
         try {
             Log.d(TAG, "\n🧪 TESTING MODEL WITH SAMPLE DATA")
-            Log.d(TAG, "=" .repeat(60))
+            Log.d(TAG, "=".repeat(60))
 
             val modelBuffer = loadModelFile(context, modelFileName)
             val interpreter = Interpreter(modelBuffer)
@@ -94,26 +94,26 @@ object ModelAnalyzer {
             val testCases = listOf(
                 TestCase(
                     name = "Morning Peak - Dokter Umum",
-                    patients = 10,
-                    hour = 9,
-                    day = 2, // Tuesday
-                    specialization = 0,
+                    patients = 10f,
+                    hour = 9f,
+                    day = 2f, // Tuesday
+                    specialization = 0f,
                     avgTime = 10f
                 ),
                 TestCase(
                     name = "Afternoon - Dokter Gigi",
-                    patients = 5,
-                    hour = 14,
-                    day = 3, // Wednesday
-                    specialization = 1,
+                    patients = 5f,
+                    hour = 14f,
+                    day = 3f, // Wednesday
+                    specialization = 1f,
                     avgTime = 15f
                 ),
                 TestCase(
                     name = "Evening - Dokter Anak",
-                    patients = 15,
-                    hour = 17,
-                    day = 5, // Friday
-                    specialization = 3,
+                    patients = 15f,
+                    hour = 17f,
+                    day = 5f, // Friday
+                    specialization = 3f,
                     avgTime = 8f
                 )
             )
@@ -123,19 +123,19 @@ object ModelAnalyzer {
 
                 Log.d(TAG, "\n📊 Test: ${test.name}")
                 Log.d(TAG, "  Input:")
-                Log.d(TAG, "    - Patients ahead: ${test.patients}")
-                Log.d(TAG, "    - Hour: ${test.hour}")
-                Log.d(TAG, "    - Day: ${test.day}")
-                Log.d(TAG, "    - Specialization: ${test.specialization}")
-                Log.d(TAG, "    - Avg service time: ${test.avgTime} min")
+                Log.d(TAG, "    - Patients ahead: ${test.patients.toInt()}")
+                Log.d(TAG, "    - Hour: ${test.hour.toInt()}")
+                Log.d(TAG, "    - Day: ${test.day.toInt()}")
+                Log.d(TAG, "    - Specialization: ${test.specialization.toInt()}")
+                Log.d(TAG, "    - Avg service time: ${test.avgTime.toInt()} min")
                 Log.d(TAG, "  Output:")
-                Log.d(TAG, "    - Predicted wait time: ${result.predictedTime} minutes")
+                Log.d(TAG, "    - Predicted wait time: ${result.predictedTime.toInt()} minutes")
                 Log.d(TAG, "    - Formatted: ${formatTime(result.predictedTime)}")
             }
 
-            Log.d(TAG, "\n" + "=" .repeat(60))
+            Log.d(TAG, "\n" + "=".repeat(60))
             Log.d(TAG, "✅ TEST COMPLETE")
-            Log.d(TAG, "=" .repeat(60))
+            Log.d(TAG, "=".repeat(60))
 
             interpreter.close()
 

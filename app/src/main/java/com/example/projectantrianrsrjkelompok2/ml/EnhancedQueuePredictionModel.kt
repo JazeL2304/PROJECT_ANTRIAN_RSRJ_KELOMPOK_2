@@ -4,8 +4,6 @@ import android.content.Context
 import android.util.Log
 import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 
@@ -148,9 +146,8 @@ class EnhancedQueuePredictionModel(private val context: Context) {
                 output[0][0]
             } else {
                 // Model expects: [features]
-                val input = Array(1) { inputArray }
                 val output = FloatArray(1)
-                interpreter?.run(input, output)
+                interpreter?.run(inputArray, output)
                 output[0]
             }
 

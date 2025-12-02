@@ -5,13 +5,14 @@ import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.example.projectantrianrsrjkelompok2.ml.QueuePredictionModel
+import com.example.projectantrianrsrjkelompok2.ml.EnhancedQueuePredictionModel
 import com.example.projectantrianrsrjkelompok2.utils.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -23,8 +24,6 @@ class QueueFragment : Fragment() {
     private lateinit var tvMyQueueStatus: TextView
     private lateinit var tvEstimatedTime: TextView
     private lateinit var tvDoctorInfo: TextView
-    private lateinit var tvYourTurnTime: TextView
-    private lateinit var tvTimeUntilAppointment: TextView
     private lateinit var btnRefresh: Button
     private lateinit var btnDownloadReceipt: Button
     private lateinit var btnCancelQueue: Button
@@ -311,7 +310,6 @@ class QueueFragment : Fragment() {
                         "⏰ Jadwal: ${it.time} (${timeDiff.getFormattedTime()})"
                     }
 
-                    // Update doctor info dengan info waktu
                     val calendar = Calendar.getInstance()
                     val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault())
                         .format(calendar.time)
