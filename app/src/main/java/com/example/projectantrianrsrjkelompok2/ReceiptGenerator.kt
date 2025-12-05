@@ -112,8 +112,9 @@ object ReceiptGenerator {
         canvas.drawText(formatDate(booking.date), leftMargin + 200f, yPos, paint)
         yPos += 30f
 
+        // ✅ CRITICAL FIX: Gunakan booking.time yang asli
         canvas.drawText("Jam:", leftMargin, yPos, paint)
-        canvas.drawText(booking.time, leftMargin + 200f, yPos, paint)
+        canvas.drawText("${booking.time} WIB", leftMargin + 200f, yPos, paint) // ✅ TAMBAHKAN WIB
         yPos += 30f
 
         canvas.drawText("Status:", leftMargin, yPos, paint)
@@ -136,7 +137,6 @@ object ReceiptGenerator {
             .format(Date())
         canvas.drawText("Dicetak pada: $currentDate", leftMargin, yPos, paint)
     }
-
     private fun formatDate(dateString: String): String {
         return try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())

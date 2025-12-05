@@ -599,6 +599,11 @@ class QueueFragment : Fragment() {
     /**
      * ✅ Tampilkan dialog struk dengan QR Code menggunakan dialog_receipt_options.xml
      */
+// app/src/main/java/com/example/projectantrianrsrjkelompok2/QueueFragment.kt
+
+    /**
+     * ✅ Tampilkan dialog struk dengan QR Code menggunakan dialog_receipt_options.xml
+     */
     private fun showReceiptDialog(booking: Booking) {
         try {
             // Inflate dialog layout
@@ -611,7 +616,7 @@ class QueueFragment : Fragment() {
             val btnDownloadPdf = dialogView.findViewById<Button>(R.id.btn_download_pdf)
             val btnClose = dialogView.findViewById<Button>(R.id.btn_close)
 
-            // ✅ Set booking info
+            // ✅ Format tanggal dengan benar
             val dateFormat = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID"))
             val displayDate = try {
                 val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(booking.date)
@@ -620,15 +625,27 @@ class QueueFragment : Fragment() {
                 booking.date
             }
 
+            // ✅ CRITICAL FIX: Pastikan menggunakan booking.time yang ASLI
+            val displayTime = booking.time // Langsung dari booking, JANGAN dihitung ulang!
+
+            // ✅ Set booking info dengan JAM YANG BENAR
             tvQueueInfo.text = """
-            Nomor Antrian: ${booking.queueNumber}
-            
-            Nama: ${booking.patientName}
-            Dokter: ${booking.doctorName}
-            Layanan: ${booking.specialization}
-            Tanggal: $displayDate
-            Jam: ${booking.time} WIB
+Nomor Antrian: ${booking.queueNumber}
+
+Nama: ${booking.patientName}
+Dokter: ${booking.doctorName}
+Layanan: ${booking.specialization}
+Tanggal: $displayDate
+Jam: $displayTime WIB
         """.trimIndent()
+
+            Log.d(TAG, """
+            ✅ Receipt Info:
+            - Queue: ${booking.queueNumber}
+            - Patient: ${booking.patientName}
+            - Date: $displayDate
+            - Time: $displayTime WIB (ORIGINAL: ${booking.time})
+        """.trimIndent())
 
             // ✅ Generate QR Code menggunakan QRCodeGenerator yang sudah ada
             val qrContent = QRCodeGenerator.generateBookingQRContent(booking)

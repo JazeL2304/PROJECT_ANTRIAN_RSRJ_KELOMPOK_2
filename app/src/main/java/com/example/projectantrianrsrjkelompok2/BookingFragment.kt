@@ -764,7 +764,25 @@ class BookingFragment : Fragment() {
 
             val queueNumber = selectedDateBookings.size + 1
 
-            val bookingTime = generateRealisticBookingTime(queueNumber, selectedDate)
+            // ✅ CRITICAL FIX: Gunakan JAM YANG USER PILIH, bukan generate otomatis!
+            val selectedTimeSlot = spinnerTime.selectedItem?.toString() ?: ""
+
+            // ✅ Validasi: pastikan user sudah memilih jam
+            if (selectedTimeSlot.isEmpty() || selectedTimeSlot == "Pilih Jam") {
+                Toast.makeText(requireContext(), "❌ Pilih jam terlebih dahulu!", Toast.LENGTH_SHORT).show()
+                showLoading(false)
+                btnConfirmBooking.isEnabled = true
+                return
+            }
+
+            Log.d(TAG, """
+            ✅ Booking Info:
+            - Queue: $queueNumber
+            - Patient: ${etPatientName.text}
+            - Doctor: ${selectedDoctor!!.name}
+            - Date: $selectedDate
+            - Time: $selectedTimeSlot (USER SELECTED)
+        """.trimIndent())
 
             val booking = Booking(
                 id = "Q${queueNumber.toString().padStart(3, '0')}",
@@ -773,7 +791,7 @@ class BookingFragment : Fragment() {
                 doctorName = selectedDoctor!!.name,
                 specialization = specialization?.name ?: "",
                 date = selectedDate,
-                time = bookingTime,
+                time = selectedTimeSlot, // ✅ GUNAKAN JAM YANG USER PILIH!
                 complaint = etComplaint.text.toString().trim(),
                 diagnosis = "",
                 prescription = "",
@@ -800,7 +818,7 @@ class BookingFragment : Fragment() {
                 "✅ Booking berhasil!\n" +
                         "No. Antrian: $queueNumber\n" +
                         "Tanggal: $displayDate\n" +
-                        "Jam: $bookingTime WIB",
+                        "Jam: $selectedTimeSlot WIB", // ✅ Tampilkan jam yang benar
                 Toast.LENGTH_LONG
             ).show()
 
