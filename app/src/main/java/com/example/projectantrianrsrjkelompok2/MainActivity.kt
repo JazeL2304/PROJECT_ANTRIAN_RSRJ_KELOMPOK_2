@@ -81,6 +81,11 @@ class MainActivity : AppCompatActivity() {
                     Log.d("MainActivity", "🌱 Starting Firebase seed (FIRST LAUNCH)...")
 
                     DataSource.invalidateCache()
+
+                    // ✅ TAMBAHAN: Force seed users FIRST
+                    FirebaseSeedData.forceSeedUsersOnly()
+                    delay(1000) // Tunggu sebentar
+
                     FirebaseSeedData.seedAllData()
                     delay(2000)
                     DataSource.forceLoadFromFirebase()
@@ -88,10 +93,6 @@ class MainActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         preferencesHelper.setFirstLaunchComplete()
                         Log.d("MainActivity", "✅ Firebase seed completed!")
-
-                        val doctors = DataSource.getAllDoctors()
-                        val specs = DataSource.getSpecializations()
-                        Log.d("MainActivity", "📊 Verification - Doctors: ${doctors.size}, Specs: ${specs.size}")
                     }
                 } catch (e: Exception) {
                     Log.e("MainActivity", "❌ Firebase seed failed: ${e.message}", e)

@@ -107,6 +107,27 @@ class FirebaseRepository {
                 }
         }
     }
+    /**
+     * Get all users (for checking existing users)
+     */
+    suspend fun getAllUsers(): List<UserAccount> {
+        return suspendCoroutine { continuation ->
+            usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val users = snapshot.children.mapNotNull {
+                        it.getValue(UserAccount::class.java)
+                    }
+                    Log.d(TAG, "✅ Loaded ${users.size} users from Firebase")
+                    continuation.resume(users)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "❌ Error getting all users: ${error.message}")
+                    continuation.resume(emptyList())
+                }
+            })
+        }
+    }
 
     // ===============================
     // 👨‍⚕️ DOCTORS

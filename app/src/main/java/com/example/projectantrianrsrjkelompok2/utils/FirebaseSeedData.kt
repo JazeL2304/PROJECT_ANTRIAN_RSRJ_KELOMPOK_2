@@ -74,7 +74,27 @@ object FirebaseSeedData {
             try {
                 Log.d(TAG, "🌱 Starting Firebase seed...")
 
-                // Check if data already exists
+                // ✅ CHECK: Apakah USERS sudah ada?
+                val existingUsers = firebaseRepo.getAllUsers() // ❌ BELUM ADA METHOD INI
+
+                // ✅ ALTERNATIF: Cek apakah users ada dengan try-catch
+                var usersExist = false
+                try {
+                    val testUser = firebaseRepo.loginUser("user@example.com", "password123")
+                    usersExist = (testUser != null)
+                } catch (e: Exception) {
+                    usersExist = false
+                }
+
+                if (!usersExist) {
+                    Log.d(TAG, "📤 Users not found, seeding users...")
+                    seedUsers()
+                    delay(1000)
+                } else {
+                    Log.d(TAG, "ℹ️ Users already exist, skipping user seed")
+                }
+
+                // Check doctors
                 delay(500)
                 val existingDoctors = firebaseRepo.getAllDoctors()
 
@@ -84,27 +104,19 @@ object FirebaseSeedData {
                     return@runBlocking
                 }
 
-                // 🆕 0. Seed Users FIRST
-                seedUsers()
-                delay(1000)
-
-                // 1. Seed Specializations
+                // Seed other data...
                 seedSpecializations()
                 delay(1000)
 
-                // 2. Seed Doctors
                 seedDoctors()
                 delay(1000)
 
-                // 3. Seed Patients
                 seedPatients()
                 delay(1000)
 
-                // 4. Seed Bookings
                 seedBookings()
                 delay(1000)
 
-                // Load to cache
                 DataSource.forceLoadFromFirebase()
 
                 Log.d(TAG, "✅ Seed completed!")
@@ -350,6 +362,13 @@ object FirebaseSeedData {
         }
     }
 
-
+    /**
+     * 🆕 Force seed users ONLY (untuk testing)
+     */
+    suspend fun forceSeedUsersOnly() {
+        Log.d(TAG, "🔐 Force seeding users...")
+        seedUsers()
+        Log.d(TAG, "✅ Users seeded!")
+    }
 
 }
