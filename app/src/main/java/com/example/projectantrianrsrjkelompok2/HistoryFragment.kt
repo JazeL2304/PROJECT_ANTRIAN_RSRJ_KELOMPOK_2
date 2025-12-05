@@ -39,16 +39,36 @@ class HistoryFragment : Fragment() {
         tvHistoryCount = view.findViewById(R.id.tvHistoryCount)
     }
 
-    private fun loadHistoryData() {
-        val bookings = DataSource.getBookingHistory()
-
-        if (bookings.isEmpty()) {
-            showEmptyState()
-        } else {
-            showHistoryList(bookings)
-        }
+    override fun onResume() {
+        super.onResume()
+        Log.d("HistoryFragment", "🔄 onResume - Refreshing history data")
+        // ✅ Refresh data setiap kali fragment muncul
+        loadHistoryData()
     }
 
+    private fun loadHistoryData() {
+        try {
+            // ✅ Get latest booking history
+            val bookings = DataSource.getBookingHistory()
+
+            Log.d("HistoryFragment", "📊 Loading history: ${bookings.size} bookings")
+
+            // ✅ Debug: Log semua booking dan statusnya
+            bookings.forEachIndexed { index, booking ->
+                Log.d("HistoryFragment", "  ${index + 1}. ${booking.id}: ${booking.patientName} - Status: ${booking.status}")
+            }
+
+            if (bookings.isEmpty()) {
+                showEmptyState()
+            } else {
+                showHistoryList(bookings)
+            }
+
+        } catch (e: Exception) {
+            Log.e("HistoryFragment", "❌ Error loading history: ${e.message}", e)
+            showEmptyState()
+        }
+    }
     private fun showEmptyState() {
         layoutHistoryContainer.visibility = View.GONE
         layoutEmptyState.visibility = View.VISIBLE

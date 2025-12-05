@@ -326,22 +326,47 @@ object DataSource {
         activeBooking = null
     }
 
-    // ✅ TAMBAHKAN FUNGSI INI
+    /**
+     * ✅ OPTIMIZED: Complete active booking dengan update cache lokal langsung
+     */
     fun completeActiveBooking() {
         activeBooking?.let { booking ->
-            // Update status menjadi COMPLETED
+            Log.d(TAG, "🔄 Completing booking: ${booking.id}")
+
+            // ✅ STEP 1: Update status menjadi COMPLETED
             val completedBooking = booking.copy(status = BookingStatus.COMPLETED)
 
-            // Update di Firebase
-            scope.launch {
-                firebaseRepo.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
-                cachedBookings = null // Invalidate cache
+            // ✅ STEP 2: Update cache lokal LANGSUNG (tidak tunggu Firebase)
+            cachedBookings = cachedBookings?.map { cachedBooking ->
+                if (cachedBooking.id == booking.id) {
+                    Log.d(TAG, "  ✅ Updated booking ${booking.id} in cache to COMPLETED")
+                    completedBooking
+                } else {
+                    cachedBooking
+                }
             }
 
-            // Clear active booking
+            // ✅ STEP 3: Clear active booking
             activeBooking = null
 
-            Log.d(TAG, "✅ Booking ${booking.id} completed and moved to history")
+            // ✅ STEP 4: Update di Firebase (async, di background)
+            scope.launch {
+                try {
+                    firebaseRepo.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
+                    Log.d(TAG, "  ✅ Booking ${booking.id} updated to COMPLETED in Firebase")
+
+                    // ✅ Optional: Reload cache setelah Firebase update
+                    delay(500)
+                    forceLoadFromFirebase()
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "  ❌ Error updating booking in Firebase: ${e.message}", e)
+                }
+            }
+
+            Log.d(TAG, "✅ Booking ${booking.id} completed successfully")
+        } ?: run {
+            Log.w(TAG, "⚠️ No active booking to complete")
         }
     }
 
