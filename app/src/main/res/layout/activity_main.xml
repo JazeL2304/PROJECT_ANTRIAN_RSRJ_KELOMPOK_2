@@ -33,19 +33,6 @@
 
     </LinearLayout>
 
-    <!-- ✅ NEW: Floating Action Button untuk Test ML -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_test_ml"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:layout_marginBottom="80dp"
-        android:contentDescription="Test ML Console"
-        android:src="@android:drawable/ic_menu_search"
-        app:tint="@android:color/white"
-        app:backgroundTint="#2196F3"
-        app:elevation="6dp"
-        app:fabSize="normal" />
+    <!-- ❌ DIHAPUS: FAB untuk Test ML sudah tidak ada di sini -->
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
