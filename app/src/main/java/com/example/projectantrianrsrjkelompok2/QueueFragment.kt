@@ -74,7 +74,90 @@ class QueueFragment : Fragment() {
         initMLModel()
         setupButtons()
         startRealTimeMonitoring()
+
+        // ✅ FIXED: Load data SEGERA tanpa delay, dan show loading
+        loadInitialData()
     }
+
+    /**
+     * ✅ NEW: Load data initial dengan proper loading state
+     */
+    private fun loadInitialData() {
+        showLoading(true)
+
+        lifecycleScope.launch {
+            try {
+                // ✅ CRITICAL: Force reload dari Firebase DULU sebelum tampilkan apapun
+                withContext(Dispatchers.IO) {
+                    Log.d(TAG, "📥 Force loading fresh data from Firebase...")
+                    DataSource.forceLoadFromFirebase()
+                    delay(500) // Beri waktu untuk data ter-load
+                }
+
+                // ✅ Sekarang ambil data yang fresh
+                val activeBooking = DataSource.getActiveBooking()
+
+                if (activeBooking == null) {
+                    withContext(Dispatchers.Main) {
+                        showLoading(false)
+                        Toast.makeText(
+                            requireContext(),
+                            "❌ Tidak ada antrian aktif",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        (activity as? MainActivity)?.navigateToFragment(EmptyQueueFragment())
+                    }
+                    return@launch
+                }
+
+                // ✅ Cek apakah booking sudah selesai
+                if (activeBooking.status == BookingStatus.COMPLETED) {
+                    withContext(Dispatchers.Main) {
+                        showLoading(false)
+                        Toast.makeText(
+                            requireContext(),
+                            "Booking sudah selesai",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
+                    }
+                    return@launch
+                }
+
+                // ✅ Get today's bookings
+                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(Calendar.getInstance().time)
+
+                val todayBookings = DataSource.getBookingHistory()
+                    .filter { it.date == today }
+                    .sortedBy { it.queueNumber }
+
+                // ✅ Calculate current queue dengan data yang FRESH
+                val currentQueue = calculateCurrentQueue(todayBookings)
+
+                // ✅ Update UI dengan data yang benar
+                withContext(Dispatchers.Main) {
+                    updateQueueInfo(activeBooking, currentQueue, todayBookings)
+                    showLoading(false)
+
+                    // ✅ BARU start monitoring setelah data initial sudah benar
+                    startRealTimeMonitoring()
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error loading initial data: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    showLoading(false)
+                    Toast.makeText(
+                        requireContext(),
+                        "❌ Error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
 
     private fun initViews(view: View) {
         tvCurrentQueue = view.findViewById(R.id.tv_current_queue)
@@ -118,9 +201,14 @@ class QueueFragment : Fragment() {
         }
     }
 
+    /**
+     * ✅ MODIFIED: startRealTimeMonitoring dipanggil SETELAH data initial ready
+     */
     private fun startRealTimeMonitoring() {
         if (isMonitoring) return
         isMonitoring = true
+
+        Log.d(TAG, "▶️ Starting real-time monitoring...")
 
         RealTimeQueueManager.startMonitoring { update ->
             activity?.runOnUiThread {
@@ -128,7 +216,7 @@ class QueueFragment : Fragment() {
             }
         }
 
-        refreshQueueStatus()
+        // ✅ Tidak perlu refreshQueueStatus() di sini karena sudah di-handle di loadInitialData()
     }
 
     private fun refreshQueueStatus() {
@@ -136,7 +224,11 @@ class QueueFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                delay(500)
+                // ✅ Force reload data dari Firebase
+                withContext(Dispatchers.IO) {
+                    DataSource.forceLoadFromFirebase()
+                    delay(300)
+                }
 
                 val activeBooking = DataSource.getActiveBooking()
 
@@ -151,19 +243,27 @@ class QueueFragment : Fragment() {
                     return@launch
                 }
 
+                // ✅ Cek status booking
+                if (activeBooking.status == BookingStatus.COMPLETED) {
+                    showLoading(false)
+                    Toast.makeText(
+                        requireContext(),
+                        "Booking sudah selesai",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
+                    return@launch
+                }
+
                 // Get today's bookings
                 val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     .format(Calendar.getInstance().time)
 
                 val todayBookings = DataSource.getBookingHistory()
                     .filter { it.date == today }
-                    .filter {
-                        it.status == BookingStatus.WAITING ||
-                                it.status == BookingStatus.CALLED
-                    }
                     .sortedBy { it.queueNumber }
 
-                // Calculate current queue (simulasi progres realistis)
+                // Calculate current queue
                 val currentQueue = calculateCurrentQueue(todayBookings)
 
                 // Update display
@@ -189,80 +289,59 @@ class QueueFragment : Fragment() {
         }
     }
 
-
-
-    // app/src/main/java/com/example/projectantrianrsrjkelompok2/QueueFragment.kt
-
     /**
-     * ✅ FIXED: Hitung current queue berdasarkan waktu REAL yang lebih akurat
-     * Antrian hanya maju jika benar-benar sudah melewati waktu booking + service time
+     * ✅ FIXED: Calculate current queue - HANYA berdasarkan status AKTUAL
      */
     private fun calculateCurrentQueue(bookings: List<Booking>): Int {
         if (bookings.isEmpty()) return 0
 
-        val now = Calendar.getInstance()
-        val currentHour = now.get(Calendar.HOUR_OF_DAY)
-        val currentMinute = now.get(Calendar.MINUTE)
-        val currentTime = currentHour * 60 + currentMinute // dalam menit
-
         Log.d(TAG, "=== CALCULATE CURRENT QUEUE ===")
-        Log.d(TAG, "Current time: $currentHour:${String.format("%02d", currentMinute)} ($currentTime minutes)")
 
-        // ✅ FIXED: Filter hanya booking yang WAITING atau CALLED (exclude COMPLETED)
+        // ✅ Filter HANYA booking yang WAITING atau CALLED
         val activeBookings = bookings.filter {
             it.status == BookingStatus.WAITING || it.status == BookingStatus.CALLED
         }.sortedBy { it.queueNumber }
 
+        Log.d(TAG, "Total bookings today: ${bookings.size}")
+        Log.d(TAG, "Active bookings (WAITING/CALLED): ${activeBookings.size}")
+
+        // ✅ Debug log
+        bookings.sortedBy { it.queueNumber }.forEach { booking ->
+            val icon = when (booking.status) {
+                BookingStatus.COMPLETED -> "✅"
+                BookingStatus.CALLED -> "📢"
+                BookingStatus.WAITING -> "⏳"
+                BookingStatus.CANCELLED -> "❌"
+                BookingStatus.MISSED -> "⚠️"
+            }
+            Log.d(TAG, "  $icon Queue #${booking.queueNumber}: ${booking.patientName} - ${booking.status}")
+        }
+
         if (activeBookings.isEmpty()) {
-            // Semua booking sudah selesai
+            // Semua sudah selesai
             val maxQueue = bookings.maxOfOrNull { it.queueNumber } ?: 0
-            Log.d(TAG, "All bookings completed. Max queue was: $maxQueue")
+            Log.d(TAG, "✅ All completed. Max queue was: $maxQueue")
             return maxQueue
         }
 
-        // Ambil nomor antrian terkecil dari yang masih aktif
-        val firstQueueNumber = activeBookings.firstOrNull()?.queueNumber ?: 1
-
-        // Cek apakah klinik sudah buka
-        val clinicOpenTime = 8 * 60 // 08:00 = 480 menit
-
-        if (currentTime < clinicOpenTime) {
-            // Klinik belum buka, current queue masih di nomor pertama
-            Log.d(TAG, "Clinic not open yet. Current queue: $firstQueueNumber")
-            return firstQueueNumber
-        }
-
-        // ✅ VALIDASI: Cek apakah ada booking yang statusnya CALLED
+        // ✅ PRIORITY 1: Cari yang sedang CALLED
         val calledBooking = activeBookings.find { it.status == BookingStatus.CALLED }
-
         if (calledBooking != null) {
-            Log.d(TAG, "Found CALLED booking: ${calledBooking.queueNumber}")
+            Log.d(TAG, "📢 CALLED booking found: Queue #${calledBooking.queueNumber}")
             return calledBooking.queueNumber
         }
 
-        // Hitung berapa banyak antrian yang SEHARUSNYA sudah selesai dilayani
-        val elapsedMinutes = currentTime - clinicOpenTime
-        val completedQueues = (elapsedMinutes / AVG_SERVICE_TIME).toInt()
+        // ✅ PRIORITY 2: Ambil WAITING terkecil
+        val firstWaiting = activeBookings.firstOrNull { it.status == BookingStatus.WAITING }
+        if (firstWaiting != null) {
+            Log.d(TAG, "⏳ First WAITING: Queue #${firstWaiting.queueNumber}")
+            return firstWaiting.queueNumber
+        }
 
-        Log.d(TAG, "Elapsed time since clinic open: $elapsedMinutes minutes")
-        Log.d(TAG, "Theoretical completed queues: $completedQueues")
-
-        // Current queue = nomor pertama + jumlah yang sudah selesai
-        val theoreticalCurrentQueue = firstQueueNumber + completedQueues
-
-        // Batasi agar tidak melebihi total booking aktif
-        val maxQueueNumber = activeBookings.lastOrNull()?.queueNumber ?: firstQueueNumber
-        val finalCurrentQueue = theoreticalCurrentQueue.coerceAtMost(maxQueueNumber)
-
-        Log.d(TAG, """
-        Queue Calculation Result:
-        - First active queue: $firstQueueNumber
-        - Max active queue: $maxQueueNumber
-        - Theoretical current: $theoreticalCurrentQueue
-        - FINAL current: $finalCurrentQueue
-    """.trimIndent())
-
-        return finalCurrentQueue
+        // ✅ Fallback
+        val first = activeBookings.firstOrNull()?.queueNumber ?: 1
+        Log.d(TAG, "⚠️ Fallback to: $first")
+        return first
     }
 
     private fun updateQueueInfo(
@@ -571,17 +650,72 @@ class QueueFragment : Fragment() {
     }
 
     private fun cancelQueue() {
-        // ✅ Update status ke CANCELLED dulu
-        DataSource.updateBookingStatus(activeBooking.id, BookingStatus.CANCELLED)
+        // ✅ FIXED: Ambil activeBooking dari DataSource
+        val activeBooking = DataSource.getActiveBooking()
 
-        // ✅ Tunggu update selesai
-        delay(300)
+        if (activeBooking == null) {
+            Toast.makeText(
+                requireContext(),
+                "❌ Tidak ada booking aktif",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
 
-        // ✅ Clear active booking setelah status di-update
-        DataSource.clearActiveBookingOnly()
+        // ✅ Show loading
+        progressBar.visibility = View.VISIBLE
+        btnCancelQueue.isEnabled = false
 
-        // ✅ Navigate ke HistoryFragment (bukan EmptyQueue)
-        navigateToFragment(HistoryFragment())
+        // ✅ FIXED: Gunakan lifecycleScope untuk coroutine
+        lifecycleScope.launch {
+            try {
+                // ✅ Update status ke CANCELLED di background thread
+                withContext(Dispatchers.IO) {
+                    DataSource.updateBookingStatus(activeBooking.id, BookingStatus.CANCELLED)
+
+                    // ✅ FIXED: delay harus dalam coroutine
+                    delay(300)
+
+                    // ✅ Clear active booking setelah status di-update
+                    DataSource.clearActiveBookingOnly()
+
+                    // ✅ Force reload data untuk memastikan cache ter-update
+                    DataSource.forceLoadFromFirebase()
+                }
+
+                // ✅ Update UI di Main thread
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    btnCancelQueue.isEnabled = true
+
+                    Toast.makeText(
+                        requireContext(),
+                        "✅ Antrian berhasil dibatalkan",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    // ✅ FIXED: Gunakan cara yang benar untuk navigate
+                    (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error cancelling booking: ${e.message}", e)
+
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    btnCancelQueue.isEnabled = true
+
+                    Toast.makeText(
+                        requireContext(),
+                        "⚠️ Antrian dibatalkan",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    // ✅ Tetap navigate meskipun ada error
+                    (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
+                }
+            }
+        }
     }
 
     private fun generateReceipt() {
