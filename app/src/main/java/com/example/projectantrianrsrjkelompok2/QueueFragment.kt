@@ -83,7 +83,17 @@ class QueueFragment : Fragment() {
      * ✅ NEW: Load data initial dengan proper loading state
      */
     private fun loadInitialData() {
+        // ✅ Hide card dulu saat loading
+        cardMyQueue.visibility = View.INVISIBLE
         showLoading(true)
+
+        // ✅ TAMBAHKAN INI - Clear semua text default
+        tvCurrentQueue.text = ""
+        tvMyQueueNumber.text = ""
+        tvMyQueueStatus.text = ""
+        tvEstimatedTime.text = ""
+        tvDoctorInfo.text = ""
+        tvQueueList.text = ""
 
         lifecycleScope.launch {
             try {
@@ -172,6 +182,15 @@ class QueueFragment : Fragment() {
         btnDownloadReceipt = view.findViewById(R.id.btn_download_receipt)
         btnCompleteQueue = view.findViewById(R.id.btn_complete_queue)
         progressBar = view.findViewById(R.id.progress_bar)
+        progressBar = view.findViewById(R.id.progress_bar)
+
+        // ✅ TAMBAHKAN INI - Clear semua text default
+        tvCurrentQueue.text = ""
+        tvMyQueueNumber.text = ""
+        tvMyQueueStatus.text = ""
+        tvEstimatedTime.text = ""
+        tvDoctorInfo.text = ""
+        tvQueueList.text = ""
     }
 
     private fun initMLModel() {
@@ -349,6 +368,16 @@ class QueueFragment : Fragment() {
         currentQueue: Int,
         allBookings: List<Booking>
     ) {
+        // ✅ Show card setelah data siap
+        cardMyQueue.visibility = View.VISIBLE
+        // ✅ TAMBAHKAN INI - Clear semua text default
+        tvCurrentQueue.text = ""
+        tvMyQueueNumber.text = ""
+        tvMyQueueStatus.text = ""
+        tvEstimatedTime.text = ""
+        tvDoctorInfo.text = ""
+        tvQueueList.text = ""
+
         // Update doctor info dengan WIB
         val dateFormat = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID"))
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
