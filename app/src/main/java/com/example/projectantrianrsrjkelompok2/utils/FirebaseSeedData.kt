@@ -17,34 +17,79 @@ object FirebaseSeedData {
     private val firebaseRepo = FirebaseRepository()
 
     /**
-     * 🌱 Seed semua data dummy ke Firebase
+     * 🔐 Seed User Accounts
      */
+    private suspend fun seedUsers() {
+        val users = listOf(
+            UserAccount(
+                id = "user001",
+                email = "user@example.com",
+                password = "password123",
+                fullName = "John Doe",
+                phoneNumber = "081234567890",
+                userType = "PATIENT"
+            ),
+            UserAccount(
+                id = "doc001",
+                email = "dokter@rumahsakit.com",
+                password = "dokter123",
+                fullName = "Dr. Ahmad Susanto",
+                phoneNumber = "081234567891",
+                userType = "DOCTOR"
+            ),
+            UserAccount(
+                id = "admin001",
+                email = "admin@rumahsakit.com",
+                password = "admin123",
+                fullName = "Siti Nurhaliza",
+                phoneNumber = "081234567892",
+                userType = "ADMIN"
+            )
+        )
+
+        Log.d(TAG, "📤 Seeding ${users.size} user accounts...")
+        var successCount = 0
+
+        users.forEach { user ->
+            try {
+                val success = firebaseRepo.addUserAccount(user)
+                if (success) {
+                    successCount++
+                    Log.d(TAG, "  ✅ Added: ${user.email} (${user.userType})")
+                } else {
+                    Log.e(TAG, "  ❌ Failed to add: ${user.email}")
+                }
+                delay(100)
+            } catch (e: Exception) {
+                Log.e(TAG, "  ❌ Exception adding ${user.email}: ${e.message}")
+            }
+        }
+
+        Log.d(TAG, "✅ Users: $successCount/${users.size} added")
+    }
+
     fun seedAllData() {
         runBlocking {
             try {
                 Log.d(TAG, "🌱 Starting Firebase seed...")
 
                 // Check if data already exists
-                delay(500) // Wait for Firebase to initialize
-
+                delay(500)
                 val existingDoctors = firebaseRepo.getAllDoctors()
 
                 if (existingDoctors.isNotEmpty()) {
-                    Log.d(TAG, "ℹ️ Data already exists in Firebase (${existingDoctors.size} doctors)")
-
-                    // ✅ Force load to cache
-                    Log.d(TAG, "📥 Loading existing data to cache...")
+                    Log.d(TAG, "ℹ️ Data already exists in Firebase")
                     DataSource.forceLoadFromFirebase()
-                    Log.d(TAG, "✅ Cache loaded!")
                     return@runBlocking
                 }
 
-                // 🌱 SEED ALL DATA TO FIREBASE
-                Log.d(TAG, "🚀 No data found. Starting seed process...")
+                // 🆕 0. Seed Users FIRST
+                seedUsers()
+                delay(1000)
 
                 // 1. Seed Specializations
                 seedSpecializations()
-                delay(1000) // Wait for write to complete
+                delay(1000)
 
                 // 2. Seed Doctors
                 seedDoctors()
@@ -54,24 +99,17 @@ object FirebaseSeedData {
                 seedPatients()
                 delay(1000)
 
-                // 4. Seed Sample Bookings
+                // 4. Seed Bookings
                 seedBookings()
                 delay(1000)
 
-                // ✅ Force load after seeding
-                Log.d(TAG, "📥 Loading seeded data to cache...")
+                // Load to cache
                 DataSource.forceLoadFromFirebase()
 
-                // Verify data
-                val verifyDoctors = firebaseRepo.getAllDoctors()
-                val verifyPatients = firebaseRepo.getAllPatients()
-
                 Log.d(TAG, "✅ Seed completed!")
-                Log.d(TAG, "📊 Final count: ${verifyDoctors.size} doctors, ${verifyPatients.size} patients")
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Seed failed: ${e.message}", e)
-                e.printStackTrace()
             }
         }
     }

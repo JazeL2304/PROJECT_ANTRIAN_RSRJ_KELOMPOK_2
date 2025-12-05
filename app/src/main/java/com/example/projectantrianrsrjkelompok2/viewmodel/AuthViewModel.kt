@@ -4,8 +4,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.projectantrianrsrjkelompok2.data.FirebaseRepository
 import com.example.projectantrianrsrjkelompok2.model.User
-import com.example.projectantrianrsrjkelompok2.model.UserType
+import com.example.projectantrianrsrjkelompok2.model.UserAccount
 import kotlinx.coroutines.launch
 
 data class AuthState(
@@ -23,63 +24,24 @@ class AuthViewModel : ViewModel() {
     private val _isLoggedIn = MutableLiveData<Boolean>()
     val isLoggedIn: LiveData<Boolean> = _isLoggedIn
 
-    // Database pengguna simulasi dengan 3 role
-    private val registeredUsers = mutableMapOf(
-        // 1. User/Pasien
-        "user@example.com" to UserCredentials(
-            password = "password123",
-            user = User(
-                id = "user001",
-                email = "user@example.com",
-                fullName = "John Doe",
-                phoneNumber = "081234567890",
-                userType = UserType.PATIENT
-            )
-        ),
-
-        // 2. Dokter
-        "dokter@rumahsakit.com" to UserCredentials(
-            password = "dokter123",
-            user = User(
-                id = "doc001",
-                email = "dokter@rumahsakit.com",
-                fullName = "Dr. Ahmad Susanto",
-                phoneNumber = "081234567891",
-                userType = UserType.DOCTOR
-            )
-        ),
-
-        // 3. Admin (Asisten Dokter)
-        "admin@rumahsakit.com" to UserCredentials(
-            password = "admin123",
-            user = User(
-                id = "admin001",
-                email = "admin@rumahsakit.com",
-                fullName = "Siti Nurhaliza",
-                phoneNumber = "081234567892",
-                userType = UserType.ADMIN
-            )
-        )
-    )
+    // ✅ Firebase Repository untuk auth
+    private val firebaseRepo = FirebaseRepository()
 
     fun login(email: String, password: String) {
         _authState.value = AuthState(isLoading = true)
 
         viewModelScope.launch {
             try {
-                // Simulasi API call delay
-                kotlinx.coroutines.delay(1000)
+                // ✅ Login dari Firebase
+                val userAccount = firebaseRepo.loginUser(email, password)
 
-                if (validateLogin(email, password)) {
-                    val userCredentials = registeredUsers[email]
-                    if (userCredentials != null) {
-                        _authState.value = AuthState(
-                            isLoading = false,
-                            isSuccess = true,
-                            user = userCredentials.user
-                        )
-                        _isLoggedIn.value = true
-                    }
+                if (userAccount != null) {
+                    _authState.value = AuthState(
+                        isLoading = false,
+                        isSuccess = true,
+                        user = userAccount.toUser()
+                    )
+                    _isLoggedIn.value = true
                 } else {
                     _authState.value = AuthState(
                         isLoading = false,
@@ -102,34 +64,31 @@ class AuthViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                kotlinx.coroutines.delay(1000)
+                val newUser = UserAccount(
+                    id = "user_${System.currentTimeMillis()}",
+                    email = email,
+                    password = password,
+                    fullName = fullName,
+                    phoneNumber = "",
+                    userType = "PATIENT"
+                )
 
-                // Validasi email sudah terdaftar
-                if (registeredUsers.containsKey(email)) {
+                // ✅ Register ke Firebase
+                val success = firebaseRepo.registerUser(newUser)
+
+                if (success) {
+                    _authState.value = AuthState(
+                        isLoading = false,
+                        isSuccess = true,
+                        user = newUser.toUser()
+                    )
+                } else {
                     _authState.value = AuthState(
                         isLoading = false,
                         isSuccess = false,
                         error = "Email sudah terdaftar, gunakan email lain"
                     )
-                    return@launch
                 }
-
-                // Tambahkan user baru (default: PATIENT)
-                val newUser = User(
-                    id = "user_${System.currentTimeMillis()}",
-                    email = email,
-                    fullName = fullName,
-                    userType = UserType.PATIENT
-                )
-
-                registeredUsers[email] = UserCredentials(password, newUser)
-
-                _authState.value = AuthState(
-                    isLoading = false,
-                    isSuccess = true,
-                    user = newUser,
-                    error = null
-                )
             } catch (e: Exception) {
                 _authState.value = AuthState(
                     isLoading = false,
@@ -151,15 +110,4 @@ class AuthViewModel : ViewModel() {
             _authState.value = currentState.copy(error = null)
         }
     }
-
-    private fun validateLogin(email: String, password: String): Boolean {
-        val userCredentials = registeredUsers[email]
-        return userCredentials?.password == password
-    }
-
-    // Helper data class
-    private data class UserCredentials(
-        val password: String,
-        val user: User
-    )
 }

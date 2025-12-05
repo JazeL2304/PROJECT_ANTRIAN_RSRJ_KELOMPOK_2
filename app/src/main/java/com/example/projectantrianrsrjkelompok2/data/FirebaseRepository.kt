@@ -6,6 +6,91 @@ import com.google.firebase.database.*
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
+
+// Tambahkan di bagian atas class FirebaseRepository
+private val usersRef: DatabaseReference = database.getReference("users")
+
+/**
+ * 🔐 Login - Cari user berdasarkan email dan password
+ */
+suspend fun loginUser(email: String, password: String): UserAccount? {
+    return suspendCoroutine { continuation ->
+        usersRef.orderByChild("email").equalTo(email)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    for (child in snapshot.children) {
+                        val user = child.getValue(UserAccount::class.java)
+                        if (user != null && user.password == password) {
+                            Log.d(TAG, "✅ Login successful: ${user.email}")
+                            continuation.resume(user)
+                            return
+                        }
+                    }
+                    Log.w(TAG, "❌ Login failed: Invalid credentials")
+                    continuation.resume(null)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Login error: ${error.message}")
+                    continuation.resume(null)
+                }
+            })
+    }
+}
+
+/**
+ * 📝 Register user baru
+ */
+suspend fun registerUser(userAccount: UserAccount): Boolean {
+    return suspendCoroutine { continuation ->
+        // Cek apakah email sudah ada
+        usersRef.orderByChild("email").equalTo(userAccount.email)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (snapshot.exists()) {
+                        // Email sudah terdaftar
+                        Log.w(TAG, "❌ Email already exists: ${userAccount.email}")
+                        continuation.resume(false)
+                    } else {
+                        // Simpan user baru
+                        usersRef.child(userAccount.id).setValue(userAccount)
+                            .addOnSuccessListener {
+                                Log.d(TAG, "✅ User registered: ${userAccount.email}")
+                                continuation.resume(true)
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e(TAG, "❌ Registration failed: ${e.message}")
+                                continuation.resume(false)
+                            }
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Registration error: ${error.message}")
+                    continuation.resume(false)
+                }
+            })
+    }
+}
+
+/**
+ * 🌱 Add user account (for seeding)
+ */
+suspend fun addUserAccount(user: UserAccount): Boolean {
+    return suspendCoroutine { continuation ->
+        usersRef.child(user.id).setValue(user)
+            .addOnSuccessListener {
+                Log.d(TAG, "✅ User account added: ${user.email}")
+                continuation.resume(true)
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "❌ Failed to add user: ${e.message}")
+                continuation.resume(false)
+            }
+    }
+}
 
 /**
  * ✅ Firebase Repository - Handle all Firebase operations
