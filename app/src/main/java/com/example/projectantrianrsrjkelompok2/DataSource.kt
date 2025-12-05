@@ -322,8 +322,24 @@ object DataSource {
 
     fun getActiveBooking(): Booking? = activeBooking
 
+    /**
+     * ✅ Clear active booking and mark as COMPLETED
+     * This is the original clearActiveBooking behavior
+     */
     fun clearActiveBooking() {
+        activeBooking?.let { booking ->
+            // Update status to COMPLETED
+            scope.launch {
+                try {
+                    firebaseRepo.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
+                    Log.d(TAG, "✅ Booking ${booking.id} marked as COMPLETED")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error updating booking status: ${e.message}", e)
+                }
+            }
+        }
         activeBooking = null
+        Log.d(TAG, "✅ Active booking cleared and marked as completed")
     }
 
     /**
@@ -370,8 +386,13 @@ object DataSource {
         }
     }
 
+    /**
+     * ✅ Clear active booking WITHOUT updating status
+     * Use this after you've already updated the booking status
+     */
     fun clearActiveBookingOnly() {
         activeBooking = null
+        Log.d(TAG, "✅ Active booking cleared (status already updated)")
     }
 
     fun hasActiveBooking(): Boolean = activeBooking != null

@@ -208,11 +208,20 @@ class QueueFragment : Fragment() {
         Log.d(TAG, "=== CALCULATE CURRENT QUEUE ===")
         Log.d(TAG, "Current time: $currentHour:${String.format("%02d", currentMinute)} ($currentTime minutes)")
 
-        // Urutkan booking berdasarkan queue number
-        val sortedBookings = bookings.sortedBy { it.queueNumber }
+        // ✅ FIXED: Filter hanya booking yang WAITING atau CALLED (exclude COMPLETED)
+        val activeBookings = bookings.filter {
+            it.status == BookingStatus.WAITING || it.status == BookingStatus.CALLED
+        }.sortedBy { it.queueNumber }
 
-        // Ambil nomor antrian terkecil
-        val firstQueueNumber = sortedBookings.firstOrNull()?.queueNumber ?: 1
+        if (activeBookings.isEmpty()) {
+            // Semua booking sudah selesai
+            val maxQueue = bookings.maxOfOrNull { it.queueNumber } ?: 0
+            Log.d(TAG, "All bookings completed. Max queue was: $maxQueue")
+            return maxQueue
+        }
+
+        // Ambil nomor antrian terkecil dari yang masih aktif
+        val firstQueueNumber = activeBookings.firstOrNull()?.queueNumber ?: 1
 
         // Cek apakah klinik sudah buka
         val clinicOpenTime = 8 * 60 // 08:00 = 480 menit
@@ -223,8 +232,15 @@ class QueueFragment : Fragment() {
             return firstQueueNumber
         }
 
+        // ✅ VALIDASI: Cek apakah ada booking yang statusnya CALLED
+        val calledBooking = activeBookings.find { it.status == BookingStatus.CALLED }
+
+        if (calledBooking != null) {
+            Log.d(TAG, "Found CALLED booking: ${calledBooking.queueNumber}")
+            return calledBooking.queueNumber
+        }
+
         // Hitung berapa banyak antrian yang SEHARUSNYA sudah selesai dilayani
-        // berdasarkan waktu yang telah berlalu sejak klinik buka
         val elapsedMinutes = currentTime - clinicOpenTime
         val completedQueues = (elapsedMinutes / AVG_SERVICE_TIME).toInt()
 
@@ -234,21 +250,15 @@ class QueueFragment : Fragment() {
         // Current queue = nomor pertama + jumlah yang sudah selesai
         val theoreticalCurrentQueue = firstQueueNumber + completedQueues
 
-        // Batasi agar tidak melebihi total booking
-        val maxQueueNumber = sortedBookings.lastOrNull()?.queueNumber ?: firstQueueNumber
-        val actualCurrentQueue = theoreticalCurrentQueue.coerceAtMost(maxQueueNumber)
-
-        // ✅ VALIDASI: Cek apakah ada booking yang statusnya CALLED
-        val calledBooking = sortedBookings.find { it.status == BookingStatus.CALLED }
-        val finalCurrentQueue = calledBooking?.queueNumber ?: actualCurrentQueue
+        // Batasi agar tidak melebihi total booking aktif
+        val maxQueueNumber = activeBookings.lastOrNull()?.queueNumber ?: firstQueueNumber
+        val finalCurrentQueue = theoreticalCurrentQueue.coerceAtMost(maxQueueNumber)
 
         Log.d(TAG, """
         Queue Calculation Result:
-        - First queue: $firstQueueNumber
-        - Max queue: $maxQueueNumber
+        - First active queue: $firstQueueNumber
+        - Max active queue: $maxQueueNumber
         - Theoretical current: $theoreticalCurrentQueue
-        - Actual current: $actualCurrentQueue
-        - Called booking: ${calledBooking?.queueNumber}
         - FINAL current: $finalCurrentQueue
     """.trimIndent())
 
@@ -561,13 +571,17 @@ class QueueFragment : Fragment() {
     }
 
     private fun cancelQueue() {
-        DataSource.clearActiveBooking()
-        Toast.makeText(
-            requireContext(),
-            "❌ Antrian dibatalkan",
-            Toast.LENGTH_SHORT
-        ).show()
-        (activity as? MainActivity)?.navigateToFragment(EmptyQueueFragment())
+        // ✅ Update status ke CANCELLED dulu
+        DataSource.updateBookingStatus(activeBooking.id, BookingStatus.CANCELLED)
+
+        // ✅ Tunggu update selesai
+        delay(300)
+
+        // ✅ Clear active booking setelah status di-update
+        DataSource.clearActiveBookingOnly()
+
+        // ✅ Navigate ke HistoryFragment (bukan EmptyQueue)
+        navigateToFragment(HistoryFragment())
     }
 
     private fun generateReceipt() {
