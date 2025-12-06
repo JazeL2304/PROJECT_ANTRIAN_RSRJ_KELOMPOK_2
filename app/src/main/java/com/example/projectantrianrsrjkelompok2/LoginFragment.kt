@@ -1,6 +1,7 @@
 package com.example.projectantrianrsrjkelompok2
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,8 +15,13 @@ import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import com.example.projectantrianrsrjkelompok2.model.UserType
 import com.google.android.material.textfield.TextInputEditText
 
+/**
+ * ✅ Login Fragment
+ * 🆕 Updated to save userId for ImageKit integration
+ */
 class LoginFragment : Fragment() {
 
+    private val TAG = "LoginFragment"
     private val authViewModel: AuthViewModel by viewModels()
 
     private lateinit var etEmail: TextInputEditText
@@ -73,9 +79,15 @@ class LoginFragment : Fragment() {
                     btnLogin.isEnabled = true
                     btnLogin.text = "Masuk"
 
-                    // Simpan data login & role user
+                    // ✅ Simpan data login & role user
                     val prefsHelper = PreferencesHelper(requireContext())
                     prefsHelper.setLoggedIn(true)
+
+                    // 🆕 Save user ID (for ImageKit profile upload)
+                    prefsHelper.saveUserId(state.user.id)
+                    Log.d(TAG, "✅ User ID saved: ${state.user.id}")
+
+                    // Save other user data
                     prefsHelper.saveUserData(state.user.email, state.user.fullName)
                     prefsHelper.saveUserRole(state.user.userType.name)
 

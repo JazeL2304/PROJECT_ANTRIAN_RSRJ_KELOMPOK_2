@@ -8,12 +8,13 @@ class PreferencesHelper(context: Context) {
     companion object {
         private const val PREF_NAME = "antrian_rs_prefs"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_USER_ID = "user_id"  // 🆕 ADDED
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_FULL_NAME = "user_full_name"
         private const val KEY_USER_PHONE = "user_phone"
         private const val KEY_USER_ROLE = "user_role"
         private const val KEY_PROFILE_PHOTO_PATH = "profile_photo_path"
-        private const val KEY_FIRST_LAUNCH = "is_first_launch"  // ✅ ADDED
+        private const val KEY_FIRST_LAUNCH = "is_first_launch"
     }
 
     private val preferences: SharedPreferences =
@@ -42,6 +43,30 @@ class PreferencesHelper(context: Context) {
     // ===============================
     // 👤 USER DATA
     // ===============================
+
+    // 🆕 USER ID METHODS
+    /**
+     * Save user ID (from Firebase UserAccount.id)
+     */
+    fun saveUserId(userId: String) {
+        preferences.edit().putString(KEY_USER_ID, userId).apply()
+    }
+
+    /**
+     * Get user ID
+     * Returns userId if saved, otherwise generates from email
+     */
+    fun getUserId(): String? {
+        // Try to get saved user ID first
+        val savedId = preferences.getString(KEY_USER_ID, null)
+        if (!savedId.isNullOrEmpty()) {
+            return savedId
+        }
+
+        // Fallback: generate from email
+        val email = getUserEmail()
+        return email?.substringBefore("@")?.replace(".", "_")
+    }
 
     fun saveUserEmail(email: String) {
         preferences.edit().putString(KEY_USER_EMAIL, email).apply()

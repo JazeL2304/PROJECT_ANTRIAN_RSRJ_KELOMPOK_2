@@ -1,23 +1,47 @@
 package com.example.projectantrianrsrjkelompok2
 
+import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import coil.load
+import coil.transform.CircleCropTransformation
+import com.example.projectantrianrsrjkelompok2.data.FirebaseRepository
+import com.example.projectantrianrsrjkelompok2.data.ImageKitRepository
+import com.example.projectantrianrsrjkelompok2.utils.ImageKitConfig
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
+/**
+ * ✅ Profile Fragment with ImageKit Integration
+ * Upload foto profil ke ImageKit.io cloud storage
+ */
 class ProfileFragment : Fragment() {
 
+    private val TAG = "ProfileFragment"
+
     private lateinit var preferencesHelper: PreferencesHelper
+    private lateinit var firebaseRepo: FirebaseRepository
+    private lateinit var imageKitRepo: ImageKitRepository
 
     private lateinit var ivProfilePhoto: ImageView
     private lateinit var tvUserName: TextView
@@ -26,6 +50,37 @@ class ProfileFragment : Fragment() {
     private lateinit var btnEditPassword: View
     private lateinit var btnVerifyIdentity: View
     private lateinit var btnLogout: View
+
+    private var progressBar: ProgressBar? = null
+
+    private var selectedImageUri: Uri? = null
+    private var isUploading = false
+
+    // Image picker launcher
+    private val imagePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        Log.d(TAG, "========== Image Picker Result ==========")
+        Log.d(TAG, "Result code: ${result.resultCode}")
+        Log.d(TAG, "RESULT_OK: ${Activity.RESULT_OK}")
+        Log.d(TAG, "Match: ${result.resultCode == Activity.RESULT_OK}")
+
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri = result.data?.data
+            Log.d(TAG, "Data: ${result.data}")
+            Log.d(TAG, "URI: $uri")
+
+            if (uri != null) {
+                Log.d(TAG, "✅ Valid URI received, handling...")
+                handleImageSelected(uri)
+            } else {
+                Log.e(TAG, "❌ URI is NULL!")
+            }
+        } else {
+            Log.w(TAG, "⚠️ Result not OK. Code: ${result.resultCode}")
+        }
+        Log.d(TAG, "=========================================")
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -38,7 +93,32 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Initialize
         preferencesHelper = PreferencesHelper(requireContext())
+        firebaseRepo = FirebaseRepository()
+        imageKitRepo = ImageKitRepository(requireContext())
+
+        // DEBUG SECTION
+        Log.d(TAG, "========== ProfileFragment DEBUG ==========")
+        val userId = preferencesHelper.getUserId()
+        Log.d(TAG, "User ID: $userId")
+        Log.d(TAG, "User Email: ${preferencesHelper.getUserEmail()}")
+        Log.d(TAG, "ImageKit URL: ${ImageKitConfig.URL_ENDPOINT}")
+        Log.d(TAG, "ImageKit Public Key: ${ImageKitConfig.PUBLIC_KEY}")
+        Log.d(TAG, "ImageKit isConfigured: ${ImageKitConfig.isConfigured()}")
+        Log.d(TAG, "==========================================")
+
+        // Check ImageKit configuration
+        if (!ImageKitConfig.isConfigured()) {
+            Log.w(TAG, "⚠️ ImageKit not configured! Please set credentials in ImageKitConfig.kt")
+            Toast.makeText(
+                context,
+                "⚠️ ImageKit belum dikonfigurasi. Foto profil tidak bisa diupload.",
+                Toast.LENGTH_LONG
+            ).show()
+        } else {
+            Log.d(TAG, "✅ ImageKit configured and ready!")
+        }
 
         // Initialize views
         ivProfilePhoto = view.findViewById(R.id.ivProfilePhoto)
@@ -49,10 +129,12 @@ class ProfileFragment : Fragment() {
         btnVerifyIdentity = view.findViewById(R.id.btnVerifyIdentity)
         btnLogout = view.findViewById(R.id.btnLogout)
 
+        progressBar = view.findViewById(R.id.progressBar)
+
         // Load user data
         loadUserData()
 
-        // ✅ Load profile photo
+        // Load profile photo from ImageKit/Firebase
         loadProfilePhoto()
 
         // Setup click listeners
@@ -62,7 +144,6 @@ class ProfileFragment : Fragment() {
     private fun loadUserData() {
         val userRole = preferencesHelper.getUserRole()
 
-        // Jika dokter, gunakan nama Dr. Ahmad Santoso
         val userName = if (userRole == "dokter") {
             "Dr. Ahmad Santoso"
         } else {
@@ -79,21 +160,72 @@ class ProfileFragment : Fragment() {
         tvUserEmail.text = userEmail
     }
 
-    // ✅ FIXED: Load foto profil dari SharedPreferences
     private fun loadProfilePhoto() {
+        val userId = preferencesHelper.getUserId()
+
+        if (userId.isNullOrEmpty()) {
+            Log.w(TAG, "❌ User ID is null or empty")
+            loadProfilePhotoFromLocal()
+            return
+        }
+
+        Log.d(TAG, "📥 Loading profile photo for user: $userId")
+
+        lifecycleScope.launch {
+            try {
+                val user = withContext(Dispatchers.IO) {
+                    firebaseRepo.getUserById(userId)
+                }
+
+                if (user != null && user.hasProfilePicture()) {
+                    // Load from ImageKit URL
+                    ivProfilePhoto.load(user.getProfileImageUrl(width = 200, height = 200)) {
+                        crossfade(true)
+                        placeholder(android.R.drawable.ic_menu_myplaces)
+                        error(android.R.drawable.ic_menu_myplaces)
+                        transformations(CircleCropTransformation())
+                    }
+
+                    Log.d(TAG, "✅ Profile photo loaded from ImageKit: ${user.profileImageUrl}")
+                } else {
+                    Log.d(TAG, "ℹ️ User has no profile picture, loading from local")
+                    loadProfilePhotoFromLocal()
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error loading profile photo: ${e.message}", e)
+                loadProfilePhotoFromLocal()
+            }
+        }
+    }
+
+    private fun loadProfilePhotoFromLocal() {
         val photoPath = preferencesHelper.getProfilePhotoPath()
 
         if (photoPath != null && File(photoPath).exists()) {
-            // Load foto dari path
             val bitmap = BitmapFactory.decodeFile(photoPath)
             ivProfilePhoto.setImageBitmap(bitmap)
+            Log.d(TAG, "📁 Profile photo loaded from local: $photoPath")
         } else {
-            // ✅ FIXED: Gunakan icon default Android (bukan R.drawable.ic_profile_placeholder)
             ivProfilePhoto.setImageResource(android.R.drawable.ic_menu_myplaces)
+            Log.d(TAG, "🖼️ Using default profile icon")
         }
     }
 
     private fun setupClickListeners() {
+        // Click profile photo to change
+        ivProfilePhoto.setOnClickListener {
+            Log.d(TAG, "📸 Profile photo clicked!")
+            Log.d(TAG, "isUploading: $isUploading")
+            Log.d(TAG, "ImageKit configured: ${ImageKitConfig.isConfigured()}")
+
+            if (!isUploading) {
+                showImagePickerDialog()
+            } else {
+                Toast.makeText(context, "⏳ Upload sedang berlangsung...", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         // Edit Name
         btnEditName.setOnClickListener {
             showEditNameDialog()
@@ -104,9 +236,9 @@ class ProfileFragment : Fragment() {
             showEditPasswordDialog()
         }
 
-        // Verify Identity (Camera)
+        // Verify Identity
         btnVerifyIdentity.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(CameraFragment())
+            showImagePickerDialog()
         }
 
         // Logout
@@ -115,11 +247,231 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    private fun showImagePickerDialog() {
+        Log.d(TAG, "🎨 showImagePickerDialog() called")
+
+        if (!ImageKitConfig.isConfigured()) {
+            Log.e(TAG, "❌ ImageKit not configured!")
+            Toast.makeText(
+                context,
+                "ImageKit belum dikonfigurasi. Silakan set credentials di ImageKitConfig.kt",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        Log.d(TAG, "✅ ImageKit configured, showing dialog")
+
+        val options = arrayOf("📷 Ambil Foto", "🖼️ Pilih dari Galeri", "❌ Batal")
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Ubah Foto Profil")
+            .setItems(options) { dialog, which ->
+                Log.d(TAG, "Dialog option selected: $which")
+                when (which) {
+                    0 -> {
+                        Log.d(TAG, "Opening camera...")
+                        openCamera()
+                    }
+                    1 -> {
+                        Log.d(TAG, "Opening gallery...")
+                        openGallery()
+                    }
+                    2 -> {
+                        Log.d(TAG, "Dialog cancelled")
+                        dialog.dismiss()
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun openCamera() {
+        (activity as MainActivity).navigateToFragment(CameraFragment())
+    }
+
+    private fun openGallery() {
+        Log.d(TAG, "📂 openGallery() called")
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        Log.d(TAG, "Launching image picker with intent: ${intent.action}")
+        imagePickerLauncher.launch(intent)
+    }
+
+    private fun handleImageSelected(uri: Uri) {
+        Log.d(TAG, "========== Handle Image Selected ==========")
+        Log.d(TAG, "URI: $uri")
+
+        selectedImageUri = uri
+
+        // Validate file type
+        val mimeType = requireContext().contentResolver.getType(uri)
+        Log.d(TAG, "MIME type: $mimeType")
+
+        if (!imageKitRepo.isValidImageType(mimeType)) {
+            Log.e(TAG, "❌ Invalid MIME type!")
+            Toast.makeText(
+                context,
+                "❌ Format tidak didukung. Gunakan JPEG, PNG, atau WEBP",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        Log.d(TAG, "✅ MIME type valid")
+
+        // Validate file size
+        if (!imageKitRepo.isValidFileSize(uri)) {
+            Log.e(TAG, "❌ File too large!")
+            val maxSizeMB = ImageKitConfig.MAX_FILE_SIZE / (1024 * 1024)
+            Toast.makeText(
+                context,
+                "❌ Ukuran file terlalu besar. Maksimal ${maxSizeMB}MB",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        Log.d(TAG, "✅ File size valid")
+
+        Log.d(TAG, "📸 Loading preview with Coil...")
+
+        // Preview image
+        ivProfilePhoto.load(uri) {
+            crossfade(true)
+            transformations(CircleCropTransformation())
+        }
+
+        Log.d(TAG, "✅ Preview loaded, showing confirmation dialog...")
+        Log.d(TAG, "==========================================")
+
+        // Confirm upload
+        showUploadConfirmationDialog(uri)
+    }
+
+    private fun showUploadConfirmationDialog(uri: Uri) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Upload Foto Profil")
+            .setMessage("Upload foto ini ke cloud storage?")
+            .setPositiveButton("Upload") { dialog, _ ->
+                uploadProfilePicture(uri)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Batal") { dialog, _ ->
+                loadProfilePhoto()
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun uploadProfilePicture(uri: Uri) {
+        Log.d(TAG, "========== Upload Profile Picture ==========")
+
+        val userId = preferencesHelper.getUserId()
+        Log.d(TAG, "User ID: $userId")
+
+        if (userId.isNullOrEmpty()) {
+            Log.e(TAG, "❌ User ID is null or empty!")
+            Toast.makeText(context, "❌ User ID tidak ditemukan", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (isUploading) {
+            Log.w(TAG, "⚠️ Already uploading!")
+            Toast.makeText(context, "⏳ Upload sedang berlangsung...", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isUploading = true
+        showLoading(true)
+
+        Log.d(TAG, "🔄 Starting upload to ImageKit...")
+        Log.d(TAG, "URI: $uri")
+
+        lifecycleScope.launch {
+            try {
+                // Step 1: Upload to ImageKit
+                Log.d(TAG, "📤 Calling imageKitRepo.uploadProfilePicture()...")
+
+                val uploadResponse = withContext(Dispatchers.IO) {
+                    imageKitRepo.uploadProfilePicture(uri, userId)
+                }
+
+                Log.d(TAG, "📥 Upload response received")
+                Log.d(TAG, "Response: $uploadResponse")
+
+                if (uploadResponse != null) {
+                    Log.d(TAG, "✅ Upload successful!")
+                    Log.d(TAG, "   - File ID: ${uploadResponse.fileId}")
+                    Log.d(TAG, "   - URL: ${uploadResponse.url}")
+                    Log.d(TAG, "   - Size: ${uploadResponse.size / 1024}KB")
+
+                    // Step 2: Save URL to Firebase
+                    Log.d(TAG, "💾 Saving to Firebase...")
+
+                    val success = withContext(Dispatchers.IO) {
+                        firebaseRepo.updateUserProfileImage(
+                            userId = userId,
+                            imageUrl = uploadResponse.url,
+                            fileId = uploadResponse.fileId
+                        )
+                    }
+
+                    Log.d(TAG, "Firebase update result: $success")
+
+                    if (success) {
+                        withContext(Dispatchers.Main) {
+                            Log.d(TAG, "✅ Complete success!")
+                            Toast.makeText(
+                                context,
+                                "✅ Foto profil berhasil diupload!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            loadProfilePhoto()
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Log.e(TAG, "❌ Firebase update failed!")
+                            Toast.makeText(
+                                context,
+                                "❌ Gagal update database",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Log.e(TAG, "❌ Upload response is NULL!")
+                        Toast.makeText(
+                            context,
+                            "❌ Gagal upload gambar",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        loadProfilePhoto()
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Upload error: ${e.message}", e)
+                e.printStackTrace()
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "❌ Error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    loadProfilePhoto()
+                }
+            } finally {
+                isUploading = false
+                showLoading(false)
+                Log.d(TAG, "==========================================")
+            }
+        }
+    }
+
     private fun showEditNameDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_name, null)
         val etNewName = dialogView.findViewById<EditText>(R.id.etNewName)
 
-        // Pre-fill dengan nama saat ini
         etNewName.setText(preferencesHelper.getUserFullName())
 
         AlertDialog.Builder(requireContext())
@@ -223,7 +575,15 @@ class ProfileFragment : Fragment() {
         Toast.makeText(context, "Berhasil logout", Toast.LENGTH_SHORT).show()
     }
 
-    // ✅ TAMBAHAN: Reload foto saat kembali ke fragment
+    private fun showLoading(show: Boolean) {
+        progressBar?.visibility = if (show) View.VISIBLE else View.GONE
+
+        btnEditName.isEnabled = !show
+        btnEditPassword.isEnabled = !show
+        btnVerifyIdentity.isEnabled = !show
+        btnLogout.isEnabled = !show
+    }
+
     override fun onResume() {
         super.onResume()
         loadProfilePhoto()

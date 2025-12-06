@@ -12,6 +12,7 @@ import kotlin.coroutines.suspendCoroutine
 
 /**
  * ✅ Firebase Repository - Handle all Firebase operations
+ * 🆕 Updated with Profile Image methods for ImageKit integration
  */
 class FirebaseRepository {
 
@@ -107,6 +108,7 @@ class FirebaseRepository {
                 }
         }
     }
+
     /**
      * Get all users (for checking existing users)
      */
@@ -126,6 +128,99 @@ class FirebaseRepository {
                     continuation.resume(emptyList())
                 }
             })
+        }
+    }
+
+    // ===============================
+    // 🖼️ USER PROFILE IMAGE METHODS
+    // ===============================
+
+    /**
+     * 🆕 Update user profile image URL
+     * Called after uploading image to ImageKit
+     */
+    suspend fun updateUserProfileImage(
+        userId: String,
+        imageUrl: String,
+        fileId: String
+    ): Boolean {
+        return try {
+            val updates = mapOf(
+                "profileImageUrl" to imageUrl,
+                "profileImageFileId" to fileId,
+                "updatedAt" to System.currentTimeMillis()
+            )
+            usersRef.child(userId).updateChildren(updates).await()
+            Log.d(TAG, "✅ Profile image updated for user: $userId")
+            Log.d(TAG, "   - Image URL: $imageUrl")
+            Log.d(TAG, "   - File ID: $fileId")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error updating profile image: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * 🆕 Remove user profile image
+     */
+    suspend fun removeUserProfileImage(userId: String): Boolean {
+        return try {
+            val updates = mapOf(
+                "profileImageUrl" to null,
+                "profileImageFileId" to null,
+                "updatedAt" to System.currentTimeMillis()
+            )
+            usersRef.child(userId).updateChildren(updates).await()
+            Log.d(TAG, "✅ Profile image removed for user: $userId")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error removing profile image: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * 🆕 Get user by ID
+     * Used to load user profile with image URL
+     */
+    suspend fun getUserById(userId: String): UserAccount? {
+        return suspendCoroutine { continuation ->
+            usersRef.child(userId)
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val user = snapshot.getValue(UserAccount::class.java)
+                        if (user != null) {
+                            Log.d(TAG, "✅ User found: ${user.email}")
+                            if (user.profileImageUrl != null) {
+                                Log.d(TAG, "   - Has profile image: ${user.profileImageUrl}")
+                            }
+                            continuation.resume(user)
+                        } else {
+                            Log.w(TAG, "❌ User not found: $userId")
+                            continuation.resume(null)
+                        }
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        Log.e(TAG, "Error getting user: ${error.message}")
+                        continuation.resume(null)
+                    }
+                })
+        }
+    }
+
+    /**
+     * 🆕 Update user account (complete update)
+     */
+    suspend fun updateUserAccount(userAccount: UserAccount): Boolean {
+        return try {
+            usersRef.child(userAccount.id).setValue(userAccount).await()
+            Log.d(TAG, "✅ User account updated: ${userAccount.email}")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error updating user account: ${e.message}", e)
+            false
         }
     }
 

@@ -1,4 +1,3 @@
-// app/build.gradle.kts
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -11,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.projectantrianrsrjkelompok2"
-        minSdk = 24  // Changed from 21 to 24 for TFLite
+        minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -40,10 +39,9 @@ android {
     buildFeatures {
         viewBinding = true
         buildConfig = true
-        mlModelBinding = true  // NEW: Enable ML Model Binding
+        mlModelBinding = true
     }
 
-    // ✅ FIXED: Correct syntax for Kotlin DSL
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -53,7 +51,6 @@ android {
         }
     }
 
-    // ✅ FIXED: aaptOptions for Kotlin DSL
     androidResources {
         noCompress += listOf("tflite", "lite")
     }
@@ -94,6 +91,12 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     implementation("com.google.code.gson:gson:2.10.1")
 
+    // Coil for Image Loading - ImageKit Integration
+    implementation("io.coil-kt:coil:2.5.0")
+
+    // Activity Result API - Image Picker
+    implementation("androidx.activity:activity-ktx:1.8.1")
+
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
@@ -105,14 +108,10 @@ dependencies {
     implementation("com.google.zxing:core:3.5.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
-    // ===== MACHINE LEARNING =====
     // TensorFlow Lite
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
-
-    // Optional: GPU acceleration
-    // implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
