@@ -147,7 +147,7 @@ class FirebaseRepository {
         return try {
             val updates = mapOf(
                 "profileImageUrl" to imageUrl,
-                "profileImageFileId" to fileId,
+                "imageKitFileId" to fileId, // ✅ Fixed field name
                 "updatedAt" to System.currentTimeMillis()
             )
             usersRef.child(userId).updateChildren(updates).await()
@@ -168,7 +168,7 @@ class FirebaseRepository {
         return try {
             val updates = mapOf(
                 "profileImageUrl" to null,
-                "profileImageFileId" to null,
+                "imageKitFileId" to null, // ✅ Fixed field name
                 "updatedAt" to System.currentTimeMillis()
             )
             usersRef.child(userId).updateChildren(updates).await()
@@ -178,6 +178,25 @@ class FirebaseRepository {
             Log.e(TAG, "❌ Error removing profile image: ${e.message}", e)
             false
         }
+    }
+
+    /**
+     * ✅ NEW: Delete user profile image (alias for removeUserProfileImage)
+     * This is used by ProfileFragment
+     */
+    suspend fun deleteUserProfileImage(userId: String): Boolean {
+        Log.d(TAG, "🗑️ Deleting profile image from Firebase...")
+        Log.d(TAG, "User ID: $userId")
+
+        val success = removeUserProfileImage(userId)
+
+        if (success) {
+            Log.d(TAG, "✅ Profile image deleted from Firebase!")
+        } else {
+            Log.e(TAG, "❌ Failed to delete profile image from Firebase")
+        }
+
+        return success
     }
 
     /**

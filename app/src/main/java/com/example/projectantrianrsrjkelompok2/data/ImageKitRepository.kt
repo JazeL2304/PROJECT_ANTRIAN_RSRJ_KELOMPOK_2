@@ -7,12 +7,14 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
+import android.util.Base64
 import com.example.projectantrianrsrjkelompok2.api.ImageKitApiService
 import com.example.projectantrianrsrjkelompok2.model.ImageKitUploadResponse
 import com.example.projectantrianrsrjkelompok2.utils.ImageKitConfig
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Retrofit
@@ -21,13 +23,22 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
+import org.json.JSONObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 
 /**
- * ✅ ImageKit Repository (Fixed Authentication)
+ * ✅ ImageKit Repository WITH Backend Authentication
+ * - Upload profile picture
+ * - Delete profile picture
  */
 class ImageKitRepository(private val context: Context) {
 
     private val TAG = "ImageKitRepository"
+
+    // ⚠️ GANTI dengan URL backend Anda setelah deploy
+    private val AUTH_BACKEND_URL = "https://imagekit-auth-backend.vercel.app/imagekit-auth"
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
@@ -40,7 +51,6 @@ class ImageKitRepository(private val context: Context) {
                     .addInterceptor { chain ->
                         val request = chain.request()
                         Log.d(TAG, "API Request: ${request.url}")
-                        Log.d(TAG, "Method: ${request.method}")
                         val response = chain.proceed(request)
                         Log.d(TAG, "Response code: ${response.code}")
                         response
@@ -55,6 +65,55 @@ class ImageKitRepository(private val context: Context) {
         retrofit.create(ImageKitApiService::class.java)
     }
 
+    /**
+     * ✅ Get authentication parameters dari backend
+     */
+    private suspend fun getAuthParams(): AuthParams? {
+        return try {
+            Log.d(TAG, "🔐 Getting auth params from backend...")
+
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url(AUTH_BACKEND_URL)
+                .get()
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string()
+
+            if (response.isSuccessful && responseBody != null) {
+                val json = JSONObject(responseBody)
+                val authParams = AuthParams(
+                    token = json.getString("token"),
+                    expire = json.getString("expire"),
+                    signature = json.getString("signature"),
+                    publicKey = json.getString("publicKey")
+                )
+
+                // ✅ DEBUG: Cek waktu
+                val expireTime = authParams.expire.toLongOrNull() ?: 0
+                val currentTime = System.currentTimeMillis() / 1000
+                val diff = expireTime - currentTime
+
+                Log.d(TAG, "✅ Auth params received")
+                Log.d(TAG, "   - Current time: $currentTime")
+                Log.d(TAG, "   - Expire time: $expireTime")
+                Log.d(TAG, "   - Difference: ${diff}s (should be ~3600s)")
+
+                authParams
+            } else {
+                Log.e(TAG, "❌ Failed to get auth params: ${response.code}")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error getting auth params: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * ✅ Upload profile picture to ImageKit
+     */
     suspend fun uploadProfilePicture(
         imageUri: Uri,
         userId: String
@@ -62,24 +121,29 @@ class ImageKitRepository(private val context: Context) {
         return try {
             Log.d(TAG, "📤 Starting image upload for user: $userId")
 
-            // Step 1: Compress image
+            // Step 1: Get authentication params dari backend
+            Log.d(TAG, "🔐 Getting authentication...")
+            val authParams = getAuthParams()
+            if (authParams == null) {
+                Log.e(TAG, "❌ Cannot get authentication parameters")
+                return null
+            }
+            Log.d(TAG, "✅ Authentication params received")
+
+            // Step 2: Compress image
             Log.d(TAG, "🔄 Compressing image...")
             val compressedFile = compressImage(imageUri)
             if (compressedFile == null) {
                 Log.e(TAG, "❌ Failed to compress image")
                 return null
             }
-
             Log.d(TAG, "📦 Image compressed: ${compressedFile.length() / 1024}KB")
 
-            // Step 2: Prepare upload parameters
+            // Step 3: Prepare upload parameters
             val fileName = "profile_${userId}_${System.currentTimeMillis()}.jpg"
             val folder = ImageKitConfig.PROFILE_FOLDER
 
-            Log.d(TAG, "📝 File name: $fileName")
-            Log.d(TAG, "📂 Folder: $folder")
-
-            // Step 3: Create multipart request
+            // Step 4: Create multipart request
             val filePart = MultipartBody.Part.createFormData(
                 "file",
                 fileName,
@@ -88,24 +152,29 @@ class ImageKitRepository(private val context: Context) {
 
             val fileNamePart = fileName.toRequestBody("text/plain".toMediaTypeOrNull())
             val folderPart = folder.toRequestBody("text/plain".toMediaTypeOrNull())
-            val publicKeyPart = ImageKitConfig.PUBLIC_KEY.toRequestBody("text/plain".toMediaTypeOrNull())
+            val publicKeyPart = authParams.publicKey.toRequestBody("text/plain".toMediaTypeOrNull())
+            val signaturePart = authParams.signature.toRequestBody("text/plain".toMediaTypeOrNull())
+            val expirePart = authParams.expire.toRequestBody("text/plain".toMediaTypeOrNull())
+            val tokenPart = authParams.token.toRequestBody("text/plain".toMediaTypeOrNull())
             val useUniqueFileNamePart = "true".toRequestBody("text/plain".toMediaTypeOrNull())
             val tagsPart = "profile,user,$userId".toRequestBody("text/plain".toMediaTypeOrNull())
 
-            // Step 4: Upload to ImageKit
-            Log.d(TAG, "☁️ Uploading to ImageKit...")
-            Log.d(TAG, "Public Key: ${ImageKitConfig.PUBLIC_KEY}")
+            // Step 5: Upload to ImageKit dengan authentication
+            Log.d(TAG, "☁️ Uploading to ImageKit with authentication...")
 
-            val response = apiService.uploadImage(
+            val response = apiService.uploadImageAuthenticated(
                 file = filePart,
                 fileName = fileNamePart,
                 folder = folderPart,
                 publicKey = publicKeyPart,
+                signature = signaturePart,
+                expire = expirePart,
+                token = tokenPart,
                 useUniqueFileName = useUniqueFileNamePart,
                 tags = tagsPart
             )
 
-            // Step 5: Clean up temp file
+            // Step 6: Clean up temp file
             compressedFile.delete()
 
             Log.d(TAG, "📡 Response received: ${response.code()}")
@@ -115,8 +184,6 @@ class ImageKitRepository(private val context: Context) {
                 Log.d(TAG, "✅ Upload successful!")
                 Log.d(TAG, "   - File ID: ${uploadResponse.fileId}")
                 Log.d(TAG, "   - URL: ${uploadResponse.url}")
-                Log.d(TAG, "   - Size: ${uploadResponse.size / 1024}KB")
-
                 uploadResponse
             } else {
                 val errorBody = response.errorBody()?.string()
@@ -127,11 +194,77 @@ class ImageKitRepository(private val context: Context) {
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Upload error: ${e.message}", e)
-            e.printStackTrace()
             null
         }
     }
 
+    /**
+     * ✅ Delete profile picture from ImageKit (via backend)
+     */
+    suspend fun deleteProfilePicture(fileId: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "🗑️ Deleting file from ImageKit via backend...")
+                Log.d(TAG, "File ID: $fileId")
+
+                // Backend delete endpoint
+                val deleteBackendUrl = "$AUTH_BACKEND_URL-delete" // Jadi: .../imagekit-auth-delete
+
+                // Atau lebih explicit:
+                val deleteUrl = AUTH_BACKEND_URL.replace("/imagekit-auth", "/imagekit-delete")
+
+                // Create request body
+                val jsonBody = JSONObject().apply {
+                    put("fileId", fileId)
+                }
+
+                // Create delete request
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+
+                val requestBody = jsonBody.toString()
+                    .toRequestBody("application/json".toMediaTypeOrNull())
+
+                val request = Request.Builder()
+                    .url(deleteUrl)
+                    .post(requestBody)
+                    .build()
+
+                Log.d(TAG, "Sending delete request to: $deleteUrl")
+                Log.d(TAG, "Request body: $jsonBody")
+
+                // Execute request
+                val response = client.newCall(request).execute()
+                val responseBody = response.body?.string()
+
+                Log.d(TAG, "Delete response code: ${response.code}")
+                Log.d(TAG, "Delete response body: $responseBody")
+
+                val success = response.isSuccessful
+
+                if (success) {
+                    Log.d(TAG, "✅ File deleted successfully!")
+                } else {
+                    Log.e(TAG, "❌ Delete failed: ${response.message}")
+                }
+
+                response.close()
+                success
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error deleting file: ${e.message}", e)
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+
+    /**
+     * Compress image before upload
+     */
     private fun compressImage(uri: Uri): File? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri)
@@ -148,10 +281,8 @@ class ImageKitRepository(private val context: Context) {
                 return null
             }
 
-            // Fix orientation
             bitmap = fixImageOrientation(uri, bitmap)
 
-            // Resize if too large
             val maxWidth = ImageKitConfig.MAX_WIDTH
             val maxHeight = ImageKitConfig.MAX_HEIGHT
 
@@ -165,10 +296,8 @@ class ImageKitRepository(private val context: Context) {
                 val newHeight = (bitmap.height * scaleFactor).toInt()
 
                 bitmap = Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
-                Log.d(TAG, "📏 Resized to: ${newWidth}x${newHeight}")
             }
 
-            // Compress to JPEG
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(
                 Bitmap.CompressFormat.JPEG,
@@ -179,15 +308,12 @@ class ImageKitRepository(private val context: Context) {
             val compressedData = outputStream.toByteArray()
             outputStream.close()
 
-            // Save to temp file
             val tempFile = File(context.cacheDir, "temp_upload_${System.currentTimeMillis()}.jpg")
             val fos = FileOutputStream(tempFile)
             fos.write(compressedData)
             fos.close()
 
             bitmap.recycle()
-
-            Log.d(TAG, "✅ Compression complete: ${tempFile.length() / 1024}KB")
             tempFile
 
         } catch (e: Exception) {
@@ -196,6 +322,9 @@ class ImageKitRepository(private val context: Context) {
         }
     }
 
+    /**
+     * Fix image orientation based on EXIF data
+     */
     private fun fixImageOrientation(uri: Uri, bitmap: Bitmap): Bitmap {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri)
@@ -218,13 +347,7 @@ class ImageKitRepository(private val context: Context) {
 
             if (!matrix.isIdentity) {
                 val rotatedBitmap = Bitmap.createBitmap(
-                    bitmap,
-                    0,
-                    0,
-                    bitmap.width,
-                    bitmap.height,
-                    matrix,
-                    true
+                    bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
                 )
                 bitmap.recycle()
                 return rotatedBitmap
@@ -237,26 +360,34 @@ class ImageKitRepository(private val context: Context) {
         }
     }
 
+    /**
+     * Validate image MIME type
+     */
     fun isValidImageType(mimeType: String?): Boolean {
         return mimeType in ImageKitConfig.ALLOWED_MIME_TYPES
     }
 
+    /**
+     * Validate file size
+     */
     fun isValidFileSize(uri: Uri): Boolean {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri)
             val size = inputStream?.available() ?: 0
             inputStream?.close()
-
-            val isValid = size <= ImageKitConfig.MAX_FILE_SIZE
-
-            if (!isValid) {
-                Log.w(TAG, "File too large: ${size / 1024 / 1024}MB (max: ${ImageKitConfig.MAX_FILE_SIZE / 1024 / 1024}MB)")
-            }
-
-            isValid
+            size <= ImageKitConfig.MAX_FILE_SIZE
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking file size: ${e.message}")
             false
         }
     }
+
+    /**
+     * Data class untuk authentication parameters
+     */
+    data class AuthParams(
+        val token: String,
+        val expire: String,
+        val signature: String,
+        val publicKey: String
+    )
 }

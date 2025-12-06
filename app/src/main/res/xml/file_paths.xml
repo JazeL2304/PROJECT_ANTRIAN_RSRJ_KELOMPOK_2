@@ -4,7 +4,8 @@
     <external-files-path name="my_images" path="Pictures" />
     <external-path name="external_files" path="." />
 
-    <!-- ✅ TAMBAHAN: Cache path (untuk temporary files) -->
+    <!-- ✅ Cache path (untuk temporary files) -->
     <cache-path name="cache" path="." />
+    <cache-path name="camera_images" path="/" />
     <external-cache-path name="external_cache" path="." />
 </paths>

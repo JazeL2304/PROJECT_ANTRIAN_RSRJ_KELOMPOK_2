@@ -33,7 +33,8 @@ import java.io.File
 
 /**
  * ✅ Profile Fragment with ImageKit Integration
- * Upload foto profil ke ImageKit.io cloud storage
+ * - Upload foto profil ke ImageKit.io cloud storage
+ * - Delete foto profil dari ImageKit & Firebase
  */
 class ProfileFragment : Fragment() {
 
@@ -56,7 +57,10 @@ class ProfileFragment : Fragment() {
     private var selectedImageUri: Uri? = null
     private var isUploading = false
 
-    // Image picker launcher
+    // ✅ Temp file untuk camera
+    private var tempCameraFile: File? = null
+
+    // Image picker launcher (untuk galeri)
     private val imagePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -80,6 +84,24 @@ class ProfileFragment : Fragment() {
             Log.w(TAG, "⚠️ Result not OK. Code: ${result.resultCode}")
         }
         Log.d(TAG, "=========================================")
+    }
+
+    // ✅ Camera launcher
+    private val cameraLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        Log.d(TAG, "========== Camera Result ==========")
+        Log.d(TAG, "Success: $success")
+
+        if (success && tempCameraFile != null) {
+            val uri = Uri.fromFile(tempCameraFile)
+            Log.d(TAG, "✅ Photo captured: $uri")
+            handleImageSelected(uri)
+        } else {
+            Log.e(TAG, "❌ Camera failed or file is null")
+            Toast.makeText(context, "❌ Gagal mengambil foto", Toast.LENGTH_SHORT).show()
+        }
+        Log.d(TAG, "===================================")
     }
 
     override fun onCreateView(
@@ -262,32 +284,100 @@ class ProfileFragment : Fragment() {
 
         Log.d(TAG, "✅ ImageKit configured, showing dialog")
 
-        val options = arrayOf("📷 Ambil Foto", "🖼️ Pilih dari Galeri", "❌ Batal")
+        // ✅ Check if user has profile picture
+        val userId = preferencesHelper.getUserId()
+        var hasProfilePicture = false
 
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Ubah Foto Profil")
-            .setItems(options) { dialog, which ->
-                Log.d(TAG, "Dialog option selected: $which")
-                when (which) {
-                    0 -> {
-                        Log.d(TAG, "Opening camera...")
-                        openCamera()
-                    }
-                    1 -> {
-                        Log.d(TAG, "Opening gallery...")
-                        openGallery()
-                    }
-                    2 -> {
-                        Log.d(TAG, "Dialog cancelled")
-                        dialog.dismiss()
+        lifecycleScope.launch {
+            val user = withContext(Dispatchers.IO) {
+                userId?.let { firebaseRepo.getUserById(it) }
+            }
+            hasProfilePicture = user?.hasProfilePicture() == true
+
+            // Show dialog with or without delete option
+            val options = if (hasProfilePicture) {
+                arrayOf("📷 Ambil Foto", "🖼️ Pilih dari Galeri", "🗑️ Hapus Foto", "❌ Batal")
+            } else {
+                arrayOf("📷 Ambil Foto", "🖼️ Pilih dari Galeri", "❌ Batal")
+            }
+
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Ubah Foto Profil")
+                .setItems(options) { dialog, which ->
+                    Log.d(TAG, "Dialog option selected: $which")
+
+                    if (hasProfilePicture) {
+                        // Menu dengan opsi hapus
+                        when (which) {
+                            0 -> {
+                                Log.d(TAG, "Opening camera...")
+                                openCamera()
+                            }
+                            1 -> {
+                                Log.d(TAG, "Opening gallery...")
+                                openGallery()
+                            }
+                            2 -> {
+                                Log.d(TAG, "Delete photo...")
+                                showDeleteConfirmationDialog()
+                            }
+                            3 -> {
+                                Log.d(TAG, "Dialog cancelled")
+                                dialog.dismiss()
+                            }
+                        }
+                    } else {
+                        // Menu tanpa opsi hapus
+                        when (which) {
+                            0 -> {
+                                Log.d(TAG, "Opening camera...")
+                                openCamera()
+                            }
+                            1 -> {
+                                Log.d(TAG, "Opening gallery...")
+                                openGallery()
+                            }
+                            2 -> {
+                                Log.d(TAG, "Dialog cancelled")
+                                dialog.dismiss()
+                            }
+                        }
                     }
                 }
-            }
-            .show()
+                .show()
+        }
     }
 
     private fun openCamera() {
-        (activity as MainActivity).navigateToFragment(CameraFragment())
+        Log.d(TAG, "📷 openCamera() called")
+
+        try {
+            // Create temp file for camera
+            tempCameraFile = File(
+                requireContext().cacheDir,
+                "camera_${System.currentTimeMillis()}.jpg"
+            )
+
+            // ✅ Use FileProvider to get content URI
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.fileprovider",
+                tempCameraFile!!
+            )
+
+            Log.d(TAG, "Temp file created: ${tempCameraFile?.absolutePath}")
+            Log.d(TAG, "Launching camera with content URI: $uri")
+
+            cameraLauncher.launch(uri)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error opening camera: ${e.message}", e)
+            Toast.makeText(
+                context,
+                "❌ Gagal membuka kamera: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun openGallery() {
@@ -303,10 +393,28 @@ class ProfileFragment : Fragment() {
 
         selectedImageUri = uri
 
-        // Validate file type
-        val mimeType = requireContext().contentResolver.getType(uri)
+        // ✅ Get MIME type (handle both content:// and file:// URI)
+        val mimeType = when {
+            uri.scheme == "content" -> {
+                requireContext().contentResolver.getType(uri)
+            }
+            uri.scheme == "file" -> {
+                // ✅ For file:// URI, detect from extension
+                val extension = uri.path?.substringAfterLast('.', "")?.lowercase()
+                when (extension) {
+                    "jpg", "jpeg" -> "image/jpeg"
+                    "png" -> "image/png"
+                    "gif" -> "image/gif"
+                    "webp" -> "image/webp"
+                    else -> "image/jpeg" // default
+                }
+            }
+            else -> null
+        }
+
         Log.d(TAG, "MIME type: $mimeType")
 
+        // Validate file type
         if (!imageKitRepo.isValidImageType(mimeType)) {
             Log.e(TAG, "❌ Invalid MIME type!")
             Toast.makeText(
@@ -459,6 +567,133 @@ class ProfileFragment : Fragment() {
                         Toast.LENGTH_SHORT
                     ).show()
                     loadProfilePhoto()
+                }
+            } finally {
+                isUploading = false
+                showLoading(false)
+                Log.d(TAG, "==========================================")
+            }
+        }
+    }
+
+    // ✅ NEW: Show delete confirmation dialog
+    private fun showDeleteConfirmationDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Hapus Foto Profil")
+            .setMessage("Apakah Anda yakin ingin menghapus foto profil?")
+            .setPositiveButton("Hapus") { dialog, _ ->
+                deleteProfilePicture()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Batal") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    // ✅ NEW: Delete profile picture
+    private fun deleteProfilePicture() {
+        Log.d(TAG, "========== Delete Profile Picture ==========")
+
+        val userId = preferencesHelper.getUserId()
+        Log.d(TAG, "User ID: $userId")
+
+        if (userId.isNullOrEmpty()) {
+            Log.e(TAG, "❌ User ID is null or empty!")
+            Toast.makeText(context, "❌ User ID tidak ditemukan", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (isUploading) {
+            Log.w(TAG, "⚠️ Upload in progress!")
+            Toast.makeText(context, "⏳ Tunggu proses upload selesai...", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isUploading = true
+        showLoading(true)
+
+        Log.d(TAG, "🗑️ Starting delete process...")
+
+        lifecycleScope.launch {
+            try {
+                // Step 1: Get user data to get fileId
+                Log.d(TAG, "📥 Getting user data...")
+
+                val user = withContext(Dispatchers.IO) {
+                    firebaseRepo.getUserById(userId)
+                }
+
+                if (user == null) {
+                    Log.e(TAG, "❌ User not found!")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "❌ User tidak ditemukan", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                val fileId = user.profileImageFileId // ✅ FIXED: Pakai profileImageFileId
+                Log.d(TAG, "File ID: $fileId")
+
+                if (fileId.isNullOrEmpty()) {
+                    Log.w(TAG, "⚠️ No file ID found, skipping ImageKit delete")
+                } else {
+                    // Step 2: Delete from ImageKit
+                    Log.d(TAG, "🗑️ Deleting from ImageKit...")
+
+                    val imageKitSuccess = withContext(Dispatchers.IO) {
+                        imageKitRepo.deleteProfilePicture(fileId)
+                    }
+
+                    Log.d(TAG, "ImageKit delete result: $imageKitSuccess")
+
+                    if (!imageKitSuccess) {
+                        Log.w(TAG, "⚠️ ImageKit delete failed, but continuing...")
+                    }
+                }
+
+                // Step 3: Delete from Firebase
+                Log.d(TAG, "🗑️ Deleting from Firebase...")
+
+                val firebaseSuccess = withContext(Dispatchers.IO) {
+                    firebaseRepo.deleteUserProfileImage(userId)
+                }
+
+                Log.d(TAG, "Firebase delete result: $firebaseSuccess")
+
+                if (firebaseSuccess) {
+                    withContext(Dispatchers.Main) {
+                        Log.d(TAG, "✅ Delete complete!")
+                        Toast.makeText(
+                            context,
+                            "✅ Foto profil berhasil dihapus!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        // Reset to default image
+                        ivProfilePhoto.setImageResource(android.R.drawable.ic_menu_myplaces)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Log.e(TAG, "❌ Firebase delete failed!")
+                        Toast.makeText(
+                            context,
+                            "❌ Gagal menghapus foto profil",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Delete error: ${e.message}", e)
+                e.printStackTrace()
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "❌ Error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } finally {
                 isUploading = false
