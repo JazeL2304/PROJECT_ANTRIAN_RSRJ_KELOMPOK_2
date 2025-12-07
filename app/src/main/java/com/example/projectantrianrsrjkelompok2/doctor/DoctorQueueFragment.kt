@@ -1,188 +1,152 @@
 package com.example.projectantrianrsrjkelompok2.doctor
 
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.ListView
-import android.widget.Toast
+import android.view.*
+import android.widget.*
 import androidx.fragment.app.Fragment
-import com.example.projectantrianrsrjkelompok2.Booking
-import com.example.projectantrianrsrjkelompok2.BookingStatus
-import com.example.projectantrianrsrjkelompok2.DataSource
-import com.example.projectantrianrsrjkelompok2.R
-import com.example.projectantrianrsrjkelompok2.toDisplayString
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.projectantrianrsrjkelompok2.*
+import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
+import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 
 class DoctorQueueFragment : Fragment() {
 
-    private lateinit var listViewQueue: ListView
-    private lateinit var emptyStateLayout: ViewGroup  // ✅ FIXED: TextView → ViewGroup
+    private lateinit var listView: ListView
+    private lateinit var emptyLayout: LinearLayout
+    private lateinit var pref: PreferencesHelper
+
+    private var doctorName = "Unknown Doctor"
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_doctor_queue, container, false)
-    }
+    ): View =
+        inflater.inflate(R.layout.fragment_doctor_queue, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ✅ FIXED: Ambil view dengan tipe yang benar
-        listViewQueue = view.findViewById(R.id.listDoctorQueue)
-        emptyStateLayout = view.findViewById(R.id.tvEmptyQueue)  // ✅ Ini LinearLayout di layout XML
+        listView = view.findViewById(R.id.listDoctorQueue)
+        emptyLayout = view.findViewById(R.id.tvEmptyQueue)
+        pref = PreferencesHelper(requireContext())
 
-        loadTodayQueue()
-    }
+        doctorName = pref.getDoctorName() ?: "Dr. Ahmad Santoso"
 
-    private fun loadTodayQueue() {
-        val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
-
-        // ✅ Filter booking hari ini untuk Dr. Ahmad Santoso
-        val bookingsToday = DataSource.getBookingHistory()
-            .filter { it.date == today }
-            .filter { it.doctorName == "Dr. Ahmad Santoso" }
-            .sortedWith(compareBy<Booking> {
-                // ✅ SORTING: CALLED (0) → WAITING (1) → COMPLETED (2) → LAINNYA (3)
-                when (it.status) {
-                    BookingStatus.CALLED -> 0
-                    BookingStatus.WAITING -> 1
-                    BookingStatus.COMPLETED -> 2
-                    BookingStatus.CANCELLED -> 3
-                    BookingStatus.MISSED -> 3
-                }
-            }.thenBy { it.queueNumber })
-
-        if (bookingsToday.isEmpty()) {
-            // ✅ FIXED: Show empty state layout (LinearLayout)
-            emptyStateLayout.visibility = View.VISIBLE
-            listViewQueue.visibility = View.GONE
-        } else {
-            // ✅ FIXED: Show list
-            emptyStateLayout.visibility = View.GONE
-            listViewQueue.visibility = View.VISIBLE
-
-            // ✅ Tampilkan daftar booking
-            val displayList = bookingsToday.map { booking ->
-                val statusEmoji = when (booking.status) {
-                    BookingStatus.CALLED -> "📢"
-                    BookingStatus.WAITING -> "⏱️"
-                    BookingStatus.COMPLETED -> "✅"
-                    BookingStatus.CANCELLED -> "❌"
-                    BookingStatus.MISSED -> "⚠️"
-                }
-
-                """
-                $statusEmoji No. ${booking.queueNumber} - ${booking.patientName}
-                🕒 Jam: ${booking.time}
-                🏥 Dokter: ${booking.doctorName}
-                💬 Keluhan: ${booking.complaint.ifEmpty { "-" }}
-                📌 Status: ${booking.status.toDisplayString()}
-                """.trimIndent()
-            }
-
-            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, displayList)
-            listViewQueue.adapter = adapter
-
-            // ✅ OPTIONAL: Fix ListView height jika ada di dalam ScrollView
-            setListViewHeightBasedOnChildren(listViewQueue)
-
-            // ✅ Klik item untuk ubah status dengan VALIDASI
-            listViewQueue.setOnItemClickListener { _, _, position, _ ->
-                val selected = bookingsToday[position]
-                handleStatusChange(selected)
-            }
+        // 🔥 Ambil semua antrian dokter (tanpa filter tanggal)
+        BookingRepository.listenQueueByDoctor(
+            doctorName,
+            null
+        ) { list ->
+            updateUI(list)
         }
     }
 
-    // ✅ HELPER FUNCTION: Fix ListView height di dalam ScrollView
-    private fun setListViewHeightBasedOnChildren(listView: ListView) {
-        val listAdapter = listView.adapter ?: return
+    private fun updateUI(list: List<Booking>) {
 
-        var totalHeight = 0
-        for (i in 0 until listAdapter.count) {
-            val listItem = listAdapter.getView(i, null, listView)
-            listItem.measure(
-                View.MeasureSpec.makeMeasureSpec(listView.width, View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        if (list.isEmpty()) {
+            listView.visibility = View.GONE
+            emptyLayout.visibility = View.VISIBLE
+            return
+        }
+
+        emptyLayout.visibility = View.GONE
+        listView.visibility = View.VISIBLE
+
+        // =====================================================
+        // 🔥 SORT & REMOVE DUPLICATE DATA
+        // =====================================================
+
+        val sorted = list
+            .distinctBy { "${it.patientName}|${it.time}" } // anti duplikat
+            .sortedWith(
+                compareBy<Booking> {
+
+                    // Urutkan status: Called → Waiting → Completed
+                    when (it.status) {
+                        BookingStatus.CALLED -> 0
+                        BookingStatus.WAITING -> 1
+                        BookingStatus.COMPLETED -> 2
+                        else -> 3
+                    }
+                }.thenBy { it.time }  // urut waktu
+                    .thenBy { it.patientName.lowercase() } // fallback
             )
-            totalHeight += listItem.measuredHeight
+
+        // =====================================================
+        // 🔥 AUTO NUMBERING (No.1, No.2, No.3,…)
+        // =====================================================
+
+        val displayList = sorted.mapIndexed { index, it ->
+
+            val autoNo = index + 1
+
+            val icon = when (it.status) {
+                BookingStatus.CALLED -> "📢"
+                BookingStatus.WAITING -> "⏱"
+                BookingStatus.COMPLETED -> "✔"
+                else -> "❓"
+            }
+
+            "$icon No.$autoNo - ${it.patientName}\n" +
+                    "Keluhan: ${it.complaint.ifEmpty { "-" }}\n" +
+                    "Waktu: ${it.time}\n" +
+                    "Status: ${it.status.toDisplayString()}"
         }
 
-        val params = listView.layoutParams
-        params.height = totalHeight + (listView.dividerHeight * (listAdapter.count - 1))
-        listView.layoutParams = params
-        listView.requestLayout()
+        listView.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_list_item_1,
+            displayList
+        )
+
+        listView.setOnItemClickListener { _, _, pos, _ ->
+            val booking = sorted[pos]
+            handleStatus(booking)
+        }
     }
 
-    private fun handleStatusChange(booking: Booking) {
-        when (booking.status) {
-            BookingStatus.WAITING -> {
-                // ✅ VALIDASI: Cek apakah ada pasien yang sedang dipanggil
-                if (DataSource.hasCalledPatient()) {
-                    Toast.makeText(
-                        requireContext(),
-                        "⚠️ Selesaikan pasien yang sedang dipanggil terlebih dahulu!",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return
-                }
+    private fun handleStatus(b: Booking) {
 
-                // ✅ PANGGIL PASIEN: WAITING → CALLED
-                DataSource.updateBookingStatus(booking.id, BookingStatus.CALLED)
+        when (b.status) {
+
+            BookingStatus.WAITING -> {
+                BookingRepository.updateStatus(
+                    b.firebaseId,
+                    BookingStatus.CALLED
+                )
+
                 Toast.makeText(
                     requireContext(),
-                    "✅ ${booking.patientName} dipanggil!",
+                    "📢 ${b.patientName} dipanggil!",
                     Toast.LENGTH_SHORT
                 ).show()
-                loadTodayQueue() // Refresh
             }
 
             BookingStatus.CALLED -> {
-                // ✅ SELESAIKAN PASIEN: CALLED → COMPLETED
-                DataSource.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
-                Toast.makeText(
-                    requireContext(),
-                    "✅ ${booking.patientName} selesai diperiksa!",
-                    Toast.LENGTH_SHORT
-                ).show()
-                loadTodayQueue() // Refresh
-            }
+                BookingRepository.updateStatus(
+                    b.firebaseId,
+                    BookingStatus.COMPLETED
+                )
 
-            BookingStatus.COMPLETED -> {
-                // ✅ Sudah selesai, tidak bisa diubah lagi
                 Toast.makeText(
                     requireContext(),
-                    "ℹ️ Pasien ini sudah selesai diperiksa",
+                    "✔ ${b.patientName} selesai!",
                     Toast.LENGTH_SHORT
                 ).show()
             }
 
-            BookingStatus.CANCELLED -> {
-                // ✅ Booking dibatalkan
+            else -> {
                 Toast.makeText(
                     requireContext(),
-                    "ℹ️ Booking ini sudah dibatalkan",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-
-            BookingStatus.MISSED -> {
-                // ✅ Pasien tidak datang
-                Toast.makeText(
-                    requireContext(),
-                    "ℹ️ Pasien tidak datang",
+                    "Status tidak dapat diubah",
                     Toast.LENGTH_SHORT
                 ).show()
             }
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        loadTodayQueue() // Refresh saat kembali ke fragment
+    override fun onDestroyView() {
+        super.onDestroyView()
+        BookingRepository.clearListeners()
     }
 }

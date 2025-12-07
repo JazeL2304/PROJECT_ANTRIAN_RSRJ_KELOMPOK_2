@@ -7,9 +7,13 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.fragment.app.Fragment
 import androidx.cardview.widget.CardView
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -19,14 +23,10 @@ class DashboardFragment : Fragment() {
     private lateinit var tvCurrentDate: TextView
     private lateinit var tvActiveQueue: TextView
 
-    // ✅ LinearLayout untuk quick actions
     private lateinit var layoutQuickBooking: LinearLayout
     private lateinit var layoutEmergency: LinearLayout
-
-    // ✅ ADDED BACK: Profile icon yang ada di fragment dashboard
     private lateinit var ivProfileIcon: ImageView
 
-    // Cards untuk poli klinik
     private lateinit var cardPoliUmum: CardView
     private lateinit var cardPoliGigi: CardView
     private lateinit var cardPoliMata: CardView
@@ -40,9 +40,7 @@ class DashboardFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_dashboard, container, false)
-    }
+    ): View = inflater.inflate(R.layout.fragment_dashboard, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -52,6 +50,7 @@ class DashboardFragment : Fragment() {
         initViews(view)
         setupUI()
         setupClickListeners()
+        loadDashboardData() // ✅ REAL DATABASE DATA
     }
 
     private fun initViews(view: View) {
@@ -59,14 +58,10 @@ class DashboardFragment : Fragment() {
         tvCurrentDate = view.findViewById(R.id.tv_current_date)
         tvActiveQueue = view.findViewById(R.id.tv_active_queue)
 
-        // ✅ LinearLayout untuk quick actions
         layoutQuickBooking = view.findViewById(R.id.btn_quick_booking)
         layoutEmergency = view.findViewById(R.id.btn_emergency)
-
-        // ✅ ADDED BACK: Profile icon dari fragment_dashboard.xml
         ivProfileIcon = view.findViewById(R.id.ivProfileIcon)
 
-        // Inisialisasi card poli
         cardPoliUmum = view.findViewById(R.id.card_poli_umum)
         cardPoliGigi = view.findViewById(R.id.card_poli_gigi)
         cardPoliMata = view.findViewById(R.id.card_poli_mata)
@@ -76,26 +71,56 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupUI() {
-        // Set welcome message dengan nama user
         val username = preferencesHelper.getUsername()
         tvWelcome.text = "Selamat Datang, $username! 👋"
 
-        // Set tanggal saat ini
-        val currentDate = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
-            .format(Date())
-        tvCurrentDate.text = currentDate
+        val currentDate =
+            SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
+                .format(Date())
 
-        // Tampilkan info antrian aktif (simulasi)
-        showActiveQueueInfo()
+        tvCurrentDate.text = currentDate
+    }
+
+    // ================================
+    // ✅ REALTIME DASHBOARD LOAD
+    // ================================
+    private fun loadDashboardData() {
+
+        lifecycleScope.launch {
+
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+            val activeBooking = withContext(Dispatchers.IO) {
+                DataSource.getBookingHistory()
+                    .firstOrNull { it.date == today }
+            }
+
+            if (activeBooking != null) {
+
+                tvActiveQueue.text =
+                    "Antrian Aktif:\n" +
+                            "${activeBooking.specialization}\n" +
+                            "Dokter: ${activeBooking.doctorName}\n" +
+                            "No: ${activeBooking.queueNumber}\n" +
+                            "Jam: ${activeBooking.time}\n" +
+                            "Status: ${activeBooking.status}"
+
+                tvActiveQueue.visibility = View.VISIBLE
+
+            } else {
+                tvActiveQueue.text = "Tidak ada antrian aktif hari ini"
+                tvActiveQueue.visibility = View.VISIBLE
+            }
+        }
     }
 
     private fun setupClickListeners() {
-        // ✅ Profile icon click listener - Navigasi ke ProfileFragment
+
         ivProfileIcon.setOnClickListener {
-            (activity as? MainActivity)?.navigateToFragment(ProfileFragment())
+            (activity as? MainActivity)
+                ?.navigateToFragment(ProfileFragment())
         }
 
-        // ✅ Quick actions click listeners
         layoutQuickBooking.setOnClickListener {
             navigateToBooking(0)
         }
@@ -104,7 +129,6 @@ class DashboardFragment : Fragment() {
             showEmergencyInfo()
         }
 
-        // ✅ FIXED: Safe click listeners untuk setiap card poli
         cardPoliUmum.setOnClickListener { navigateToBooking(1) }
         cardPoliGigi.setOnClickListener { navigateToBooking(2) }
         cardPoliMata.setOnClickListener { navigateToBooking(3) }
@@ -113,26 +137,15 @@ class DashboardFragment : Fragment() {
         cardPoliKandungan.setOnClickListener { navigateToBooking(6) }
     }
 
-    private fun showActiveQueueInfo() {
-        // Simulasi antrian aktif
-        val hasActiveQueue = true
-
-        if (hasActiveQueue) {
-            tvActiveQueue.text = "Antrian Aktif: Layanan Klinik Umum - No. 15\nStatus: Menunggu (estimasi 30 menit)"
-            tvActiveQueue.visibility = View.VISIBLE
-        } else {
-            tvActiveQueue.visibility = View.GONE
-        }
-    }
-
     private fun showEmergencyInfo() {
-        tvActiveQueue.text = "🚨 Untuk kondisi darurat, segera hubungi: \n(021) 1234-5678 atau datang langsung ke UGD"
+        tvActiveQueue.text =
+            "🚨 Untuk kondisi darurat hubungi:\n(021) 1234-5678 atau datang langsung ke UGD"
         tvActiveQueue.setTextColor(resources.getColor(android.R.color.holo_red_dark))
         tvActiveQueue.visibility = View.VISIBLE
     }
 
-    // ✅ FIXED: Safe cast untuk navigasi
     private fun navigateToBooking(specializationId: Int) {
+
         val bookingFragment = BookingFragment()
 
         if (specializationId > 0) {
@@ -141,7 +154,7 @@ class DashboardFragment : Fragment() {
             bookingFragment.arguments = bundle
         }
 
-        // ✅ CRITICAL FIX: Safe cast untuk mencegah crash
-        (activity as? MainActivity)?.navigateToFragment(bookingFragment)
+        (activity as? MainActivity)
+            ?.navigateToFragment(bookingFragment)
     }
 }

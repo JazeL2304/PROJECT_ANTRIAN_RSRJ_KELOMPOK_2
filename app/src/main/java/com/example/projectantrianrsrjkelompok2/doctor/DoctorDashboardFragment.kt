@@ -4,167 +4,153 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.TextView
+import android.widget.*
 import androidx.fragment.app.Fragment
-import com.example.projectantrianrsrjkelompok2.BookingStatus
-import com.example.projectantrianrsrjkelompok2.DataSource
-import com.example.projectantrianrsrjkelompok2.MainActivity
-import com.example.projectantrianrsrjkelompok2.ProfileFragment
-import com.example.projectantrianrsrjkelompok2.R
-import com.example.projectantrianrsrjkelompok2.toDisplayString
+import com.example.projectantrianrsrjkelompok2.*
+import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import java.text.SimpleDateFormat
-import java.util.*
 
 class DoctorDashboardFragment : Fragment() {
 
     private lateinit var tvGreeting: TextView
-    private lateinit var preferencesHelper: PreferencesHelper
-    private lateinit var ivProfileIcon: ImageView  // ✅ TAMBAHAN: Icon profile
+    private lateinit var ivProfileIcon: ImageView
 
     private lateinit var tvTotalPatientsToday: TextView
     private lateinit var tvActiveQueue: TextView
     private lateinit var tvCompletedToday: TextView
     private lateinit var tvRecentPatients: TextView
 
-    private val DOCTOR_NAME = "Dr. Ahmad Santoso"
+    private lateinit var pref: PreferencesHelper
+    private var doctorName = ""
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_doctor_dashboard, container, false)
-    }
+    ): View =
+        inflater.inflate(R.layout.fragment_doctor_dashboard, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        preferencesHelper = PreferencesHelper(requireContext())
+        pref = PreferencesHelper(requireContext())
+        doctorName = pref.getDoctorName() ?: "Dr. Ahmad Santoso"
 
         tvGreeting = view.findViewById(R.id.tv_greeting)
-        tvGreeting.text = "Selamat Datang, $DOCTOR_NAME! 👋"
+        tvGreeting.text = "Selamat Datang, $doctorName! 👋"
 
-        ivProfileIcon = view.findViewById(R.id.ivProfileIcon)  // ✅ TAMBAHAN
+        ivProfileIcon = view.findViewById(R.id.ivProfileIcon)
 
         tvTotalPatientsToday = view.findViewById(R.id.tv_total_patients_today)
         tvActiveQueue = view.findViewById(R.id.tv_active_queue)
         tvCompletedToday = view.findViewById(R.id.tv_completed_today)
         tvRecentPatients = view.findViewById(R.id.tv_recent_patients)
 
-        // ✅ TAMBAHAN: Profile icon click listener
         ivProfileIcon.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(ProfileFragment())
+            (activity as? MainActivity)
+                ?.navigateToFragment(ProfileFragment())
         }
 
-        val btnViewQueue = view.findViewById<Button>(R.id.btnViewQueue)
-        val btnPatientHistory = view.findViewById<Button>(R.id.btnPatientHistory)
-        val btnUpdateStatus = view.findViewById<Button>(R.id.btnUpdateStatus)
+        view.findViewById<Button>(R.id.btnViewQueue).setOnClickListener {
 
-        btnViewQueue.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(DoctorQueueFragment())
+            (activity as? MainActivity)
+                ?.navigateToFragment(DoctorQueueFragment())
+
             try {
-                val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
-                bottomNav?.selectedItemId = R.id.nav_doctor_queue
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+                requireActivity()
+                    .findViewById<BottomNavigationView>(R.id.bottom_navigation)
+                    .selectedItemId = R.id.nav_doctor_queue
+            } catch (_: Exception) {}
         }
 
-        btnPatientHistory.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(DoctorPatientHistoryFragment())
+        view.findViewById<Button>(R.id.btnPatientHistory).setOnClickListener {
+
+            (activity as? MainActivity)
+                ?.navigateToFragment(DoctorPatientHistoryFragment())
+
             try {
-                val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottom_navigation)
-                bottomNav?.selectedItemId = R.id.nav_patient_history
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+                requireActivity()
+                    .findViewById<BottomNavigationView>(R.id.bottom_navigation)
+                    .selectedItemId = R.id.nav_patient_history
+            } catch (_: Exception) {}
         }
 
-        btnUpdateStatus.setOnClickListener {
-            showStatusDialog()
-        }
+        view.findViewById<Button>(R.id.btnUpdateStatus)
+            .setOnClickListener { showStatusDialog() }
 
-        loadStatistics()
-        loadRecentPatients()
+        startRealtime()
     }
 
-    private fun loadStatistics() {
-        try {
-            val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+    // ==========================================================
+    // ✅ REALTIME SAFE + AUTO NUMBER
+    // ==========================================================
+    private fun startRealtime() {
 
-            val todayBookings = DataSource.getBookingHistory()
-                .filter { it.date == today }
-                .filter { it.doctorName == DOCTOR_NAME }
+        BookingRepository.clearListeners()
 
-            val activeQueue = todayBookings.filter {
-                it.status == BookingStatus.WAITING || it.status == BookingStatus.CALLED
-            }.size
+        BookingRepository.listenQueueByDoctor(
+            doctorName,
+            null
+        ) { bookings ->
 
-            val completed = todayBookings.filter {
-                it.status == BookingStatus.COMPLETED
-            }.size
+            val unique = bookings.distinctBy {
+                "${it.patientName}|${it.queueNumber}|${it.time}"
+            }
 
-            tvTotalPatientsToday.text = todayBookings.size.toString()
-            tvActiveQueue.text = activeQueue.toString()
-            tvCompletedToday.text = completed.toString()
-
-        } catch (e: Exception) {
-            tvTotalPatientsToday.text = "0"
-            tvActiveQueue.text = "0"
-            tvCompletedToday.text = "0"
+            updateDashboardUI(unique)
         }
     }
 
-    private fun loadRecentPatients() {
-        try {
-            val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+    private fun updateDashboardUI(list: List<Booking>) {
 
-            val todayBookings = DataSource.getBookingHistory()
-                .filter { it.date == today }
-                .filter { it.doctorName == DOCTOR_NAME }
-                .filter { it.status == BookingStatus.WAITING || it.status == BookingStatus.CALLED }
-                .sortedBy { it.queueNumber }
+        val waiting =
+            list.filter {
+                it.status == BookingStatus.WAITING ||
+                        it.status == BookingStatus.CALLED
+            }.sortedBy { it.queueNumber }
 
-            val recentText = StringBuilder()
-            recentText.append("📋 Pasien yang Menunggu:\n\n")
+        tvTotalPatientsToday.text = list.size.toString()
+        tvActiveQueue.text = waiting.size.toString()
 
-            if (todayBookings.isEmpty()) {
-                recentText.append("Tidak ada pasien yang menunggu")
-            } else {
-                todayBookings.take(5).forEach { booking ->
-                    recentText.append("• No. ${booking.queueNumber} - ${booking.patientName}\n")
-                    recentText.append("  Keluhan: ${booking.complaint.ifEmpty { "-" }}\n")
-                    recentText.append("  Waktu: ${booking.time}\n")
-                    recentText.append("  Status: ${booking.status.toDisplayString()}\n\n")
+        tvCompletedToday.text =
+            list.count { it.status == BookingStatus.COMPLETED }.toString()
+
+        val sb = StringBuilder()
+        sb.append("📋 Pasien yang Menunggu:\n\n")
+
+        if (waiting.isEmpty()) {
+            sb.append("Tidak ada pasien yang menunggu")
+        } else {
+
+            waiting.take(5)
+                .forEachIndexed { index, b ->
+
+                    val noDisplay = index + 1   // ✅ AUTO NUMBER
+
+                    sb.append("• No. $noDisplay - ${b.patientName}\n")
+                    sb.append("  Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
+                    sb.append("  Waktu: ${b.time}\n")
+                    sb.append("  Status: ${b.status.toDisplayString()}\n\n")
                 }
-
-                if (todayBookings.size > 5) {
-                    recentText.append("... dan ${todayBookings.size - 5} pasien lainnya")
-                }
-            }
-
-            tvRecentPatients.text = recentText.toString()
-
-        } catch (e: Exception) {
-            tvRecentPatients.text = "Tidak ada data pasien"
         }
+
+        tvRecentPatients.text = sb.toString()
     }
 
     private fun showStatusDialog() {
+
         android.app.AlertDialog.Builder(requireContext())
             .setTitle("⚙️ Atur Status Praktek")
-            .setMessage("Fitur pengaturan status praktek (Aktif/Istirahat/Selesai) akan segera tersedia.")
+            .setMessage(
+                "Fitur pengaturan status praktek (Aktif/Istirahat/Selesai) akan segera tersedia."
+            )
             .setPositiveButton("OK", null)
             .show()
     }
 
-    override fun onResume() {
-        super.onResume()
-        loadStatistics()
-        loadRecentPatients()
+    override fun onDestroyView() {
+        super.onDestroyView()
+        BookingRepository.clearListeners()
     }
 }

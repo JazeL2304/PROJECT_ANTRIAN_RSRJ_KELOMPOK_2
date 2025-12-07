@@ -2,23 +2,35 @@ package com.example.projectantrianrsrjkelompok2
 
 // -------------------- MODEL BOOKING --------------------
 data class Booking(
-    val id: String = "",
-    val queueNumber: Int = 0,
-    val patientName: String = "",
-    val doctorName: String = "",
-    val specialization: String = "",
-    val date: String = "",
-    val time: String = "",
-    val complaint: String = "",
-    val diagnosis: String = "",
-    val prescription: String = "",
-    val status: BookingStatus = BookingStatus.WAITING,
-    val createdAt: Long = System.currentTimeMillis()
+
+    // ID unik Firebase (wajib var supaya bisa di-set setelah getValue)
+    var firebaseId: String = "",
+
+    // ID internal aplikasi (opsional)
+    var id: String = "",
+
+    var queueNumber: Int = 0,
+    var patientName: String = "",
+    var doctorName: String = "",
+    var specialization: String = "",
+    var date: String = "",
+    var time: String = "",
+    var complaint: String = "",
+    var diagnosis: String = "",
+    var prescription: String = "",
+
+    var status: BookingStatus = BookingStatus.WAITING,
+
+    var createdAt: Long = System.currentTimeMillis()
 )
 
 // -------------------- ENUM STATUS BOOKING --------------------
 enum class BookingStatus {
-    WAITING, CALLED, COMPLETED, CANCELLED, MISSED
+    WAITING,
+    CALLED,
+    COMPLETED,
+    CANCELLED,
+    MISSED
 }
 
 // -------------------- EXTENSIONS --------------------

@@ -8,15 +8,12 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.example.projectantrianrsrjkelompok2.DataSource
-import com.example.projectantrianrsrjkelompok2.MainActivity
+import com.example.projectantrianrsrjkelompok2.BookingStatus
 import com.example.projectantrianrsrjkelompok2.ProfileFragment
 import com.example.projectantrianrsrjkelompok2.R
+import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
 import com.example.projectantrianrsrjkelompok2.toDisplayString
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
-import com.google.android.material.bottomnavigation.BottomNavigationView
-import java.text.SimpleDateFormat
-import java.util.*
 
 class AdminDashboardFragment : Fragment() {
 
@@ -26,134 +23,127 @@ class AdminDashboardFragment : Fragment() {
     private lateinit var tvTodayBookings: TextView
     private lateinit var tvActiveQueues: TextView
     private lateinit var tvRecentBookings: TextView
-    private lateinit var ivProfileIcon: ImageView  // ✅ TAMBAHAN: Icon profile
 
-    private lateinit var preferencesHelper: PreferencesHelper
+    private lateinit var pref: PreferencesHelper
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_admin_dashboard, container, false)
-    }
+    ): View =
+        inflater.inflate(R.layout.fragment_admin_dashboard, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        preferencesHelper = PreferencesHelper(requireContext())
+        pref = PreferencesHelper(requireContext())
 
-        // Inisialisasi views
         tvGreeting = view.findViewById(R.id.tv_greeting)
         tvTotalPatients = view.findViewById(R.id.tv_total_patients)
         tvTotalDoctors = view.findViewById(R.id.tv_total_doctors)
         tvTodayBookings = view.findViewById(R.id.tv_today_bookings)
         tvActiveQueues = view.findViewById(R.id.tv_active_queues)
         tvRecentBookings = view.findViewById(R.id.tv_recent_bookings)
-        ivProfileIcon = view.findViewById(R.id.ivProfileIcon)  // ✅ TAMBAHAN
 
-        // Set greeting dengan nama user
-        val username = preferencesHelper.getUsername()
-        tvGreeting.text = "Selamat Datang, $username! 👋"
+        tvGreeting.text = "Selamat Datang, ${pref.getUsername()} 👋"
 
-        // ✅ TAMBAHAN: Profile icon click listener
-        ivProfileIcon.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(ProfileFragment())
+        // =============================
+        // PROFILE
+        // =============================
+        val ivProfile = view.findViewById<ImageView>(R.id.ivProfileIcon)
+        ivProfile.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, ProfileFragment())
+                .addToBackStack(null)
+                .commit()
         }
 
-        // Tombol-tombol dashboard
-        val btnManageDoctor = view.findViewById<Button>(R.id.btnManageDoctor)
-        val btnManagePatient = view.findViewById<Button>(R.id.btnManagePatient)
-        val btnManageSchedule = view.findViewById<Button>(R.id.btnManageSchedule)
-        val btnViewReports = view.findViewById<Button>(R.id.btnViewReports)
-
-        btnManageDoctor.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(ManageDoctorFragment())
+        // =============================
+        // ✅ BUTTON NAVIGATION — FIX
+        // =============================
+        view.findViewById<Button>(R.id.btnManageDoctor).setOnClickListener {
+            navigateTo(ManageDoctorFragment())
         }
 
-        btnManagePatient.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(ManagePatientFragment())
+        view.findViewById<Button>(R.id.btnManagePatient).setOnClickListener {
+            navigateTo(ManagePatientFragment())
         }
 
-        btnManageSchedule.setOnClickListener {
-            (activity as MainActivity).navigateToFragment(ManageScheduleFragment())
+        view.findViewById<Button>(R.id.btnManageSchedule).setOnClickListener {
+            navigateTo(ManageScheduleFragment())
         }
 
-        btnViewReports.setOnClickListener {
-            (activity as? MainActivity)?.apply {
-                navigateToFragment(ViewReportFragment())
-                val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
-                bottomNav.selectedItemId = R.id.nav_reports
+        view.findViewById<Button>(R.id.btnViewReports).setOnClickListener {
+            navigateTo(ViewReportFragment())
+        }
+
+        // =============================
+        // REALTIME DASHBOARD
+        // =============================
+        startRealtimeAdmin()
+    }
+
+    private fun navigateTo(fragment: Fragment) {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .addToBackStack(null)
+            .commit()
+    }
+
+    // =====================================================
+    // ✅ REALTIME ADMIN DASHBOARD
+    // =====================================================
+    private fun startRealtimeAdmin() {
+
+        BookingRepository.clearListeners()
+
+        BookingRepository.listenActiveQueue { bookings ->
+
+            val unique = bookings.distinctBy {
+                "${it.patientName}|${it.time}|${it.queueNumber}"
             }
-        }
 
-        loadStatistics()
-        loadRecentActivity()
-    }
+            tvTotalPatients.text =
+                unique.map { it.patientName }
+                    .distinct()
+                    .size
+                    .toString()
 
-    private fun loadStatistics() {
-        try {
-            val totalPatients = DataSource.getTotalPatients()
-            val totalDoctors = DataSource.getTotalDoctors()
-            val todayBookings = DataSource.getTodayBookings()
-            val activeQueues = DataSource.getActiveQueues()
+            tvTotalDoctors.text =
+                unique.map { it.doctorName }
+                    .distinct()
+                    .size
+                    .toString()
 
-            tvTotalPatients.text = totalPatients.toString()
-            tvTotalDoctors.text = totalDoctors.toString()
-            tvTodayBookings.text = todayBookings.size.toString()
-            tvActiveQueues.text = activeQueues.size.toString()
+            tvTodayBookings.text = unique.size.toString()
 
-        } catch (e: Exception) {
-            tvTotalPatients.text = "0"
-            tvTotalDoctors.text = "0"
-            tvTodayBookings.text = "0"
-            tvActiveQueues.text = "0"
-        }
-    }
+            val waiting = unique.filter {
+                it.status == BookingStatus.WAITING ||
+                        it.status == BookingStatus.CALLED
+            }.sortedBy { it.queueNumber }
 
-    private fun loadRecentActivity() {
-        try {
-            val todayBookings = DataSource.getTodayBookings()
+            tvActiveQueues.text = waiting.size.toString()
 
-            val recentText = StringBuilder()
-            recentText.append("📋 Booking Hari Ini:\n\n")
+            val sb = StringBuilder()
+            sb.append("📋 Pasien yang Menunggu:\n\n")
 
-            if (todayBookings.isEmpty()) {
-                recentText.append("Tidak ada booking hari ini")
+            if (waiting.isEmpty()) {
+                sb.append("Tidak ada pasien")
             } else {
-                todayBookings.take(5).forEach { booking ->
-                    recentText.append("• ${booking.patientName}\n")
-                    recentText.append("  Dokter: ${booking.doctorName}\n")
-                    recentText.append("  Waktu: ${booking.time}\n")
-                    recentText.append("  Status: ${booking.status.toDisplayString()}\n\n")
-                }
-
-                if (todayBookings.size > 5) {
-                    recentText.append("... dan ${todayBookings.size - 5} booking lainnya")
+                waiting.take(5).forEachIndexed { i, b ->
+                    sb.append("• No. ${i + 1} - ${b.patientName}\n")
+                    sb.append("  Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
+                    sb.append("  Waktu: ${b.time}\n")
+                    sb.append("  Status: ${b.status.toDisplayString()}\n\n")
                 }
             }
 
-            tvRecentBookings.text = recentText.toString()
-
-        } catch (e: Exception) {
-            tvRecentBookings.text = "Tidak ada aktivitas terbaru"
+            tvRecentBookings.text = sb.toString()
         }
     }
 
-    private fun formatDate(dateString: String): String {
-        return try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val outputFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
-            val date = inputFormat.parse(dateString)
-            outputFormat.format(date ?: Date())
-        } catch (e: Exception) {
-            dateString
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadStatistics()
-        loadRecentActivity()
+    override fun onDestroyView() {
+        super.onDestroyView()
+        BookingRepository.clearListeners()
     }
 }
