@@ -187,7 +187,7 @@ class BookingFragment : Fragment() {
     }
 
     // ======================================================
-    // DATE PICKER
+    // DATE PICKER ✔ ENHANCED WITH VALIDATION
     // ======================================================
     private fun setupDatePicker() {
         btnSelectDate.setOnClickListener {
@@ -198,8 +198,9 @@ class BookingFragment : Fragment() {
             }
 
             val cal = Calendar.getInstance()
+            val minDate = cal.timeInMillis // Hari ini
 
-            DatePickerDialog(
+            val picker = DatePickerDialog(
                 requireContext(),
                 { _, y, m, d ->
 
@@ -207,6 +208,15 @@ class BookingFragment : Fragment() {
                         .format(Calendar.getInstance().apply {
                             set(y, m, d)
                         }.time)
+
+                    // ✅ VALIDASI: Check apakah dokter bekerja di hari ini
+                    if (!selectedDoctor!!.isWorkingOn(selectedDate)) {
+                        showDoctorOffDialog()
+                        selectedDate = ""
+                        tvSelectedDate.visibility = View.GONE
+                        clearTimeSpinner()
+                        return@DatePickerDialog
+                    }
 
                     tvSelectedDate.text = selectedDate
                     tvSelectedDate.visibility = View.VISIBLE
@@ -216,12 +226,43 @@ class BookingFragment : Fragment() {
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            )
+
+            // Set minimum date ke hari ini (tidak bisa pilih tanggal lampau)
+            picker.datePicker.minDate = minDate
+
+            picker.show()
         }
     }
 
     // ======================================================
-    // TIME ✔ CUSTOM UI
+    // DIALOG DOKTER TIDAK TERSEDIA
+    // ======================================================
+    private fun showDoctorOffDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("❌ Dokter Tidak Tersedia")
+            .setMessage("""
+                Maaf, ${selectedDoctor?.name} tidak praktik di hari yang Anda pilih.
+                
+                📅 Jadwal Praktik:
+                ${selectedDoctor?.getWorkingDaysString()}
+                
+                ⏰ Jam Praktik:
+                ${selectedDoctor?.getWorkingHours()}
+                
+                Silakan pilih tanggal lain sesuai jadwal praktik dokter.
+            """.trimIndent())
+            .setPositiveButton("Pilih Lagi") { dialog, _ ->
+                dialog.dismiss()
+                // Trigger date picker lagi
+                btnSelectDate.performClick()
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    // ======================================================
+    // TIME SPINNER ✔ ENHANCED WITH VALIDATION
     // ======================================================
     private fun updateTimeSpinner() {
 
@@ -245,24 +286,68 @@ class BookingFragment : Fragment() {
                 }
 
             spinnerTime.isEnabled = currentTimeSlots.size > 1
+
+            // ✅ Show info jika tidak ada slot tersedia
+            if (currentTimeSlots.size == 1) {
+                toast("⚠️ Tidak ada jam praktik tersedia untuk tanggal ini")
+            }
         }
     }
 
     private fun generateValidTimeSlots(): List<String> {
 
-        val result = mutableListOf<String>()
+        if (selectedDoctor == null || selectedDate.isEmpty()) {
+            return emptyList()
+        }
 
-        var m = 8 * 60
-        while (m <= 20 * 60) {
-            result.add(formatTime(m))
-            m += 30
+        // ✅ Get time slots dari jadwal dokter
+        val doctorSlots = selectedDoctor!!.getAvailableTimeSlots(selectedDate)
+
+        if (doctorSlots.isEmpty()) {
+            return emptyList()
+        }
+
+        // ✅ Filter berdasarkan waktu sekarang (jika pilih hari ini)
+        val result = mutableListOf<String>()
+        val isToday = isSelectedDateToday()
+
+        for (slot in doctorSlots) {
+            if (isToday) {
+                // Hanya tampilkan jam yang belum lewat
+                if (isTimeFuture(slot)) {
+                    result.add(slot)
+                }
+            } else {
+                // Untuk hari lain, tampilkan semua jam
+                result.add(slot)
+            }
         }
 
         return result
     }
 
-    private fun formatTime(min: Int): String =
-        String.format("%02d:%02d", min / 60, min % 60)
+    // ======================================================
+    // TIME VALIDATION HELPERS
+    // ======================================================
+    private fun isSelectedDateToday(): Boolean {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        return selectedDate == today
+    }
+
+    private fun isTimeFuture(time: String): Boolean {
+        return try {
+            val currentTime = Calendar.getInstance()
+            val currentMinutes = currentTime.get(Calendar.HOUR_OF_DAY) * 60 +
+                    currentTime.get(Calendar.MINUTE)
+
+            val timeParts = time.split(":")
+            val timeMinutes = timeParts[0].toInt() * 60 + timeParts[1].toInt()
+
+            timeMinutes > currentMinutes
+        } catch (e: Exception) {
+            true // Default: allow jika ada error
+        }
+    }
 
     // ======================================================
     // BOOKING BUTTON
@@ -292,8 +377,45 @@ class BookingFragment : Fragment() {
             return false
         }
 
+        // ✅ VALIDASI: Double check dokter bekerja di hari ini
+        if (!selectedDoctor!!.isWorkingOn(selectedDate)) {
+            showDoctorOffDialog()
+            return false
+        }
+
         if (spinnerTime.selectedItemPosition == 0) {
             toast("Pilih jam")
+            return false
+        }
+
+        val selectedTime = spinnerTime.selectedItem.toString()
+
+        // ✅ VALIDASI: Check jam masih valid (belum lewat)
+        if (isSelectedDateToday() && !isTimeFuture(selectedTime)) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("⏰ Jam Sudah Lewat")
+                .setMessage("Jam yang Anda pilih sudah lewat. Silakan pilih jam yang lain.")
+                .setPositiveButton("OK") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .show()
+            return false
+        }
+
+        // ✅ VALIDASI: Check jam sesuai dengan jadwal dokter
+        if (!selectedDoctor!!.isTimeValid(selectedTime, selectedDate)) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("⚠️ Jam Tidak Sesuai")
+                .setMessage("""
+                    Jam yang Anda pilih tidak sesuai dengan jadwal praktik dokter.
+                    
+                    ⏰ Jam Praktik ${selectedDoctor?.name}:
+                    ${selectedDoctor?.getWorkingHours()}
+                """.trimIndent())
+                .setPositiveButton("OK") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .show()
             return false
         }
 
@@ -360,7 +482,7 @@ class BookingFragment : Fragment() {
     }
 
     // ======================================================
-    // HELPER ✔ CUSTOM UI
+    // HELPER METHODS
     // ======================================================
     private fun clearDoctorSpinner() {
         spinnerDoctor.adapter =

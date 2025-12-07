@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import com.example.projectantrianrsrjkelompok2.utils.PasswordHasher
 
 /**
  * ✅ Firebase Repository - Handle all Firebase operations
@@ -24,13 +25,19 @@ class FirebaseRepository {
     private val bookingsRef: DatabaseReference = database.getReference("bookings")
     private val specializationsRef: DatabaseReference = database.getReference("specializations")
     private val usersRef: DatabaseReference = database.getReference("users")
+    // ✅ Reference untuk counter
+    private val countersRef: DatabaseReference = database.getReference("counters")
+
 
     // ===============================
     // 🔐 USER AUTHENTICATION
     // ===============================
 
+
+
+// Ganti method loginUser dengan yang ini:
     /**
-     * Login - Cari user berdasarkan email dan password
+     * Login - Cari user berdasarkan email dan password (dengan hash verification)
      */
     suspend fun loginUser(email: String, password: String): UserAccount? {
         return suspendCoroutine { continuation ->
@@ -39,10 +46,23 @@ class FirebaseRepository {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         for (child in snapshot.children) {
                             val user = child.getValue(UserAccount::class.java)
-                            if (user != null && user.password == password) {
-                                Log.d(TAG, "✅ Login successful: ${user.email}")
-                                continuation.resume(user)
-                                return
+                            if (user != null) {
+                                // ✅ BARU: Verifikasi password dengan hash
+                                val isPasswordValid = if (PasswordHasher.isBCryptHash(user.password)) {
+                                    // Password sudah dalam bentuk hash, verifikasi dengan BCrypt
+                                    PasswordHasher.verifyPassword(password, user.password)
+                                } else {
+                                    // Password masih plain text (data lama), compare langsung
+                                    // TODO: Sebaiknya update password ke hash setelah login berhasil
+                                    Log.w(TAG, "⚠️ Warning: User ${user.email} still using plain text password")
+                                    user.password == password
+                                }
+
+                                if (isPasswordValid) {
+                                    Log.d(TAG, "✅ Login successful: ${user.email}")
+                                    continuation.resume(user)
+                                    return
+                                }
                             }
                         }
                         Log.w(TAG, "❌ Login failed: Invalid credentials")
@@ -57,8 +77,9 @@ class FirebaseRepository {
         }
     }
 
+// Ganti method registerUser dengan yang ini:
     /**
-     * Register user baru
+     * Register user baru (dengan password hashing)
      */
     suspend fun registerUser(userAccount: UserAccount): Boolean {
         return suspendCoroutine { continuation ->
@@ -71,16 +92,25 @@ class FirebaseRepository {
                             Log.w(TAG, "❌ Email already exists: ${userAccount.email}")
                             continuation.resume(false)
                         } else {
-                            // Simpan user baru
-                            usersRef.child(userAccount.id).setValue(userAccount)
-                                .addOnSuccessListener {
-                                    Log.d(TAG, "✅ User registered: ${userAccount.email}")
-                                    continuation.resume(true)
-                                }
-                                .addOnFailureListener { e ->
-                                    Log.e(TAG, "❌ Registration failed: ${e.message}")
-                                    continuation.resume(false)
-                                }
+                            // ✅ BARU: Hash password sebelum simpan
+                            try {
+                                val hashedPassword = PasswordHasher.hashPassword(userAccount.password)
+                                val userWithHashedPassword = userAccount.copy(password = hashedPassword)
+
+                                // Simpan user baru dengan password yang sudah di-hash
+                                usersRef.child(userWithHashedPassword.id).setValue(userWithHashedPassword)
+                                    .addOnSuccessListener {
+                                        Log.d(TAG, "✅ User registered with hashed password: ${userAccount.email}")
+                                        continuation.resume(true)
+                                    }
+                                    .addOnFailureListener { e ->
+                                        Log.e(TAG, "❌ Registration failed: ${e.message}")
+                                        continuation.resume(false)
+                                    }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "❌ Error hashing password: ${e.message}")
+                                continuation.resume(false)
+                            }
                         }
                     }
 
@@ -574,4 +604,77 @@ class FirebaseRepository {
             false
         }
     }
+
+    /**
+     * 🆕 Get next user ID dengan format rapi (user001, user002, dst)
+     */
+    suspend fun getNextUserId(): String {
+        return suspendCoroutine { continuation ->
+            countersRef.child("userIdCounter").get()
+                .addOnSuccessListener { snapshot ->
+                    // Get current counter value
+                    val currentCounter = snapshot.getValue(Int::class.java) ?: 0
+                    val nextCounter = currentCounter + 1
+
+                    // Format dengan leading zeros (user001, user002, dst)
+                    val userId = "user${String.format("%03d", nextCounter)}"
+
+                    // Update counter di Firebase
+                    countersRef.child("userIdCounter").setValue(nextCounter)
+                        .addOnSuccessListener {
+                            Log.d(TAG, "✅ Next user ID generated: $userId")
+                            continuation.resume(userId)
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e(TAG, "❌ Failed to update counter: ${e.message}")
+                            // Fallback ke timestamp jika gagal
+                            continuation.resume("user_${System.currentTimeMillis()}")
+                        }
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "❌ Failed to get counter: ${e.message}")
+                    // Fallback ke timestamp jika gagal
+                    continuation.resume("user_${System.currentTimeMillis()}")
+                }
+        }
+    }
+
+    /**
+     * 🆕 Initialize counter berdasarkan user yang sudah ada
+     * Jalankan sekali untuk setup initial counter
+     */
+    suspend fun initializeUserIdCounter(): Boolean {
+        return try {
+            Log.d(TAG, "🔄 Initializing user ID counter...")
+
+            // Get all existing users
+            val allUsers = getAllUsers()
+
+            // Find highest user number
+            var maxNumber = 0
+
+            for (user in allUsers) {
+                // Extract number from user ID (user001 -> 1, user002 -> 2)
+                val match = Regex("user(\\d+)").find(user.id)
+                if (match != null) {
+                    val number = match.groupValues[1].toIntOrNull() ?: 0
+                    if (number > maxNumber) {
+                        maxNumber = number
+                    }
+                }
+            }
+
+            // Set counter to max number found
+            countersRef.child("userIdCounter").setValue(maxNumber).await()
+
+            Log.d(TAG, "✅ Counter initialized to: $maxNumber")
+            Log.d(TAG, "   Next user will be: user${String.format("%03d", maxNumber + 1)}")
+
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error initializing counter: ${e.message}", e)
+            false
+        }
+    }
+
 }

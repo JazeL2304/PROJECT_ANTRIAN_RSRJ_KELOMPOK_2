@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.example.projectantrianrsrjkelompok2.utils.PasswordHasher
 
 /**
  * ✅ Profile Fragment with ImageKit Integration
@@ -703,6 +704,7 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    // Ganti method showEditNameDialog dengan ini:
     private fun showEditNameDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_name, null)
         val etNewName = dialogView.findViewById<EditText>(R.id.etNewName)
@@ -716,9 +718,7 @@ class ProfileFragment : Fragment() {
                 val newName = etNewName.text.toString().trim()
 
                 if (validateName(newName)) {
-                    preferencesHelper.saveUserFullName(newName)
-                    tvUserName.text = newName
-                    Toast.makeText(context, "✅ Nama berhasil diubah!", Toast.LENGTH_SHORT).show()
+                    updateNameToFirebase(newName)
                     dialog.dismiss()
                 }
             }
@@ -728,6 +728,69 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
+    // 🆕 NEW: Update nama ke Firebase
+    private fun updateNameToFirebase(newName: String) {
+        val userId = preferencesHelper.getUserId()
+
+        if (userId.isNullOrEmpty()) {
+            Toast.makeText(context, "❌ User ID tidak ditemukan", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        showLoading(true)
+
+        lifecycleScope.launch {
+            try {
+                Log.d(TAG, "🔄 Updating name to Firebase...")
+                Log.d(TAG, "User ID: $userId")
+                Log.d(TAG, "New Name: $newName")
+
+                // Get current user data
+                val user = withContext(Dispatchers.IO) {
+                    firebaseRepo.getUserById(userId)
+                }
+
+                if (user == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "❌ User tidak ditemukan", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                // Update user with new name
+                val updatedUser = user.copy(
+                    fullName = newName,
+                    updatedAt = System.currentTimeMillis()
+                )
+
+                val success = withContext(Dispatchers.IO) {
+                    firebaseRepo.updateUserAccount(updatedUser)
+                }
+
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        // Update local storage
+                        preferencesHelper.saveUserFullName(newName)
+                        tvUserName.text = newName
+
+                        Toast.makeText(context, "✅ Nama berhasil diubah!", Toast.LENGTH_SHORT).show()
+                        Log.d(TAG, "✅ Name updated successfully!")
+                    } else {
+                        Toast.makeText(context, "❌ Gagal mengubah nama", Toast.LENGTH_SHORT).show()
+                        Log.e(TAG, "❌ Failed to update name")
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error updating name: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "❌ Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                showLoading(false)
+            }
+        }
+    }
     private fun validateName(name: String): Boolean {
         if (name.isEmpty()) {
             Toast.makeText(context, "Nama tidak boleh kosong", Toast.LENGTH_SHORT).show()
@@ -742,6 +805,7 @@ class ProfileFragment : Fragment() {
         return true
     }
 
+    // Ganti method showEditPasswordDialog dengan ini:
     private fun showEditPasswordDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_change_password, null)
         val etOldPassword = dialogView.findViewById<EditText>(R.id.etOldPassword)
@@ -757,7 +821,7 @@ class ProfileFragment : Fragment() {
                 val confirmPassword = etConfirmPassword.text.toString()
 
                 if (validatePasswordChange(oldPassword, newPassword, confirmPassword)) {
-                    Toast.makeText(context, "Password berhasil diubah!", Toast.LENGTH_SHORT).show()
+                    updatePasswordToFirebase(oldPassword, newPassword)
                     dialog.dismiss()
                 }
             }
@@ -765,6 +829,103 @@ class ProfileFragment : Fragment() {
                 dialog.dismiss()
             }
             .show()
+    }
+
+    // 🆕 NEW: Update password ke Firebase
+    private fun updatePasswordToFirebase(oldPassword: String, newPassword: String) {
+        val userId = preferencesHelper.getUserId()
+
+        if (userId.isNullOrEmpty()) {
+            Toast.makeText(context, "❌ User ID tidak ditemukan", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        showLoading(true)
+
+        lifecycleScope.launch {
+            try {
+                Log.d(TAG, "🔄 Updating password to Firebase...")
+                Log.d(TAG, "User ID: $userId")
+
+                // Step 1: Get current user data
+                val user = withContext(Dispatchers.IO) {
+                    firebaseRepo.getUserById(userId)
+                }
+
+                if (user == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "❌ User tidak ditemukan", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                // Step 2: Verify old password
+                val isOldPasswordCorrect = if (PasswordHasher.isBCryptHash(user.password)) {
+                    // Password is hashed, verify with BCrypt
+                    PasswordHasher.verifyPassword(oldPassword, user.password)
+                } else {
+                    // Password is plain text (old data), compare directly
+                    user.password == oldPassword
+                }
+
+                if (!isOldPasswordCorrect) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "❌ Password lama salah!", Toast.LENGTH_SHORT).show()
+                        Log.w(TAG, "❌ Old password is incorrect")
+                    }
+                    return@launch
+                }
+
+                Log.d(TAG, "✅ Old password verified")
+
+                // Step 3: Hash new password
+                val hashedPassword = withContext(Dispatchers.IO) {
+                    PasswordHasher.hashPassword(newPassword)
+                }
+
+                Log.d(TAG, "✅ New password hashed")
+
+                // Step 4: Update user with new hashed password
+                val updatedUser = user.copy(
+                    password = hashedPassword,
+                    updatedAt = System.currentTimeMillis()
+                )
+
+                val success = withContext(Dispatchers.IO) {
+                    firebaseRepo.updateUserAccount(updatedUser)
+                }
+
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        Toast.makeText(
+                            context,
+                            "✅ Password berhasil diubah!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        Log.d(TAG, "✅ Password updated successfully!")
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "❌ Gagal mengubah password",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        Log.e(TAG, "❌ Failed to update password")
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error updating password: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "❌ Error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } finally {
+                showLoading(false)
+            }
+        }
     }
 
     private fun validatePasswordChange(oldPassword: String, newPassword: String, confirmPassword: String): Boolean {

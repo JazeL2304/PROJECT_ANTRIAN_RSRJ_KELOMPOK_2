@@ -64,8 +64,11 @@ class AuthViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
+                // ✅ BARU: Generate user ID yang rapi (user001, user002, dst)
+                val userId = firebaseRepo.getNextUserId()
+
                 val newUser = UserAccount(
-                    id = "user_${System.currentTimeMillis()}",
+                    id = userId, // ✅ Sekarang: user001, user002, user003...
                     email = email,
                     password = password,
                     fullName = fullName,
