@@ -17,7 +17,7 @@ import com.google.android.material.textfield.TextInputEditText
 
 /**
  * ✅ Login Fragment
- * 🆕 Updated to save userId for ImageKit integration
+ * 🆕 Updated to save userId for user-specific bookings
  */
 class LoginFragment : Fragment() {
 
@@ -79,17 +79,24 @@ class LoginFragment : Fragment() {
                     btnLogin.isEnabled = true
                     btnLogin.text = "Masuk"
 
-                    // ✅ Simpan data login & role user
+                    // ✅ SAVE COMPLETE USER DATA
                     val prefsHelper = PreferencesHelper(requireContext())
-                    prefsHelper.setLoggedIn(true)
 
-                    // 🆕 Save user ID (for ImageKit profile upload)
-                    prefsHelper.saveUserId(state.user.id)
-                    Log.d(TAG, "✅ User ID saved: ${state.user.id}")
+                    // ✅ METHOD 1: Using saveCompleteLoginData (RECOMMENDED)
+                    prefsHelper.saveCompleteLoginData(
+                        userId = state.user.id,           // ✅ "user001" atau "user002"
+                        email = state.user.email,
+                        fullName = state.user.fullName,
+                        phone = state.user.phoneNumber ?: "",
+                        role = state.user.userType.name
+                    )
 
-                    // Save other user data
-                    prefsHelper.saveUserData(state.user.email, state.user.fullName)
-                    prefsHelper.saveUserRole(state.user.userType.name)
+                    // Debug log
+                    Log.d(TAG, "✅ User logged in successfully:")
+                    Log.d(TAG, "  - User ID: ${state.user.id}")
+                    Log.d(TAG, "  - Name: ${state.user.fullName}")
+                    Log.d(TAG, "  - Email: ${state.user.email}")
+                    Log.d(TAG, "  - Role: ${state.user.userType.name}")
 
                     Toast.makeText(context, "Login berhasil!", Toast.LENGTH_SHORT).show()
 

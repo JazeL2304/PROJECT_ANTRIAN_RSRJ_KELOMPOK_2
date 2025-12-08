@@ -10,6 +10,8 @@ import com.example.projectantrianrsrjkelompok2.*
 import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import java.text.SimpleDateFormat
+import java.util.*
 
 class DoctorDashboardFragment : Fragment() {
 
@@ -52,43 +54,31 @@ class DoctorDashboardFragment : Fragment() {
                 ?.navigateToFragment(ProfileFragment())
         }
 
+        // ✅ PERBAIKAN: Langsung trigger bottom nav untuk Antrian
         view.findViewById<Button>(R.id.btnViewQueue).setOnClickListener {
-
-            (activity as? MainActivity)
-                ?.navigateToFragment(DoctorQueueFragment())
-
-            try {
-                requireActivity()
-                    .findViewById<BottomNavigationView>(R.id.bottom_navigation)
-                    .selectedItemId = R.id.nav_doctor_queue
-            } catch (_: Exception) {}
+            requireActivity()
+                .findViewById<BottomNavigationView>(R.id.bottom_navigation)
+                ?.selectedItemId = R.id.nav_doctor_queue
         }
 
+        // ✅ PERBAIKAN: Langsung trigger bottom nav untuk Riwayat
         view.findViewById<Button>(R.id.btnPatientHistory).setOnClickListener {
-
-            (activity as? MainActivity)
-                ?.navigateToFragment(DoctorPatientHistoryFragment())
-
-            try {
-                requireActivity()
-                    .findViewById<BottomNavigationView>(R.id.bottom_navigation)
-                    .selectedItemId = R.id.nav_patient_history
-            } catch (_: Exception) {}
+            requireActivity()
+                .findViewById<BottomNavigationView>(R.id.bottom_navigation)
+                ?.selectedItemId = R.id.nav_patient_history
         }
-
-        view.findViewById<Button>(R.id.btnUpdateStatus)
-            .setOnClickListener { showStatusDialog() }
 
         startRealtime()
     }
 
     // ==========================================================
-    // ✅ REALTIME SAFE + AUTO NUMBER
+    // ✅ REALTIME SAFE + AUTO NUMBER + FIX COMPLETED COUNT
     // ==========================================================
     private fun startRealtime() {
 
         BookingRepository.clearListeners()
 
+        // ✅ Ambil SEMUA booking dokter ini (tidak hanya hari ini)
         BookingRepository.listenQueueByDoctor(
             doctorName,
             null
@@ -104,26 +94,34 @@ class DoctorDashboardFragment : Fragment() {
 
     private fun updateDashboardUI(list: List<Booking>) {
 
+        // ✅ Filter pasien yang menunggu/dipanggil (WAITING atau CALLED)
         val waiting =
             list.filter {
                 it.status == BookingStatus.WAITING ||
                         it.status == BookingStatus.CALLED
             }.sortedBy { it.queueNumber }
 
+        // ✅ Filter pasien yang sudah selesai (COMPLETED)
+        val completed = list.filter {
+            it.status == BookingStatus.COMPLETED
+        }
+
+        // ✅ UPDATE STATISTIK
         tvTotalPatientsToday.text = list.size.toString()
         tvActiveQueue.text = waiting.size.toString()
+        tvCompletedToday.text = completed.size.toString()  // ✅ FIX: Hitung dari list completed
 
-        tvCompletedToday.text =
-            list.count { it.status == BookingStatus.COMPLETED }.toString()
-
+        // ✅ TAMPILKAN PASIEN MENUNGGU
         val sb = StringBuilder()
-        sb.append("📋 Pasien yang Menunggu:\n\n")
 
         if (waiting.isEmpty()) {
-            sb.append("Tidak ada pasien yang menunggu")
+            sb.append("✅ Tidak ada pasien yang menunggu\n\n")
+            sb.append("Klik tombol 'Lihat Antrian Pasien' untuk melihat riwayat lengkap")
         } else {
+            sb.append("📋 Pasien yang Menunggu:\n\n")
 
-            waiting.take(5)
+            // ✅ Tampilkan max 3 pasien di dashboard (lebih ringkas)
+            waiting.take(3)
                 .forEachIndexed { index, b ->
 
                     val noDisplay = index + 1   // ✅ AUTO NUMBER
@@ -133,20 +131,15 @@ class DoctorDashboardFragment : Fragment() {
                     sb.append("  Waktu: ${b.time}\n")
                     sb.append("  Status: ${b.status.toDisplayString()}\n\n")
                 }
+
+            // ✅ Tampilkan info kalau masih ada pasien lagi
+            if (waiting.size > 3) {
+                sb.append("... dan ${waiting.size - 3} pasien lainnya\n")
+                sb.append("Klik 'Lihat Antrian Pasien' untuk melihat semua")
+            }
         }
 
         tvRecentPatients.text = sb.toString()
-    }
-
-    private fun showStatusDialog() {
-
-        android.app.AlertDialog.Builder(requireContext())
-            .setTitle("⚙️ Atur Status Praktek")
-            .setMessage(
-                "Fitur pengaturan status praktek (Aktif/Istirahat/Selesai) akan segera tersedia."
-            )
-            .setPositiveButton("OK", null)
-            .show()
     }
 
     override fun onDestroyView() {

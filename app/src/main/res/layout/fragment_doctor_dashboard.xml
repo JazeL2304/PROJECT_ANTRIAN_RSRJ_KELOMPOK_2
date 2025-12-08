@@ -269,17 +269,7 @@
                 android:layout_marginBottom="12dp"
                 android:elevation="2dp"/>
 
-            <Button
-                android:id="@+id/btnUpdateStatus"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="⚙️ ATUR STATUS PRAKTEK"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
-                android:backgroundTint="@color/teal_700"
-                android:layout_marginBottom="24dp"
-                android:elevation="2dp"/>
+
 
             <!-- 📋 Pasien yang Menunggu -->
             <TextView

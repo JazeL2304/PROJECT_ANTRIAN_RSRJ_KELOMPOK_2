@@ -12,7 +12,6 @@ import com.example.projectantrianrsrjkelompok2.BookingStatus
 import com.example.projectantrianrsrjkelompok2.ProfileFragment
 import com.example.projectantrianrsrjkelompok2.R
 import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
-import com.example.projectantrianrsrjkelompok2.toDisplayString
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 
 class AdminDashboardFragment : Fragment() {
@@ -134,6 +133,7 @@ class AdminDashboardFragment : Fragment() {
                     sb.append("• No. ${i + 1} - ${b.patientName}\n")
                     sb.append("  Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
                     sb.append("  Waktu: ${b.time}\n")
+                    // ✅ FIX: Langsung panggil toDisplayString() dari enum
                     sb.append("  Status: ${b.status.toDisplayString()}\n\n")
                 }
             }

@@ -11,7 +11,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import com.example.projectantrianrsrjkelompok2.Booking
-import com.example.projectantrianrsrjkelompok2.toDisplayString
+import com.example.projectantrianrsrjkelompok2.BookingStatus  // ✅ ADD THIS if missing
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -114,9 +114,10 @@ object ReceiptGenerator {
 
         // ✅ CRITICAL FIX: Gunakan booking.time yang asli
         canvas.drawText("Jam:", leftMargin, yPos, paint)
-        canvas.drawText("${booking.time} WIB", leftMargin + 200f, yPos, paint) // ✅ TAMBAHKAN WIB
+        canvas.drawText("${booking.time} WIB", leftMargin + 200f, yPos, paint)
         yPos += 30f
 
+        // ✅ FIX: Langsung panggil toDisplayString() dari enum
         canvas.drawText("Status:", leftMargin, yPos, paint)
         canvas.drawText(booking.status.toDisplayString(), leftMargin + 200f, yPos, paint)
         yPos += 50f
@@ -137,6 +138,7 @@ object ReceiptGenerator {
             .format(Date())
         canvas.drawText("Dicetak pada: $currentDate", leftMargin, yPos, paint)
     }
+
     private fun formatDate(dateString: String): String {
         return try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())

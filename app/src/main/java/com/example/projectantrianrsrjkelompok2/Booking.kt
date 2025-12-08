@@ -1,51 +1,60 @@
 package com.example.projectantrianrsrjkelompok2
 
-// -------------------- MODEL BOOKING --------------------
+// ✅ UPDATED: Added userId field untuk user-specific bookings
+
 data class Booking(
+    val id: String = "",
+    val queueNumber: Int = 0,
+    val patientName: String = "",
+    val doctorName: String = "",
+    val specialization: String = "",
+    val date: String = "",
+    val time: String = "",
+    val complaint: String = "-",
+    val diagnosis: String = "",
+    val prescription: String = "",
+    val status: BookingStatus = BookingStatus.WAITING,
+    val createdAt: Long = System.currentTimeMillis(),
+    val firebaseId: String = "",
 
-    // ID unik Firebase (wajib var supaya bisa di-set setelah getValue)
-    var firebaseId: String = "",
-
-    // ID internal aplikasi (opsional)
-    var id: String = "",
-
-    var queueNumber: Int = 0,
-    var patientName: String = "",
-    var doctorName: String = "",
-    var specialization: String = "",
-    var date: String = "",
-    var time: String = "",
-    var complaint: String = "",
-    var diagnosis: String = "",
-    var prescription: String = "",
-
-    var status: BookingStatus = BookingStatus.WAITING,
-
-    var createdAt: Long = System.currentTimeMillis()
+    // ✅ NEW: User ID field - CRITICAL untuk user isolation
+    val userId: String = ""  // Stores: "user001", "user002", etc
 )
 
-// -------------------- ENUM STATUS BOOKING --------------------
 enum class BookingStatus {
     WAITING,
     CALLED,
     COMPLETED,
     CANCELLED,
-    MISSED
+    MISSED;
+
+    fun toDisplayString(): String {
+        return when (this) {
+            WAITING -> "Menunggu"
+            CALLED -> "Dipanggil"
+            COMPLETED -> "Selesai"
+            CANCELLED -> "Dibatalkan"
+            MISSED -> "Terlewat"
+        }
+    }
+
+    fun getColorResource(): Int {
+        return when (this) {
+            WAITING -> android.R.color.holo_blue_light
+            CALLED -> android.R.color.holo_orange_light
+            COMPLETED -> android.R.color.holo_green_light
+            CANCELLED -> android.R.color.holo_red_light
+            MISSED -> android.R.color.darker_gray
+        }
+    }
 }
 
-// -------------------- EXTENSIONS --------------------
-fun BookingStatus.toDisplayString(): String = when (this) {
-    BookingStatus.WAITING -> "Menunggu"
-    BookingStatus.CALLED -> "Dipanggil"
-    BookingStatus.COMPLETED -> "Selesai"
-    BookingStatus.CANCELLED -> "Dibatalkan"
-    BookingStatus.MISSED -> "Terlewat"
-}
-
-fun BookingStatus.getColorResource(): Int = when (this) {
-    BookingStatus.WAITING -> android.R.color.holo_orange_dark
-    BookingStatus.CALLED -> android.R.color.holo_blue_dark
-    BookingStatus.COMPLETED -> android.R.color.holo_green_dark
-    BookingStatus.CANCELLED -> android.R.color.holo_red_dark
-    BookingStatus.MISSED -> android.R.color.darker_gray
+// ✅ Extension function untuk String
+// Ini diperlukan jika ada code yang call toDisplayString() pada String
+fun String.toDisplayString(): String {
+    return try {
+        BookingStatus.valueOf(this).toDisplayString()
+    } catch (e: Exception) {
+        this // Return original string jika bukan BookingStatus
+    }
 }

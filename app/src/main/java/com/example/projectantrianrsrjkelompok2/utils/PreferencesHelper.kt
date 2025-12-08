@@ -3,7 +3,7 @@ package com.example.projectantrianrsrjkelompok2.utils
 import android.content.Context
 import android.content.SharedPreferences
 
-class PreferencesHelper(context: Context) {
+class PreferencesHelper(private val context: Context) {
 
     companion object {
         private const val PREF_NAME = "antrian_rs_prefs"
@@ -15,9 +15,28 @@ class PreferencesHelper(context: Context) {
         private const val KEY_USER_ROLE = "user_role"
         private const val KEY_PROFILE_PHOTO_PATH = "profile_photo_path"
         private const val KEY_FIRST_LAUNCH = "is_first_launch"
-
-        // ✅ ===== TAMBAHAN UNTUK DOKTER =====
         private const val KEY_DOCTOR_NAME = "doctor_name"
+
+        // ✅ STATIC HELPER untuk dipanggil dari Fragment tanpa instance
+        fun getUserId(context: Context): String? {
+            val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            return prefs.getString(KEY_USER_ID, null)
+        }
+
+        fun getUserFullName(context: Context): String? {
+            val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            return prefs.getString(KEY_USER_FULL_NAME, null)
+        }
+
+        fun getUserEmail(context: Context): String? {
+            val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            return prefs.getString(KEY_USER_EMAIL, null)
+        }
+
+        fun isLoggedIn(context: Context): Boolean {
+            val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            return prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+        }
     }
 
     private val preferences: SharedPreferences =
@@ -51,11 +70,7 @@ class PreferencesHelper(context: Context) {
     }
 
     fun getUserId(): String? {
-        val savedId = preferences.getString(KEY_USER_ID, null)
-        if (!savedId.isNullOrEmpty()) return savedId
-
-        val email = getUserEmail()
-        return email?.substringBefore("@")?.replace(".", "_")
+        return preferences.getString(KEY_USER_ID, null)
     }
 
     fun saveUserEmail(email: String) {
@@ -113,7 +128,7 @@ class PreferencesHelper(context: Context) {
     }
 
     // ===============================
-    // 👨‍⚕️ DOCTOR DATA ✅ FIX
+    // 👨‍⚕️ DOCTOR DATA
     // ===============================
 
     fun saveDoctorName(name: String) {
@@ -136,5 +151,30 @@ class PreferencesHelper(context: Context) {
 
     fun resetFirstLaunch() {
         preferences.edit().putBoolean(KEY_FIRST_LAUNCH, true).apply()
+    }
+
+    // ===============================
+    // 💾 SAVE COMPLETE LOGIN DATA
+    // ===============================
+
+    /**
+     * ✅ Save all user data at once during login
+     */
+    fun saveCompleteLoginData(
+        userId: String,
+        email: String,
+        fullName: String,
+        phone: String = "",
+        role: String = "PATIENT"
+    ) {
+        preferences.edit().apply {
+            putBoolean(KEY_IS_LOGGED_IN, true)
+            putString(KEY_USER_ID, userId)
+            putString(KEY_USER_EMAIL, email)
+            putString(KEY_USER_FULL_NAME, fullName)
+            putString(KEY_USER_PHONE, phone)
+            putString(KEY_USER_ROLE, role)
+            apply()
+        }
     }
 }

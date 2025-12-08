@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.projectantrianrsrjkelompok2.utils.QRCodeGenerator
 import com.example.projectantrianrsrjkelompok2.utils.ReceiptGenerator
+import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 
 
 class QueueFragment : Fragment() {
@@ -83,11 +84,22 @@ class QueueFragment : Fragment() {
      * ✅ NEW: Load data initial dengan proper loading state
      */
     private fun loadInitialData() {
-        // ✅ Hide card dulu saat loading
+        // ✅ STEP 1: Get current user ID
+        val currentUserId = PreferencesHelper.getUserId(requireContext())
+
+        if (currentUserId.isNullOrEmpty()) {
+            Log.e(TAG, "❌ User not logged in!")
+            showLoading(false)
+            Toast.makeText(requireContext(), "❌ Silakan login", Toast.LENGTH_SHORT).show()
+            (activity as? MainActivity)?.navigateToFragment(LoginFragment())
+            return
+        }
+
+        Log.d(TAG, "👤 Current userId: $currentUserId")
+
         cardMyQueue.visibility = View.INVISIBLE
         showLoading(true)
 
-        // ✅ TAMBAHKAN INI - Clear semua text default
         tvCurrentQueue.text = ""
         tvMyQueueNumber.text = ""
         tvMyQueueStatus.text = ""
@@ -97,72 +109,75 @@ class QueueFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                // ✅ CRITICAL: Force reload dari Firebase DULU sebelum tampilkan apapun
                 withContext(Dispatchers.IO) {
-                    Log.d(TAG, "📥 Force loading fresh data from Firebase...")
+                    Log.d(TAG, "📥 Force loading data from Firebase...")
                     DataSource.forceLoadFromFirebase()
-                    delay(500) // Beri waktu untuk data ter-load
+                    delay(500)
                 }
 
-                // ✅ Sekarang ambil data yang fresh
                 val activeBooking = DataSource.getActiveBooking()
 
+                // ✅ STEP 2: Check if booking belongs to current user
                 if (activeBooking == null) {
+                    Log.w(TAG, "⚠️ No active booking")
                     withContext(Dispatchers.Main) {
                         showLoading(false)
-                        Toast.makeText(
-                            requireContext(),
-                            "❌ Tidak ada antrian aktif",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(requireContext(), "❌ Tidak ada antrian aktif", Toast.LENGTH_SHORT).show()
                         (activity as? MainActivity)?.navigateToFragment(EmptyQueueFragment())
                     }
                     return@launch
                 }
 
-                // ✅ Cek apakah booking sudah selesai
+                if (activeBooking.userId != currentUserId) {
+                    Log.w(TAG, "⚠️ Booking doesn't belong to this user")
+                    Log.w(TAG, "  - Booking userId: ${activeBooking.userId}")
+                    Log.w(TAG, "  - Current userId: $currentUserId")
+
+                    withContext(Dispatchers.Main) {
+                        showLoading(false)
+                        Toast.makeText(requireContext(), "❌ Tidak ada antrian untuk Anda", Toast.LENGTH_SHORT).show()
+                        (activity as? MainActivity)?.navigateToFragment(EmptyQueueFragment())
+                    }
+                    return@launch
+                }
+
+                Log.d(TAG, "✅ Found booking for user: ${activeBooking.patientName}")
+
                 if (activeBooking.status == BookingStatus.COMPLETED) {
                     withContext(Dispatchers.Main) {
                         showLoading(false)
-                        Toast.makeText(
-                            requireContext(),
-                            "Booking sudah selesai",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(requireContext(), "Booking sudah selesai", Toast.LENGTH_SHORT).show()
                         (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
                     }
                     return@launch
                 }
 
-                // ✅ Get today's bookings
                 val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     .format(Calendar.getInstance().time)
 
+                // ✅ STEP 3: Filter today's bookings by user
                 val todayBookings = DataSource.getBookingHistory()
-                    .filter { it.date == today }
+                    .filter {
+                        it.date == today &&
+                                it.userId == currentUserId  // ✅ Only this user's bookings
+                    }
                     .sortedBy { it.queueNumber }
 
-                // ✅ Calculate current queue dengan data yang FRESH
+                Log.d(TAG, "📊 Today's bookings for user: ${todayBookings.size}")
+
                 val currentQueue = calculateCurrentQueue(todayBookings)
 
-                // ✅ Update UI dengan data yang benar
                 withContext(Dispatchers.Main) {
                     updateQueueInfo(activeBooking, currentQueue, todayBookings)
                     showLoading(false)
-
-                    // ✅ BARU start monitoring setelah data initial sudah benar
                     startRealTimeMonitoring()
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error loading initial data: ${e.message}", e)
+                Log.e(TAG, "❌ Error: ${e.message}", e)
                 withContext(Dispatchers.Main) {
                     showLoading(false)
-                    Toast.makeText(
-                        requireContext(),
-                        "❌ Error: ${e.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(), "❌ Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -243,7 +258,17 @@ class QueueFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                // ✅ Force reload data dari Firebase
+                // ✅ Get current user
+                val currentUserId = PreferencesHelper.getUserId(requireContext())
+
+                if (currentUserId.isNullOrEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        showLoading(false)
+                        Toast.makeText(requireContext(), "❌ Not logged in", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
                 withContext(Dispatchers.IO) {
                     DataSource.forceLoadFromFirebase()
                     delay(300)
@@ -251,59 +276,44 @@ class QueueFragment : Fragment() {
 
                 val activeBooking = DataSource.getActiveBooking()
 
-                if (activeBooking == null) {
+                // ✅ Check if belongs to user
+                if (activeBooking == null || activeBooking.userId != currentUserId) {
                     showLoading(false)
-                    Toast.makeText(
-                        requireContext(),
-                        "❌ Tidak ada antrian aktif",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(), "❌ Tidak ada antrian aktif", Toast.LENGTH_SHORT).show()
                     (activity as? MainActivity)?.navigateToFragment(EmptyQueueFragment())
                     return@launch
                 }
 
-                // ✅ Cek status booking
                 if (activeBooking.status == BookingStatus.COMPLETED) {
                     showLoading(false)
-                    Toast.makeText(
-                        requireContext(),
-                        "Booking sudah selesai",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(), "Booking sudah selesai", Toast.LENGTH_SHORT).show()
                     (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
                     return@launch
                 }
 
-                // Get today's bookings
                 val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     .format(Calendar.getInstance().time)
 
+                // ✅ Filter by user
                 val todayBookings = DataSource.getBookingHistory()
-                    .filter { it.date == today }
+                    .filter {
+                        it.date == today &&
+                                it.userId == currentUserId
+                    }
                     .sortedBy { it.queueNumber }
 
-                // Calculate current queue
                 val currentQueue = calculateCurrentQueue(todayBookings)
 
-                // Update display
                 updateQueueInfo(activeBooking, currentQueue, todayBookings)
 
                 showLoading(false)
 
-                Toast.makeText(
-                    requireContext(),
-                    "✅ Status diperbarui",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(requireContext(), "✅ Status diperbarui", Toast.LENGTH_SHORT).show()
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error refreshing: ${e.message}", e)
                 showLoading(false)
-                Toast.makeText(
-                    requireContext(),
-                    "❌ Error: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(requireContext(), "❌ Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -590,77 +600,101 @@ class QueueFragment : Fragment() {
         updateQueueInfo(update.booking, update.currentQueueNumber, listOf(update.booking))
     }
 
-// app/src/main/java/com/example/projectantrianrsrjkelompok2/QueueFragment.kt
+// ✅ TAMBAHKAN CHECK INI di QueueFragment.kt
+
+// Cari method completeQueue() dan replace dengan ini:
 
     private fun completeQueue() {
+        val activeBooking = DataSource.getActiveBooking()
+
+        if (activeBooking == null) {
+            Toast.makeText(
+                requireContext(),
+                "❌ Tidak ada booking aktif",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        // ✅ CRITICAL: Prevent double complete
+        if (activeBooking.status == BookingStatus.COMPLETED) {
+            Log.w(TAG, "⚠️ Booking ${activeBooking.id} already COMPLETED, preventing duplicate")
+            Toast.makeText(
+                requireContext(),
+                "⚠️ Booking sudah selesai",
+                Toast.LENGTH_SHORT
+            ).show()
+            // Navigate to history
+            (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
+            return
+        }
+
         AlertDialog.Builder(requireContext())
             .setTitle("Selesai Konsultasi")
             .setMessage("Tandai antrian ini sebagai selesai?")
             .setPositiveButton("Ya") { dialog, _ ->
                 dialog.dismiss()
 
-                val activeBooking = DataSource.getActiveBooking()
+                // ✅ Show loading
+                progressBar.visibility = View.VISIBLE
+                btnCompleteQueue.isEnabled = false
 
-                if (activeBooking != null) {
-                    // ✅ Show loading
-                    progressBar.visibility = View.VISIBLE
-                    btnCompleteQueue.isEnabled = false
+                lifecycleScope.launch {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            // ✅ DOUBLE CHECK sebelum update (race condition protection)
+                            val currentBooking = DataSource.getActiveBooking()
 
-                    lifecycleScope.launch {
-                        try {
-                            // ✅ Update status di DataSource (akan update cache lokal + Firebase)
-                            withContext(Dispatchers.IO) {
-                                DataSource.completeActiveBooking()
-
-                                // ✅ Tunggu sebentar untuk memastikan update selesai
-                                delay(500)
-
-                                // ✅ Force reload untuk memastikan data fresh
-                                DataSource.forceLoadFromFirebase()
+                            if (currentBooking == null) {
+                                Log.w(TAG, "⚠️ No active booking found during completion")
+                                return@withContext
                             }
 
-                            // ✅ Update UI di Main thread
-                            withContext(Dispatchers.Main) {
-                                progressBar.visibility = View.GONE
-                                btnCompleteQueue.isEnabled = true
-
-                                Toast.makeText(
-                                    requireContext(),
-                                    "✅ Antrian selesai! Pindah ke riwayat...",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                // ✅ Delay kecil sebelum navigate untuk memastikan data sudah ready
-                                delay(300)
-
-                                // Navigate ke HistoryFragment
-                                (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
+                            if (currentBooking.status == BookingStatus.COMPLETED) {
+                                Log.w(TAG, "⚠️ Booking ${currentBooking.id} already COMPLETED (double check)")
+                                return@withContext
                             }
 
-                        } catch (e: Exception) {
-                            Log.e(TAG, "❌ Error completing booking: ${e.message}", e)
+                            Log.d(TAG, "✅ Completing booking: ${currentBooking.id}")
 
-                            withContext(Dispatchers.Main) {
-                                progressBar.visibility = View.GONE
-                                btnCompleteQueue.isEnabled = true
+                            // Update status
+                            DataSource.completeActiveBooking()
 
-                                Toast.makeText(
-                                    requireContext(),
-                                    "⚠️ Antrian ditandai selesai",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                            // Wait for Firebase sync
+                            delay(500)
 
-                                // Tetap navigate meskipun ada error
-                                (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
-                            }
+                            // Force reload
+                            DataSource.forceLoadFromFirebase()
+                        }
+
+                        withContext(Dispatchers.Main) {
+                            progressBar.visibility = View.GONE
+                            btnCompleteQueue.isEnabled = true
+
+                            Toast.makeText(
+                                requireContext(),
+                                "✅ Antrian selesai! Pindah ke riwayat...",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            delay(300)
+                            (activity as? MainActivity)?.navigateToFragment(HistoryFragment())
+                        }
+
+                    } catch (e: Exception) {
+                        Log.e(TAG, "❌ Error completing booking: ${e.message}", e)
+
+                        withContext(Dispatchers.Main) {
+                            progressBar.visibility = View.GONE
+                            btnCompleteQueue.isEnabled = true
+
+                            Toast.makeText(
+                                requireContext(),
+                                "⚠️ Error: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "❌ Tidak ada booking aktif",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 }
             }
             .setNegativeButton("Batal", null)

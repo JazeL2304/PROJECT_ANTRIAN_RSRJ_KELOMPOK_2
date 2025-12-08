@@ -17,6 +17,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
+
 
 class BookingFragment : Fragment() {
 
@@ -437,9 +439,23 @@ class BookingFragment : Fragment() {
     // ======================================================
     private fun createBooking() {
 
+        // ✅ STEP 1: Get current logged in user ID
+        val currentUserId = PreferencesHelper.getUserId(requireContext())
+
+        if (currentUserId.isNullOrEmpty()) {
+            toast("❌ Silakan login terlebih dahulu")
+            Log.e("BookingFragment", "❌ User not logged in!")
+            // Navigate to login
+            (activity as? MainActivity)?.navigateToFragment(LoginFragment())
+            return
+        }
+
+        Log.d("BookingFragment", "👤 Creating booking for userId: $currentUserId")
+
         val queueNumber =
             DataSource.getBookingHistory().count { it.date == selectedDate } + 1
 
+        // ✅ STEP 2: Create booking WITH userId
         val booking = Booking(
             id = "Q${queueNumber.toString().padStart(3, '0')}",
             queueNumber = queueNumber,
@@ -452,8 +468,15 @@ class BookingFragment : Fragment() {
             diagnosis = "",
             prescription = "",
             status = BookingStatus.WAITING,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            firebaseId = "Q${queueNumber.toString().padStart(3, '0')}",
+            userId = currentUserId  // ✅ CRITICAL: Set userId!
         )
+
+        Log.d("BookingFragment", "📋 New booking:")
+        Log.d("BookingFragment", "  - Booking ID: ${booking.id}")
+        Log.d("BookingFragment", "  - Patient: ${booking.patientName}")
+        Log.d("BookingFragment", "  - User ID: $currentUserId")
 
         showLoading(true)
 
@@ -467,8 +490,11 @@ class BookingFragment : Fragment() {
 
                 if (!success) {
                     toast("❌ Gagal simpan booking")
+                    Log.e("BookingFragment", "❌ Failed to save booking")
                     return@runOnUiThread
                 }
+
+                Log.d("BookingFragment", "✅ Booking saved successfully!")
 
                 DataSource.setActiveBooking(booking)
                 DataSource.addToHistory(booking)

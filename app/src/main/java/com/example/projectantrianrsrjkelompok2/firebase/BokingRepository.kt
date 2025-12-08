@@ -6,26 +6,44 @@ import com.google.firebase.database.*
 
 object BookingRepository {
 
-    private val ref =
-        FirebaseDatabase.getInstance().getReference("bookings")
+    private val ref = FirebaseDatabase.getInstance().getReference("bookings")
 
     // ✅ SIMPAN QUERY + LISTENER BIAR TIDAK DOUBLE
-    private val activeListeners =
-        mutableListOf<Pair<Query, ValueEventListener>>()
+    private val activeListeners = mutableListOf<Pair<Query, ValueEventListener>>()
 
     // ==========================================================
-    // ADD BOOKING
+    // ADD BOOKING - FIXED: Hanya save 1 kali dengan ID yang benar
     // ==========================================================
     fun addBooking(booking: Booking, onResult: (Boolean) -> Unit) {
+        // ✅ FIXED: Gunakan booking.id (Q001, Q002, dll) sebagai Firebase key
+        // BUKAN generate ID baru dengan push()
 
-        val firebaseId = ref.push().key ?: return
+        val firebaseKey = booking.id // ← Ini yang benar! (Q001, Q002, dst)
 
-        val bookingWithId = booking.copy(firebaseId = firebaseId)
+        if (firebaseKey.isEmpty()) {
+            android.util.Log.e("BookingRepository", "❌ Booking ID is empty!")
+            onResult(false)
+            return
+        }
 
-        ref.child(firebaseId)
-            .setValue(bookingWithId)
-            .addOnSuccessListener { onResult(true) }
-            .addOnFailureListener { onResult(false) }
+        // ✅ Set firebaseId sama dengan id
+        val bookingToSave = booking.copy(firebaseId = firebaseKey)
+
+        android.util.Log.d("BookingRepository", "💾 Saving booking with key: $firebaseKey")
+        android.util.Log.d("BookingRepository", "   - Patient: ${booking.patientName}")
+        android.util.Log.d("BookingRepository", "   - Queue: ${booking.queueNumber}")
+
+        // ✅ Save HANYA SEKALI dengan key yang benar
+        ref.child(firebaseKey)
+            .setValue(bookingToSave)
+            .addOnSuccessListener {
+                android.util.Log.d("BookingRepository", "✅ Booking saved successfully: $firebaseKey")
+                onResult(true)
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("BookingRepository", "❌ Failed to save booking: ${e.message}", e)
+                onResult(false)
+            }
     }
 
     // ==========================================================
@@ -36,13 +54,10 @@ object BookingRepository {
     ) = object : ValueEventListener {
 
         override fun onDataChange(snapshot: DataSnapshot) {
-
-            val list =
-                snapshot.children.mapNotNull {
-                    it.getValue(Booking::class.java)
-                        ?.copy(firebaseId = it.key ?: "")
-                }
-
+            val list = snapshot.children.mapNotNull {
+                it.getValue(Booking::class.java)
+                    ?.copy(firebaseId = it.key ?: "")
+            }
             onUpdate(list)
         }
 
@@ -53,30 +68,27 @@ object BookingRepository {
     // ACTIVE QUEUE (ADMIN)
     // ==========================================================
     fun listenActiveQueue(onUpdate: (List<Booking>) -> Unit) {
-
         val query = ref
 
         val listener = createListener {
-
-            val active =
-                it.filter {
-                    it.status == BookingStatus.WAITING ||
-                            it.status == BookingStatus.CALLED
+            val active = it.filter {
+                it.status == BookingStatus.WAITING ||
+                        it.status == BookingStatus.CALLED
+            }
+                .distinctBy { b ->
+                    "${b.patientName}|${b.queueNumber}|${b.time}|${b.date}"
                 }
-                    .distinctBy { b ->
-                        "${b.patientName}|${b.queueNumber}|${b.time}|${b.date}"
-                    }
-                    .sortedWith(
-                        compareBy<Booking> {
-                            when (it.status) {
-                                BookingStatus.CALLED -> 0
-                                BookingStatus.WAITING -> 1
-                                BookingStatus.COMPLETED -> 2
-                                else -> 3
-                            }
-                        }.thenBy { it.queueNumber }
-                            .thenBy { it.time }
-                    )
+                .sortedWith(
+                    compareBy<Booking> {
+                        when (it.status) {
+                            BookingStatus.CALLED -> 0
+                            BookingStatus.WAITING -> 1
+                            BookingStatus.COMPLETED -> 2
+                            else -> 3
+                        }
+                    }.thenBy { it.queueNumber }
+                        .thenBy { it.time }
+                )
 
             onUpdate(active)
         }
@@ -93,40 +105,34 @@ object BookingRepository {
         date: String?,
         onUpdate: (List<Booking>) -> Unit
     ) {
-
-        val query =
-            ref.orderByChild("doctorName")
-                .equalTo(doctorName)
+        val query = ref.orderByChild("doctorName")
+            .equalTo(doctorName)
 
         val listener = createListener {
-
-            val filtered =
-                it.filter { b ->
-                    (date == null || b.date == date) &&
-                            (b.status == BookingStatus.WAITING ||
-                                    b.status == BookingStatus.CALLED)
-                }
+            val filtered = it.filter { b ->
+                (date == null || b.date == date) &&
+                        (b.status == BookingStatus.WAITING ||
+                                b.status == BookingStatus.CALLED)
+            }
 
             // ❗ HILANGKAN DUPLIKAT TOTAL
-            val unique =
-                filtered.distinctBy {
-                    "${it.patientName}|${it.queueNumber}|${it.time}|${it.date}"
-                }
+            val unique = filtered.distinctBy {
+                "${it.patientName}|${it.queueNumber}|${it.time}|${it.date}"
+            }
 
             // ✅ SORT FINAL
-            val sorted =
-                unique.sortedWith(
-                    compareBy<Booking> {
-                        when (it.status) {
-                            BookingStatus.CALLED -> 0
-                            BookingStatus.WAITING -> 1
-                            BookingStatus.COMPLETED -> 2
-                            else -> 3
-                        }
+            val sorted = unique.sortedWith(
+                compareBy<Booking> {
+                    when (it.status) {
+                        BookingStatus.CALLED -> 0
+                        BookingStatus.WAITING -> 1
+                        BookingStatus.COMPLETED -> 2
+                        else -> 3
                     }
-                        .thenBy { it.queueNumber }
-                        .thenBy { it.time }
-                )
+                }
+                    .thenBy { it.queueNumber }
+                    .thenBy { it.time }
+            )
 
             onUpdate(sorted)
         }
@@ -142,23 +148,19 @@ object BookingRepository {
         doctorName: String,
         onUpdate: (List<Booking>) -> Unit
     ) {
-
-        val query =
-            ref.orderByChild("doctorName")
-                .equalTo(doctorName)
+        val query = ref.orderByChild("doctorName")
+            .equalTo(doctorName)
 
         val listener = createListener {
-
-            val completed =
-                it.filter { b ->
-                    b.status == BookingStatus.COMPLETED
+            val completed = it.filter { b ->
+                b.status == BookingStatus.COMPLETED
+            }
+                .distinctBy {
+                    "${it.patientName}|${it.queueNumber}|${it.time}|${it.date}"
                 }
-                    .distinctBy {
-                        "${it.patientName}|${it.queueNumber}|${it.time}|${it.date}"
-                    }
-                    .sortedByDescending { b ->
-                        b.createdAt
-                    }
+                .sortedByDescending { b ->
+                    b.createdAt
+                }
 
             onUpdate(completed)
         }
@@ -190,11 +192,9 @@ object BookingRepository {
     // ✅ CLEAR LISTENER (ANTI DOUBLE)
     // ==========================================================
     fun clearListeners() {
-
         activeListeners.forEach { (query, listener) ->
             query.removeEventListener(listener)
         }
-
         activeListeners.clear()
     }
 }
