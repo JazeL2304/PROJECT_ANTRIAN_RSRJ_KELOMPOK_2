@@ -39,10 +39,20 @@ import com.example.projectantrianrsrjkelompok2.doctor.DoctorPatientHistoryFragme
 import com.example.projectantrianrsrjkelompok2.utils.NotificationHelper
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import com.example.projectantrianrsrjkelompok2.utils.FirebaseSeedData
+import com.example.projectantrianrsrjkelompok2.utils.FirebaseDataMigration
 
 // ========== MATERIAL COMPONENTS ==========
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
+/**
+ * ✅ UPDATED MainActivity - With Auto Migration
+ *
+ * FITUR BARU:
+ * 1. Auto-update admin001 → "angelica"
+ * 2. Auto-update doc002 password → "siti123"
+ * 3. Auto-hash semua password plain text
+ * 4. Jalan otomatis saat app start
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var bottomNavigation: BottomNavigationView
@@ -57,53 +67,133 @@ class MainActivity : AppCompatActivity() {
         NotificationHelper.createNotificationChannel(this)
         bottomNavigation = findViewById(R.id.bottom_navigation)
 
-        // ✅ SEED DATA FIREBASE (async, tidak blocking UI)
+        // ✅ AUTO-MIGRATE existing data (SEBELUM seed)
+        autoMigrateExistingData()
+
+        // ✅ Seed data Firebase HANYA pada first launch
         seedFirebaseDataIfNeeded()
 
-        // ✅ Clear session SAJA
+        // ✅ Clear session untuk logout otomatis
         preferencesHelper.clearSession()
 
-        // ✅ Langsung tampilkan halaman login
+        // ✅ Tampilkan halaman login
         loadFragment(LoginFragment())
         hideBottomNavigation()
+
+        // Handle notifikasi
         handleNotificationIntent()
     }
 
-    // 🌱 Seed Firebase with dummy data on first launch (ASYNC)
+    /**
+     * 🔄 AUTO-MIGRATE EXISTING DATA
+     *
+     * Fungsi ini akan:
+     * 1. Cek apakah data perlu di-update
+     * 2. Update admin001 fullName → "angelica"
+     * 3. Update doc002 password → "siti123" (hashed)
+     * 4. Hash SEMUA password yang masih plain text
+     *
+     * Jalan OTOMATIS setiap kali app start, tapi hanya update yang perlu.
+     */
+    private fun autoMigrateExistingData() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                Log.d("MainActivity", "🔍 Checking if data migration is needed...")
+
+                // Check apakah perlu migration
+                val needsMigration = FirebaseDataMigration.needsMigration()
+
+                if (!needsMigration) {
+                    Log.d("MainActivity", "✅ Data already up-to-date, no migration needed")
+                    return@launch
+                }
+
+                Log.d("MainActivity", "🔄 Starting data migration...")
+
+                // Run migration
+                val success = FirebaseDataMigration.migrateExistingData()
+
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        Log.d("MainActivity", "✅ Data migration completed!")
+                        Toast.makeText(
+                            this@MainActivity,
+                            "✅ Data berhasil diupdate",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Log.e("MainActivity", "❌ Data migration failed")
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e("MainActivity", "❌ Migration error: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * 🌱 Seed Firebase with data on FIRST LAUNCH only
+     */
     private fun seedFirebaseDataIfNeeded() {
         val isFirstLaunch = preferencesHelper.isFirstLaunch()
 
-        Log.d("MainActivity", "🔍 First Launch: $isFirstLaunch")
+        Log.d("MainActivity", "🔍 Checking first launch: $isFirstLaunch")
 
         if (isFirstLaunch) {
+            // ✅ FIRST LAUNCH - Seed data baru
+            Log.d("MainActivity", "🌱 First launch detected, starting seed...")
+
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
-                    Log.d("MainActivity", "🌱 Starting Firebase seed (FIRST LAUNCH)...")
+                    // Wait for migration to complete first
+                    delay(1000)
 
+                    Log.d("MainActivity", "🌱 Seeding Firebase data...")
+
+                    // Invalidate cache
                     DataSource.invalidateCache()
 
-                    // ✅ TAMBAHAN: Force seed users FIRST
-                    FirebaseSeedData.forceSeedUsersOnly()
-                    delay(1000) // Tunggu sebentar
-
+                    // Seed semua data (users sudah include password hashed)
                     FirebaseSeedData.seedAllData()
                     delay(2000)
+
+                    // Force load from Firebase
                     DataSource.forceLoadFromFirebase()
 
                     withContext(Dispatchers.Main) {
+                        // Mark first launch as complete
                         preferencesHelper.setFirstLaunchComplete()
                         Log.d("MainActivity", "✅ Firebase seed completed!")
+
+                        Toast.makeText(
+                            this@MainActivity,
+                            "✅ Data berhasil dimuat",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 } catch (e: Exception) {
                     Log.e("MainActivity", "❌ Firebase seed failed: ${e.message}", e)
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "⚠️ Gagal memuat data awal",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
         } else {
+            // ✅ NOT FIRST LAUNCH - Preload existing data
+            Log.d("MainActivity", "📥 Not first launch, preloading existing data...")
             preloadDataFromFirebase()
         }
     }
 
-    // 🔔 Jika notifikasi membuka QueueFragment
+    /**
+     * 🔔 Handle notification intent
+     */
     private fun handleNotificationIntent() {
         if (intent.getBooleanExtra("open_queue_fragment", false)) {
             if (DataSource.hasActiveBooking()) {
@@ -115,7 +205,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ⚙️ Setup Bottom Navigation untuk PASIEN
+    /**
+     * ⚙️ Setup Bottom Navigation untuk PASIEN
+     */
     private fun setupPatientNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu)
@@ -155,7 +247,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ⚙️ Setup Bottom Navigation untuk ADMIN
+    /**
+     * ⚙️ Setup Bottom Navigation untuk ADMIN
+     */
     private fun setupAdminNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu_admin)
@@ -182,7 +276,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ⚙️ Setup Bottom Navigation untuk DOKTER
+    /**
+     * ⚙️ Setup Bottom Navigation untuk DOKTER
+     */
     private fun setupDoctorNavigation() {
         bottomNavigation.menu.clear()
         bottomNavigation.inflateMenu(R.menu.bottom_navigation_menu_doctor)
@@ -209,7 +305,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 📦 Ganti fragment dengan animasi lembut
+    /**
+     * 📦 Ganti fragment dengan animasi
+     */
     private fun loadFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(
@@ -220,36 +318,48 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    // Navigasi manual antar fragment
+    /**
+     * Navigasi manual antar fragment
+     */
     fun navigateToFragment(fragment: Fragment) {
         loadFragment(fragment)
         showBottomNavigation()
     }
 
-    // Navigasi ke login/signup
+    /**
+     * Navigasi ke login/signup
+     */
     fun navigateToLoginOrSignup(fragment: Fragment) {
         loadFragment(fragment)
         hideBottomNavigation()
     }
 
-    // 🔹 Sembunyikan bottom navigation
+    /**
+     * 🔹 Sembunyikan bottom navigation
+     */
     fun hideBottomNavigation() {
         bottomNavigation.visibility = View.GONE
     }
 
-    // 🔹 Tampilkan bottom navigation
+    /**
+     * 🔹 Tampilkan bottom navigation
+     */
     fun showBottomNavigation() {
         bottomNavigation.visibility = View.VISIBLE
     }
 
-    // 🚪 Logout user
+    /**
+     * 🚪 Logout user
+     */
     fun logout() {
         preferencesHelper.clearSession()
         hideBottomNavigation()
         loadFragment(LoginFragment())
     }
 
-    // 👤 Pasien → dashboard pasien + setup nav pasien
+    /**
+     * 👤 Pasien → dashboard pasien
+     */
     fun showPatientDashboard() {
         setupPatientNavigation()
         showBottomNavigation()
@@ -258,7 +368,9 @@ class MainActivity : AppCompatActivity() {
         bottomNavigation.selectedItemId = R.id.nav_dashboard
     }
 
-    // 🩺 Dokter → dashboard dokter + setup nav dokter
+    /**
+     * 🩺 Dokter → dashboard dokter
+     */
     fun showDoctorDashboard() {
         setupDoctorNavigation()
         showBottomNavigation()
@@ -267,7 +379,9 @@ class MainActivity : AppCompatActivity() {
         preloadDataFromFirebase()
     }
 
-    // 🧾 Admin → dashboard admin + setup nav admin
+    /**
+     * 🧾 Admin → dashboard admin
+     */
     fun showAdminDashboard() {
         setupAdminNavigation()
         showBottomNavigation()
@@ -276,7 +390,9 @@ class MainActivity : AppCompatActivity() {
         preloadDataFromFirebase()
     }
 
-    // 📥 Preload data from Firebase after login
+    /**
+     * 📥 Preload data from Firebase
+     */
     private fun preloadDataFromFirebase() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -286,11 +402,6 @@ class MainActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     val doctors = DataSource.getAllDoctors()
                     Log.d("MainActivity", "✅ Data preloaded: ${doctors.size} doctors")
-                    Toast.makeText(
-                        this@MainActivity,
-                        "✅ Data dimuat",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -300,12 +411,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Handle back button
+     */
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
 
         when (currentFragment) {
-            is LoginFragment, is DashboardFragment, is AdminDashboardFragment, is DoctorDashboardFragment -> {
+            is LoginFragment,
+            is DashboardFragment,
+            is AdminDashboardFragment,
+            is DoctorDashboardFragment -> {
                 finish()
             }
             else -> {

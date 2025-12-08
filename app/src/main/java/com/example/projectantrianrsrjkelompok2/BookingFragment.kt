@@ -435,7 +435,7 @@ class BookingFragment : Fragment() {
     }
 
     // ======================================================
-    // CREATE BOOKING
+    // CREATE BOOKING - ✅ FIXED: Queue number per dokter & tanggal
     // ======================================================
     private fun createBooking() {
 
@@ -452,12 +452,26 @@ class BookingFragment : Fragment() {
 
         Log.d("BookingFragment", "👤 Creating booking for userId: $currentUserId")
 
-        val queueNumber =
-            DataSource.getBookingHistory().count { it.date == selectedDate } + 1
+        // ✅ FIX: Queue number berdasarkan DOKTER + TANGGAL yang sama (bukan semua booking)
+        val queueNumber = DataSource.getBookingHistory().count { booking ->
+            booking.date == selectedDate &&
+                    booking.doctorName == selectedDoctor!!.name &&  // ✅ SAME DOCTOR
+                    booking.status != BookingStatus.CANCELLED  // ✅ Exclude cancelled bookings
+        } + 1
+
+        Log.d("BookingFragment", "📊 Queue calculation:")
+        Log.d("BookingFragment", "  - Date: $selectedDate")
+        Log.d("BookingFragment", "  - Doctor: ${selectedDoctor!!.name}")
+        Log.d("BookingFragment", "  - Assigned Queue #: $queueNumber")
+
+        // ✅ Generate unique booking ID dengan format: Q{doctorInitial}_{date}_{queueNumber}
+        val doctorInitial = selectedDoctor!!.name.take(2).uppercase()
+        val dateShort = selectedDate.replace("-", "")
+        val bookingId = "Q${doctorInitial}_${dateShort}_${queueNumber.toString().padStart(3, '0')}"
 
         // ✅ STEP 2: Create booking WITH userId
         val booking = Booking(
-            id = "Q${queueNumber.toString().padStart(3, '0')}",
+            id = bookingId,
             queueNumber = queueNumber,
             patientName = etPatientName.text.toString(),
             doctorName = selectedDoctor!!.name,
@@ -467,15 +481,19 @@ class BookingFragment : Fragment() {
             complaint = etComplaint.text.toString(),
             diagnosis = "",
             prescription = "",
-            status = BookingStatus.WAITING,
+            status = BookingStatus.WAITING,  // ✅ Always start as WAITING
             createdAt = System.currentTimeMillis(),
-            firebaseId = "Q${queueNumber.toString().padStart(3, '0')}",
+            firebaseId = bookingId,
             userId = currentUserId  // ✅ CRITICAL: Set userId!
         )
 
         Log.d("BookingFragment", "📋 New booking:")
         Log.d("BookingFragment", "  - Booking ID: ${booking.id}")
+        Log.d("BookingFragment", "  - Queue #: ${booking.queueNumber}")
         Log.d("BookingFragment", "  - Patient: ${booking.patientName}")
+        Log.d("BookingFragment", "  - Doctor: ${booking.doctorName}")
+        Log.d("BookingFragment", "  - Date: ${booking.date}")
+        Log.d("BookingFragment", "  - Status: ${booking.status}")
         Log.d("BookingFragment", "  - User ID: $currentUserId")
 
         showLoading(true)
@@ -497,9 +515,10 @@ class BookingFragment : Fragment() {
                 Log.d("BookingFragment", "✅ Booking saved successfully!")
 
                 DataSource.setActiveBooking(booking)
-                DataSource.addToHistory(booking)
+                // ✅ Note: setActiveBooking sudah memanggil addToHistory, jangan duplikat
+                // DataSource.addToHistory(booking)  // ← HAPUS INI untuk mencegah duplikat
 
-                toast("✅ Booking berhasil")
+                toast("✅ Booking berhasil! Antrian Anda: #$queueNumber")
 
                 (activity as? MainActivity)
                     ?.navigateToFragment(QueueFragment())

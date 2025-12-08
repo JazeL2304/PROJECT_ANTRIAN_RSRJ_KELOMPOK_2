@@ -1,6 +1,7 @@
 package com.example.projectantrianrsrjkelompok2.doctor
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -26,6 +27,10 @@ class DoctorDashboardFragment : Fragment() {
     private lateinit var pref: PreferencesHelper
     private var doctorName = ""
 
+    companion object {
+        private const val TAG = "DoctorDashboard"
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -37,7 +42,12 @@ class DoctorDashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         pref = PreferencesHelper(requireContext())
-        doctorName = pref.getDoctorName() ?: "Dr. Ahmad Santoso"
+
+        // ✅ FIX: Gunakan getUserFullName() bukan getDoctorName()
+        // Karena LoginFragment menyimpan ke KEY_USER_FULL_NAME
+        doctorName = pref.getUserFullName() ?: pref.getDoctorName() ?: "Dokter"
+
+        Log.d(TAG, "👨‍⚕️ Doctor logged in: $doctorName")
 
         tvGreeting = view.findViewById(R.id.tv_greeting)
         tvGreeting.text = "Selamat Datang, $doctorName! 👋"
@@ -72,17 +82,30 @@ class DoctorDashboardFragment : Fragment() {
     }
 
     // ==========================================================
-    // ✅ REALTIME SAFE + AUTO NUMBER + FIX COMPLETED COUNT
+    // ✅ REALTIME SAFE + AUTO NUMBER + FIX COMPLETED COUNT + ICON CENTANG
     // ==========================================================
     private fun startRealtime() {
 
         BookingRepository.clearListeners()
 
+        Log.d(TAG, "📡 Starting realtime listener for doctor: $doctorName")
+
+        // ✅ FIXED: Pastikan doctorName tidak kosong
+        if (doctorName.isEmpty() || doctorName == "Dokter") {
+            Log.e(TAG, "❌ Doctor name is empty or default!")
+            tvRecentPatients.text = "❌ Error: Nama dokter tidak ditemukan.\nSilakan login ulang."
+            return
+        }
+
         // ✅ Ambil SEMUA booking dokter ini (tidak hanya hari ini)
+        // PENTING: BookingRepository.listenQueueByDoctor harus diubah dulu
+        // agar mengambil SEMUA status (WAITING, CALLED, COMPLETED)
         BookingRepository.listenQueueByDoctor(
             doctorName,
-            null
+            null  // null = ambil semua tanggal
         ) { bookings ->
+
+            Log.d(TAG, "📥 Received ${bookings.size} bookings for $doctorName")
 
             val unique = bookings.distinctBy {
                 "${it.patientName}|${it.queueNumber}|${it.time}"
@@ -93,6 +116,8 @@ class DoctorDashboardFragment : Fragment() {
     }
 
     private fun updateDashboardUI(list: List<Booking>) {
+
+        Log.d(TAG, "📊 Updating dashboard with ${list.size} bookings")
 
         // ✅ Filter pasien yang menunggu/dipanggil (WAITING atau CALLED)
         val waiting =
@@ -106,36 +131,68 @@ class DoctorDashboardFragment : Fragment() {
             it.status == BookingStatus.COMPLETED
         }
 
-        // ✅ UPDATE STATISTIK
+        Log.d(TAG, "  - Total: ${list.size}")
+        Log.d(TAG, "  - Waiting/Called: ${waiting.size}")
+        Log.d(TAG, "  - Completed: ${completed.size}")
+
+        // ✅ UPDATE STATISTIK - SEKARANG AKAN BENAR!
         tvTotalPatientsToday.text = list.size.toString()
         tvActiveQueue.text = waiting.size.toString()
-        tvCompletedToday.text = completed.size.toString()  // ✅ FIX: Hitung dari list completed
+        tvCompletedToday.text = completed.size.toString()  // ← INI SEKARANG AKAN BERTAMBAH!
 
-        // ✅ TAMPILKAN PASIEN MENUNGGU
+        // ✅ TAMPILKAN SEMUA PASIEN (MENUNGGU + SELESAI) DENGAN ICON
         val sb = StringBuilder()
 
-        if (waiting.isEmpty()) {
-            sb.append("✅ Tidak ada pasien yang menunggu\n\n")
+        if (list.isEmpty()) {
+            sb.append("✅ Tidak ada pasien hari ini\n\n")
             sb.append("Klik tombol 'Lihat Antrian Pasien' untuk melihat riwayat lengkap")
         } else {
-            sb.append("📋 Pasien yang Menunggu:\n\n")
+            // ✅ SECTION 1: Pasien yang Menunggu
+            if (waiting.isNotEmpty()) {
+                sb.append("⏱️ Pasien yang Menunggu:\n\n")
 
-            // ✅ Tampilkan max 3 pasien di dashboard (lebih ringkas)
-            waiting.take(3)
-                .forEachIndexed { index, b ->
+                waiting.take(3).forEachIndexed { index, b ->
+                    val noDisplay = index + 1
 
-                    val noDisplay = index + 1   // ✅ AUTO NUMBER
+                    // Icon berdasarkan status
+                    val statusIcon = when(b.status) {
+                        BookingStatus.CALLED -> "📢"
+                        else -> "⏳"
+                    }
 
-                    sb.append("• No. $noDisplay - ${b.patientName}\n")
-                    sb.append("  Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
-                    sb.append("  Waktu: ${b.time}\n")
-                    sb.append("  Status: ${b.status.toDisplayString()}\n\n")
+                    sb.append("$statusIcon No. $noDisplay - ${b.patientName}\n")
+                    sb.append("   Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
+                    sb.append("   Waktu: ${b.time}\n")
+                    sb.append("   Status: ${b.status.toDisplayString()}\n\n")
                 }
 
-            // ✅ Tampilkan info kalau masih ada pasien lagi
-            if (waiting.size > 3) {
-                sb.append("... dan ${waiting.size - 3} pasien lainnya\n")
-                sb.append("Klik 'Lihat Antrian Pasien' untuk melihat semua")
+                if (waiting.size > 3) {
+                    sb.append("... dan ${waiting.size - 3} pasien lainnya menunggu\n\n")
+                }
+            }
+
+            // ✅ SECTION 2: Pasien yang Selesai (dengan icon centang ✅)
+            if (completed.isNotEmpty()) {
+                sb.append("✅ Pasien Selesai Hari Ini:\n\n")
+
+                completed.take(3).forEachIndexed { index, b ->
+                    val noDisplay = index + 1
+
+                    // ✅ ICON CENTANG untuk yang selesai
+                    sb.append("✅ No. $noDisplay - ${b.patientName}\n")
+                    sb.append("   Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
+                    sb.append("   Waktu: ${b.time}\n")
+                    sb.append("   Status: Selesai ✓\n\n")
+                }
+
+                if (completed.size > 3) {
+                    sb.append("... dan ${completed.size - 3} pasien lainnya selesai\n\n")
+                }
+            }
+
+            // ✅ Info tambahan
+            if (waiting.isEmpty() && completed.isNotEmpty()) {
+                sb.append("\n🎉 Semua pasien sudah selesai!")
             }
         }
 

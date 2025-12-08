@@ -98,8 +98,8 @@ object BookingRepository {
     }
 
     // ==========================================================
-    // QUEUE PER DOKTER  ✅ FIX DOUBEL + URUT
-    // ==========================================================
+// QUEUE PER DOKTER  ✅ FIX: Ambil SEMUA status termasuk COMPLETED
+// ==========================================================
     fun listenQueueByDoctor(
         doctorName: String,
         date: String?,
@@ -109,10 +109,10 @@ object BookingRepository {
             .equalTo(doctorName)
 
         val listener = createListener {
+            // ✅ FIX: Ambil SEMUA booking (termasuk COMPLETED)
+            // Filter hanya berdasarkan date jika ada
             val filtered = it.filter { b ->
-                (date == null || b.date == date) &&
-                        (b.status == BookingStatus.WAITING ||
-                                b.status == BookingStatus.CALLED)
+                date == null || b.date == date
             }
 
             // ❗ HILANGKAN DUPLIKAT TOTAL
@@ -120,7 +120,7 @@ object BookingRepository {
                 "${it.patientName}|${it.queueNumber}|${it.time}|${it.date}"
             }
 
-            // ✅ SORT FINAL
+            // ✅ SORT FINAL: CALLED pertama, lalu WAITING, lalu COMPLETED
             val sorted = unique.sortedWith(
                 compareBy<Booking> {
                     when (it.status) {

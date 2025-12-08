@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SIMPAN DI: res/layout/item_queue_card.xml -->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header: Queue Number & Status Badge -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvQueueNumber"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="No. 1"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#333333"/>
+
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📢 Dipanggil"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/bg_status_called"/>
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="#E0E0E0"/>
+
+        <!-- Patient Info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="8dp">
+
+            <!-- Patient Name -->
+            <TextView
+                android:id="@+id/tvPatientName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="👤 jasiin"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#1976D2"
+                android:layout_marginBottom="6dp"/>
+
+            <!-- Date & Time -->
+            <TextView
+                android:id="@+id/tvDateTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📅 2025-12-08 • 23:30"
+                android:textSize="14sp"
+                android:textColor="#757575"
+                android:layout_marginBottom="6dp"/>
+
+            <!-- Complaint -->
+            <TextView
+                android:id="@+id/tvComplaint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="💬 Keluhan pasien di sini..."
+                android:textSize="14sp"
+                android:textColor="#616161"
+                android:maxLines="2"
+                android:ellipsize="end"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

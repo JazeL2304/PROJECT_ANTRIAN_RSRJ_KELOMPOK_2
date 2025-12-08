@@ -10,7 +10,13 @@ import java.util.*
 import com.example.projectantrianrsrjkelompok2.model.UserAccount
 
 /**
- * ✅ FIXED Firebase Seeding - Dengan proper async handling
+ * ✅ UPDATED Firebase Seeding - With proper data & hash support
+ *
+ * PERUBAHAN:
+ * 1. Admin001 fullName = "angelica" (bukan "Siti Nurhaliza")
+ * 2. Doc002 password = "siti123" (bukan "dokter123")
+ * 3. Password otomatis di-hash dengan bcrypt
+ * 4. Seed HANYA SEKALI (check existing data)
  */
 object FirebaseSeedData {
 
@@ -18,14 +24,17 @@ object FirebaseSeedData {
     private val firebaseRepo = FirebaseRepository()
 
     /**
-     * 🔐 Seed User Accounts
+     * 🔐 Seed User Accounts - UPDATED DATA
      */
     private suspend fun seedUsers() {
-        val users = listOf(
+        Log.d(TAG, "🔐 Preparing to seed user accounts...")
+
+        // ✅ Data user yang sudah di-update
+        val usersPlain = listOf(
             UserAccount(
                 id = "user001",
                 email = "user@example.com",
-                password = "password123",
+                password = "password123",  // Plain, akan di-hash
                 fullName = "John Doe",
                 phoneNumber = "081234567890",
                 userType = "PATIENT"
@@ -33,93 +42,105 @@ object FirebaseSeedData {
             UserAccount(
                 id = "doc001",
                 email = "dokter@rumahsakit.com",
-                password = "dokter123",
+                password = "dokter123",  // Plain, akan di-hash
                 fullName = "Dr. Ahmad Susanto",
                 phoneNumber = "081234567891",
                 userType = "DOCTOR"
             ),
             UserAccount(
+                id = "doc002",
+                email = "siti@rumahsakit.com",
+                password = "siti123",  // ✅ PASSWORD BARU!
+                fullName = "Dr. Siti Nurhaliza",
+                phoneNumber = "081234567892",
+                userType = "DOCTOR"
+            ),
+            UserAccount(
                 id = "admin001",
                 email = "admin@rumahsakit.com",
-                password = "admin123",
-                fullName = "Siti Nurhaliza",
-                phoneNumber = "081234567892",
+                password = "admin123",  // Plain, akan di-hash
+                fullName = "angelica",  // ✅ NAMA BARU!
+                phoneNumber = "081234567893",
                 userType = "ADMIN"
             )
         )
 
-        Log.d(TAG, "📤 Seeding ${users.size} user accounts...")
+        Log.d(TAG, "🔐 Hashing passwords...")
+
+        // ✅ Hash semua password SEBELUM disimpan
+        val usersWithHashedPassword = usersPlain.map { user ->
+            val hashedPassword = PasswordHasher.hashPassword(user.password)
+            Log.d(TAG, "  🔐 ${user.id}: ${user.password} → ${hashedPassword.take(30)}...")
+
+            user.copy(password = hashedPassword)
+        }
+
+        Log.d(TAG, "📤 Seeding ${usersWithHashedPassword.size} user accounts...")
         var successCount = 0
 
-        users.forEach { user ->
+        usersWithHashedPassword.forEach { user ->
             try {
                 val success = firebaseRepo.addUserAccount(user)
                 if (success) {
                     successCount++
-                    Log.d(TAG, "  ✅ Added: ${user.email} (${user.userType})")
+                    Log.d(TAG, "  ✅ Added: ${user.email} (${user.userType}) - ${user.fullName}")
                 } else {
                     Log.e(TAG, "  ❌ Failed to add: ${user.email}")
                 }
-                delay(100)
+                delay(200) // Delay untuk stabilitas Firebase
             } catch (e: Exception) {
                 Log.e(TAG, "  ❌ Exception adding ${user.email}: ${e.message}")
             }
         }
 
-        Log.d(TAG, "✅ Users: $successCount/${users.size} added")
+        Log.d(TAG, "✅ Users: $successCount/${usersWithHashedPassword.size} added (with hashed passwords)")
     }
 
+    /**
+     * 🌱 Seed All Data - WITH PROPER CHECKS
+     */
     fun seedAllData() {
         runBlocking {
             try {
                 Log.d(TAG, "🌱 Starting Firebase seed...")
 
-                // ✅ CHECK: Apakah USERS sudah ada?
-                val existingUsers = firebaseRepo.getAllUsers() // ❌ BELUM ADA METHOD INI
-
-                // ✅ ALTERNATIF: Cek apakah users ada dengan try-catch
-                var usersExist = false
-                try {
-                    val testUser = firebaseRepo.loginUser("user@example.com", "password123")
-                    usersExist = (testUser != null)
-                } catch (e: Exception) {
-                    usersExist = false
-                }
-
-                if (!usersExist) {
-                    Log.d(TAG, "📤 Users not found, seeding users...")
-                    seedUsers()
-                    delay(1000)
-                } else {
-                    Log.d(TAG, "ℹ️ Users already exist, skipping user seed")
-                }
-
-                // Check doctors
-                delay(500)
+                // ✅ CHECK: Apakah data sudah ada?
                 val existingDoctors = firebaseRepo.getAllDoctors()
 
                 if (existingDoctors.isNotEmpty()) {
-                    Log.d(TAG, "ℹ️ Data already exists in Firebase")
+                    Log.d(TAG, "ℹ️ Data already exists in Firebase (${existingDoctors.size} doctors)")
+                    Log.d(TAG, "ℹ️ Skipping seed to prevent overwrite")
                     DataSource.forceLoadFromFirebase()
                     return@runBlocking
                 }
 
-                // Seed other data...
+                // ✅ Data belum ada, mulai seeding
+                Log.d(TAG, "📤 No existing data found, starting seed...")
+
+                // Seed users PERTAMA (dengan password hashed)
+                seedUsers()
+                delay(2000)
+
+                // Seed specializations
                 seedSpecializations()
                 delay(1000)
 
+                // Seed doctors
                 seedDoctors()
                 delay(1000)
 
+                // Seed patients
                 seedPatients()
                 delay(1000)
 
+                // Seed sample bookings
                 seedBookings()
                 delay(1000)
 
+                // Force reload data
                 DataSource.forceLoadFromFirebase()
 
-                Log.d(TAG, "✅ Seed completed!")
+                Log.d(TAG, "✅ Seed completed successfully!")
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Seed failed: ${e.message}", e)
@@ -150,7 +171,7 @@ object FirebaseSeedData {
                 } else {
                     Log.e(TAG, "  ❌ Failed to add: ${spec.name}")
                 }
-                delay(100) // Small delay between writes
+                delay(100)
             } catch (e: Exception) {
                 Log.e(TAG, "  ❌ Exception adding ${spec.name}: ${e.message}")
             }
@@ -162,35 +183,31 @@ object FirebaseSeedData {
     /**
      * 👨‍⚕️ Seed Doctors
      */
-    // app/src/main/java/com/example/projectantrianrsrjkelompok2/utils/FirebaseSeedData.kt
-
-// app/src/main/java/com/example/projectantrianrsrjkelompok2/utils/FirebaseSeedData.kt
-
     private suspend fun seedDoctors() {
         val doctors = listOf(
             // ✅ Dokter Umum - SHIFT BERSELINGAN
             Doctor(1, "Dr. Ahmad Santoso", "Dokter Umum", "Senin–Jumat 08:00–20:00"),
-            Doctor(2, "Dr. Siti Nurhaliza", "Dokter Umum", "Senin–Jumat 20:00–08:00"), // Shift malam
+            Doctor(2, "Dr. Siti Nurhaliza", "Dokter Umum", "Senin–Jumat 20:00–08:00"),
 
             // ✅ Dokter Gigi - SHIFT BERSELINGAN
             Doctor(3, "Dr. Budi Hartono", "Dokter Gigi", "Senin–Kamis 08:00–20:00"),
-            Doctor(4, "Dr. Dewi Lestari", "Dokter Gigi", "Senin–Kamis 20:00–08:00"), // Shift malam
+            Doctor(4, "Dr. Dewi Lestari", "Dokter Gigi", "Senin–Kamis 20:00–08:00"),
 
             // ✅ Dokter Mata - SHIFT BERSELINGAN
             Doctor(5, "Dr. Indra Wijaya", "Dokter Mata", "Senin–Jumat 08:00–20:00"),
-            Doctor(6, "Dr. Maya Anggraini", "Dokter Mata", "Senin–Jumat 20:00–08:00"), // Shift malam
+            Doctor(6, "Dr. Maya Anggraini", "Dokter Mata", "Senin–Jumat 20:00–08:00"),
 
-            // ✅ Dokter Anak - 24 JAM (2 dokter cover semua waktu)
+            // ✅ Dokter Anak - 24 JAM
             Doctor(7, "Dr. Ani Kusuma", "Dokter Anak", "Senin–Minggu 08:00–20:00"),
-            Doctor(8, "Dr. Rina Permata", "Dokter Anak", "Senin–Minggu 20:00–08:00"), // Shift malam
+            Doctor(8, "Dr. Rina Permata", "Dokter Anak", "Senin–Minggu 20:00–08:00"),
 
             // ✅ Dokter Jantung - SHIFT BERSELINGAN
             Doctor(9, "Dr. Joko Widodo", "Dokter Jantung", "Senin–Jumat 08:00–20:00"),
-            Doctor(10, "Dr. Andi Cahyono", "Dokter Jantung", "Senin–Jumat 20:00–08:00"), // Shift malam
+            Doctor(10, "Dr. Andi Cahyono", "Dokter Jantung", "Senin–Jumat 20:00–08:00"),
 
             // ✅ Dokter Kandungan - SHIFT BERSELINGAN
             Doctor(11, "Dr. Maya Sari", "Dokter Kandungan", "Senin–Sabtu 08:00–20:00"),
-            Doctor(12, "Dr. Ratna Dewi", "Dokter Kandungan", "Senin–Sabtu 20:00–08:00") // Shift malam
+            Doctor(12, "Dr. Ratna Dewi", "Dokter Kandungan", "Senin–Sabtu 20:00–08:00")
         )
 
         Log.d(TAG, "📤 Seeding ${doctors.size} doctors with shift schedules...")
@@ -201,7 +218,7 @@ object FirebaseSeedData {
                 val success = firebaseRepo.addDoctor(doctor)
                 if (success) {
                     successCount++
-                    Log.d(TAG, "  ✅ Added: ${doctor.name} (${doctor.specialization}) - ${doctor.schedule}")
+                    Log.d(TAG, "  ✅ Added: ${doctor.name} (${doctor.specialization})")
                 } else {
                     Log.e(TAG, "  ❌ Failed to add: ${doctor.name}")
                 }
@@ -213,6 +230,7 @@ object FirebaseSeedData {
 
         Log.d(TAG, "✅ Doctors: $successCount/${doctors.size} added")
     }
+
     /**
      * 🧍‍♀️ Seed Patients
      */
@@ -329,7 +347,7 @@ object FirebaseSeedData {
             try {
                 Log.w(TAG, "⚠️ Clearing all Firebase data...")
                 firebaseRepo.clearAllData()
-                delay(1000) // Wait for deletion
+                delay(1000)
                 DataSource.invalidateCache()
                 Log.d(TAG, "✅ All data cleared")
             } catch (e: Exception) {
@@ -363,12 +381,7 @@ object FirebaseSeedData {
     }
 
     /**
-     * 🆕 Force seed users ONLY (untuk testing)
+     * ✅ REMOVED: forceSeedUsersOnly()
+     * Tidak perlu lagi karena seedAllData() sudah handle dengan baik
      */
-    suspend fun forceSeedUsersOnly() {
-        Log.d(TAG, "🔐 Force seeding users...")
-        seedUsers()
-        Log.d(TAG, "✅ Users seeded!")
-    }
-
 }

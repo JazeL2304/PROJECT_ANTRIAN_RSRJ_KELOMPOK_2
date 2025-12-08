@@ -12,8 +12,8 @@ import kotlin.coroutines.suspendCoroutine
 import com.example.projectantrianrsrjkelompok2.utils.PasswordHasher
 
 /**
- * ✅ Firebase Repository - Handle all Firebase operations
- * 🆕 Updated with Profile Image methods for ImageKit integration
+ * ✅ FIXED: Firebase Repository dengan parsing yang lebih toleran
+ * 🔧 Mengatasi error konversi tipe data (Long to String, dll)
  */
 class FirebaseRepository {
 
@@ -25,17 +25,68 @@ class FirebaseRepository {
     private val bookingsRef: DatabaseReference = database.getReference("bookings")
     private val specializationsRef: DatabaseReference = database.getReference("specializations")
     private val usersRef: DatabaseReference = database.getReference("users")
-    // ✅ Reference untuk counter
     private val countersRef: DatabaseReference = database.getReference("counters")
-
 
     // ===============================
     // 🔐 USER AUTHENTICATION
     // ===============================
 
+    /**
+     * ✅ FIXED: Parse user dari Firebase dengan handling berbagai tipe data
+     */
+    private fun parseUserFromSnapshot(snapshot: DataSnapshot): UserAccount? {
+        return try {
+            val id = snapshot.child("id").value?.toString() ?: snapshot.key ?: return null
+            val email = snapshot.child("email").value?.toString() ?: return null
+            val password = snapshot.child("password").value?.toString() ?: return null
+            val fullName = snapshot.child("fullName").value?.toString() ?: ""
+            val userType = snapshot.child("userType").value?.toString() ?: "PATIENT"
 
+            // ✅ Handle phoneNumber - bisa String atau Number
+            val phoneNumber = when (val phone = snapshot.child("phoneNumber").value) {
+                is String -> phone
+                is Number -> phone.toString()
+                null -> ""
+                else -> phone.toString()
+            }
 
-// Ganti method loginUser dengan yang ini:
+            // ✅ Handle createdAt - bisa Long atau String
+            val createdAt = when (val created = snapshot.child("createdAt").value) {
+                is Long -> created
+                is String -> created.toLongOrNull() ?: System.currentTimeMillis()
+                else -> System.currentTimeMillis()
+            }
+
+            // ✅ Handle updatedAt - bisa Long atau String
+            val updatedAt = when (val updated = snapshot.child("updatedAt").value) {
+                is Long -> updated
+                is String -> updated.toLongOrNull() ?: System.currentTimeMillis()
+                else -> System.currentTimeMillis()
+            }
+
+            // ✅ Handle profile image fields
+            val profileImageUrl = snapshot.child("profileImageUrl").value?.toString()
+            val profileImageFileId = snapshot.child("profileImageFileId").value?.toString()
+
+            UserAccount(
+                id = id,
+                email = email,
+                password = password,
+                fullName = fullName,
+                phoneNumber = phoneNumber,
+                userType = userType,
+                profileImageUrl = profileImageUrl,
+                profileImageFileId = profileImageFileId,
+                createdAt = createdAt,
+                updatedAt = updatedAt
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error parsing user from snapshot: ${e.message}", e)
+            Log.e(TAG, "   Snapshot key: ${snapshot.key}")
+            null
+        }
+    }
+
     /**
      * Login - Cari user berdasarkan email dan password (dengan hash verification)
      */
@@ -45,15 +96,12 @@ class FirebaseRepository {
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         for (child in snapshot.children) {
-                            val user = child.getValue(UserAccount::class.java)
+                            // ✅ FIXED: Gunakan parseUserFromSnapshot
+                            val user = parseUserFromSnapshot(child)
                             if (user != null) {
-                                // ✅ BARU: Verifikasi password dengan hash
                                 val isPasswordValid = if (PasswordHasher.isBCryptHash(user.password)) {
-                                    // Password sudah dalam bentuk hash, verifikasi dengan BCrypt
                                     PasswordHasher.verifyPassword(password, user.password)
                                 } else {
-                                    // Password masih plain text (data lama), compare langsung
-                                    // TODO: Sebaiknya update password ke hash setelah login berhasil
                                     Log.w(TAG, "⚠️ Warning: User ${user.email} still using plain text password")
                                     user.password == password
                                 }
@@ -77,27 +125,22 @@ class FirebaseRepository {
         }
     }
 
-// Ganti method registerUser dengan yang ini:
     /**
      * Register user baru (dengan password hashing)
      */
     suspend fun registerUser(userAccount: UserAccount): Boolean {
         return suspendCoroutine { continuation ->
-            // Cek apakah email sudah ada
             usersRef.orderByChild("email").equalTo(userAccount.email)
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         if (snapshot.exists()) {
-                            // Email sudah terdaftar
                             Log.w(TAG, "❌ Email already exists: ${userAccount.email}")
                             continuation.resume(false)
                         } else {
-                            // ✅ BARU: Hash password sebelum simpan
                             try {
                                 val hashedPassword = PasswordHasher.hashPassword(userAccount.password)
                                 val userWithHashedPassword = userAccount.copy(password = hashedPassword)
 
-                                // Simpan user baru dengan password yang sudah di-hash
                                 usersRef.child(userWithHashedPassword.id).setValue(userWithHashedPassword)
                                     .addOnSuccessListener {
                                         Log.d(TAG, "✅ User registered with hashed password: ${userAccount.email}")
@@ -140,14 +183,14 @@ class FirebaseRepository {
     }
 
     /**
-     * Get all users (for checking existing users)
+     * ✅ FIXED: Get all users dengan parsing yang lebih robust
      */
     suspend fun getAllUsers(): List<UserAccount> {
         return suspendCoroutine { continuation ->
             usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    val users = snapshot.children.mapNotNull {
-                        it.getValue(UserAccount::class.java)
+                    val users = snapshot.children.mapNotNull { child ->
+                        parseUserFromSnapshot(child)
                     }
                     Log.d(TAG, "✅ Loaded ${users.size} users from Firebase")
                     continuation.resume(users)
@@ -165,10 +208,6 @@ class FirebaseRepository {
     // 🖼️ USER PROFILE IMAGE METHODS
     // ===============================
 
-    /**
-     * 🆕 Update user profile image URL
-     * Called after uploading image to ImageKit
-     */
     suspend fun updateUserProfileImage(
         userId: String,
         imageUrl: String,
@@ -177,13 +216,11 @@ class FirebaseRepository {
         return try {
             val updates = mapOf(
                 "profileImageUrl" to imageUrl,
-                "imageKitFileId" to fileId, // ✅ Fixed field name
+                "profileImageFileId" to fileId,
                 "updatedAt" to System.currentTimeMillis()
             )
             usersRef.child(userId).updateChildren(updates).await()
             Log.d(TAG, "✅ Profile image updated for user: $userId")
-            Log.d(TAG, "   - Image URL: $imageUrl")
-            Log.d(TAG, "   - File ID: $fileId")
             true
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error updating profile image: ${e.message}", e)
@@ -191,14 +228,11 @@ class FirebaseRepository {
         }
     }
 
-    /**
-     * 🆕 Remove user profile image
-     */
     suspend fun removeUserProfileImage(userId: String): Boolean {
         return try {
             val updates = mapOf(
                 "profileImageUrl" to null,
-                "imageKitFileId" to null, // ✅ Fixed field name
+                "profileImageFileId" to null,
                 "updatedAt" to System.currentTimeMillis()
             )
             usersRef.child(userId).updateChildren(updates).await()
@@ -210,40 +244,21 @@ class FirebaseRepository {
         }
     }
 
-    /**
-     * ✅ NEW: Delete user profile image (alias for removeUserProfileImage)
-     * This is used by ProfileFragment
-     */
     suspend fun deleteUserProfileImage(userId: String): Boolean {
-        Log.d(TAG, "🗑️ Deleting profile image from Firebase...")
-        Log.d(TAG, "User ID: $userId")
-
-        val success = removeUserProfileImage(userId)
-
-        if (success) {
-            Log.d(TAG, "✅ Profile image deleted from Firebase!")
-        } else {
-            Log.e(TAG, "❌ Failed to delete profile image from Firebase")
-        }
-
-        return success
+        return removeUserProfileImage(userId)
     }
 
     /**
-     * 🆕 Get user by ID
-     * Used to load user profile with image URL
+     * ✅ FIXED: Get user by ID dengan parsing yang lebih robust
      */
     suspend fun getUserById(userId: String): UserAccount? {
         return suspendCoroutine { continuation ->
             usersRef.child(userId)
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
-                        val user = snapshot.getValue(UserAccount::class.java)
+                        val user = parseUserFromSnapshot(snapshot)
                         if (user != null) {
                             Log.d(TAG, "✅ User found: ${user.email}")
-                            if (user.profileImageUrl != null) {
-                                Log.d(TAG, "   - Has profile image: ${user.profileImageUrl}")
-                            }
                             continuation.resume(user)
                         } else {
                             Log.w(TAG, "❌ User not found: $userId")
@@ -259,9 +274,6 @@ class FirebaseRepository {
         }
     }
 
-    /**
-     * 🆕 Update user account (complete update)
-     */
     suspend fun updateUserAccount(userAccount: UserAccount): Boolean {
         return try {
             usersRef.child(userAccount.id).setValue(userAccount).await()
@@ -283,16 +295,9 @@ class FirebaseRepository {
             val snapshot = doctorsRef.get().await()
             val doctors = snapshot.children.mapNotNull { it.getValue(Doctor::class.java) }
             Log.d(TAG, "✅ Loaded ${doctors.size} doctors from Firebase")
-
-            // Log each doctor for debugging
-            doctors.forEach { doctor ->
-                Log.d(TAG, "  - ${doctor.name} (${doctor.specialization})")
-            }
-
             doctors
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error getting doctors: ${e.message}", e)
-            e.printStackTrace()
             emptyList()
         }
     }
@@ -301,20 +306,13 @@ class FirebaseRepository {
         return try {
             Log.d(TAG, "📥 Fetching doctors for specialization: $specialization")
             val snapshot = doctorsRef.get().await()
-
             val doctors = snapshot.children.mapNotNull {
                 it.getValue(Doctor::class.java)
             }.filter { doctor ->
-                // Filter berdasarkan specialization yang cocok
                 doctor.specialization.equals(specialization, ignoreCase = true) ||
                         doctor.specialization.contains(specialization, ignoreCase = true)
             }
-
             Log.d(TAG, "✅ Found ${doctors.size} doctors for $specialization")
-            doctors.forEach { doctor ->
-                Log.d(TAG, "  - ${doctor.name} (${doctor.specialization})")
-            }
-
             doctors
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error getting doctors by spec: ${e.message}", e)
@@ -428,7 +426,6 @@ class FirebaseRepository {
             specializations
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error getting specializations: ${e.message}", e)
-            // Return default specializations if Firebase fails
             getDefaultSpecializations()
         }
     }
@@ -463,10 +460,7 @@ class FirebaseRepository {
     suspend fun getBookingHistory(): List<Booking> {
         return try {
             Log.d(TAG, "📥 Fetching booking history from Firebase...")
-            val snapshot = bookingsRef
-                .orderByChild("createdAt")
-                .get()
-                .await()
+            val snapshot = bookingsRef.orderByChild("createdAt").get().await()
             val bookings = snapshot.children.mapNotNull { it.getValue(Booking::class.java) }
                 .sortedByDescending { it.createdAt }
             Log.d(TAG, "✅ Loaded ${bookings.size} bookings from Firebase")
@@ -523,11 +517,7 @@ class FirebaseRepository {
         val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
         return try {
             Log.d(TAG, "📥 Fetching today's bookings ($today)...")
-            val snapshot = bookingsRef
-                .orderByChild("date")
-                .equalTo(today)
-                .get()
-                .await()
+            val snapshot = bookingsRef.orderByChild("date").equalTo(today).get().await()
             val bookings = snapshot.children.mapNotNull { it.getValue(Booking::class.java) }
             Log.d(TAG, "✅ Found ${bookings.size} bookings for today")
             bookings
@@ -554,11 +544,7 @@ class FirebaseRepository {
 
     suspend fun getNextQueueNumber(): Int {
         return try {
-            val snapshot = bookingsRef
-                .orderByChild("queueNumber")
-                .limitToLast(1)
-                .get()
-                .await()
+            val snapshot = bookingsRef.orderByChild("queueNumber").limitToLast(1).get().await()
             val maxQueue = snapshot.children.mapNotNull {
                 it.getValue(Booking::class.java)?.queueNumber
             }.maxOrNull() ?: 0
@@ -570,10 +556,6 @@ class FirebaseRepository {
             1
         }
     }
-
-    // ===============================
-    // 🗑️ UTILITY - Clear all data
-    // ===============================
 
     suspend fun clearAllData() {
         try {
@@ -588,10 +570,6 @@ class FirebaseRepository {
         }
     }
 
-    // ===============================
-    // 🔍 DEBUG - Check connection
-    // ===============================
-
     suspend fun checkConnection(): Boolean {
         return try {
             Log.d(TAG, "🔍 Checking Firebase connection...")
@@ -605,21 +583,14 @@ class FirebaseRepository {
         }
     }
 
-    /**
-     * 🆕 Get next user ID dengan format rapi (user001, user002, dst)
-     */
     suspend fun getNextUserId(): String {
         return suspendCoroutine { continuation ->
             countersRef.child("userIdCounter").get()
                 .addOnSuccessListener { snapshot ->
-                    // Get current counter value
                     val currentCounter = snapshot.getValue(Int::class.java) ?: 0
                     val nextCounter = currentCounter + 1
-
-                    // Format dengan leading zeros (user001, user002, dst)
                     val userId = "user${String.format("%03d", nextCounter)}"
 
-                    // Update counter di Firebase
                     countersRef.child("userIdCounter").setValue(nextCounter)
                         .addOnSuccessListener {
                             Log.d(TAG, "✅ Next user ID generated: $userId")
@@ -627,34 +598,23 @@ class FirebaseRepository {
                         }
                         .addOnFailureListener { e ->
                             Log.e(TAG, "❌ Failed to update counter: ${e.message}")
-                            // Fallback ke timestamp jika gagal
                             continuation.resume("user_${System.currentTimeMillis()}")
                         }
                 }
                 .addOnFailureListener { e ->
                     Log.e(TAG, "❌ Failed to get counter: ${e.message}")
-                    // Fallback ke timestamp jika gagal
                     continuation.resume("user_${System.currentTimeMillis()}")
                 }
         }
     }
 
-    /**
-     * 🆕 Initialize counter berdasarkan user yang sudah ada
-     * Jalankan sekali untuk setup initial counter
-     */
     suspend fun initializeUserIdCounter(): Boolean {
         return try {
             Log.d(TAG, "🔄 Initializing user ID counter...")
-
-            // Get all existing users
             val allUsers = getAllUsers()
-
-            // Find highest user number
             var maxNumber = 0
 
             for (user in allUsers) {
-                // Extract number from user ID (user001 -> 1, user002 -> 2)
                 val match = Regex("user(\\d+)").find(user.id)
                 if (match != null) {
                     val number = match.groupValues[1].toIntOrNull() ?: 0
@@ -664,17 +624,12 @@ class FirebaseRepository {
                 }
             }
 
-            // Set counter to max number found
             countersRef.child("userIdCounter").setValue(maxNumber).await()
-
             Log.d(TAG, "✅ Counter initialized to: $maxNumber")
-            Log.d(TAG, "   Next user will be: user${String.format("%03d", maxNumber + 1)}")
-
             true
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error initializing counter: ${e.message}", e)
             false
         }
     }
-
 }

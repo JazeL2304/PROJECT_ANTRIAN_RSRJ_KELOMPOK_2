@@ -16,8 +16,8 @@ import com.example.projectantrianrsrjkelompok2.model.UserType
 import com.google.android.material.textfield.TextInputEditText
 
 /**
- * ✅ Login Fragment
- * 🆕 Updated to save userId for user-specific bookings
+ * ✅ Login Fragment - FIXED VERSION
+ * Menyimpan semua user data termasuk fullName untuk filter booking dokter
  */
 class LoginFragment : Fragment() {
 
@@ -79,38 +79,65 @@ class LoginFragment : Fragment() {
                     btnLogin.isEnabled = true
                     btnLogin.text = "Masuk"
 
-                    // ✅ SAVE COMPLETE USER DATA
+                    val user = state.user
+
+                    // ✅ CRITICAL: Save complete user data including fullName
                     val prefsHelper = PreferencesHelper(requireContext())
 
-                    // ✅ METHOD 1: Using saveCompleteLoginData (RECOMMENDED)
+                    // ✅ Save semua data user
                     prefsHelper.saveCompleteLoginData(
-                        userId = state.user.id,           // ✅ "user001" atau "user002"
-                        email = state.user.email,
-                        fullName = state.user.fullName,
-                        phone = state.user.phoneNumber ?: "",
-                        role = state.user.userType.name
+                        userId = user.id,
+                        email = user.email,
+                        fullName = user.fullName,
+                        phone = user.phoneNumber ?: "",
+                        role = user.userType.name
                     )
 
-                    // Debug log
+                    // ✅ TAMBAHAN: Jika user adalah DOCTOR, simpan juga ke doctorName
+                    // Ini untuk backward compatibility dengan code lama
+                    if (user.userType == UserType.DOCTOR) {
+                        prefsHelper.saveDoctorName(user.fullName)
+                        Log.d(TAG, "👨‍⚕️ Doctor name saved: ${user.fullName}")
+                    }
+
+                    // Debug log untuk verifikasi
                     Log.d(TAG, "✅ User logged in successfully:")
-                    Log.d(TAG, "  - User ID: ${state.user.id}")
-                    Log.d(TAG, "  - Name: ${state.user.fullName}")
-                    Log.d(TAG, "  - Email: ${state.user.email}")
-                    Log.d(TAG, "  - Role: ${state.user.userType.name}")
+                    Log.d(TAG, "  - User ID: ${user.id}")
+                    Log.d(TAG, "  - Email: ${user.email}")
+                    Log.d(TAG, "  - FullName: ${user.fullName}")
+                    Log.d(TAG, "  - Role: ${user.userType.name}")
+                    Log.d(TAG, "  - Phone: ${user.phoneNumber ?: "N/A"}")
+
+                    // ✅ Verifikasi data tersimpan dengan benar
+                    Log.d(TAG, "📋 Verification - Saved preferences:")
+                    Log.d(TAG, "  - getUserId(): ${prefsHelper.getUserId()}")
+                    Log.d(TAG, "  - getUserFullName(): ${prefsHelper.getUserFullName()}")
+                    Log.d(TAG, "  - getUserRole(): ${prefsHelper.getUserRole()}")
+                    Log.d(TAG, "  - getDoctorName(): ${prefsHelper.getDoctorName()}")
 
                     Toast.makeText(context, "Login berhasil!", Toast.LENGTH_SHORT).show()
 
                     // Arahkan sesuai role
-                    when (state.user.userType) {
-                        UserType.PATIENT -> (activity as? MainActivity)?.showPatientDashboard()
-                        UserType.DOCTOR -> (activity as? MainActivity)?.showDoctorDashboard()
-                        UserType.ADMIN -> (activity as? MainActivity)?.showAdminDashboard()
+                    when (user.userType) {
+                        UserType.PATIENT -> {
+                            Log.d(TAG, "👤 Navigating to Patient Dashboard")
+                            (activity as? MainActivity)?.showPatientDashboard()
+                        }
+                        UserType.DOCTOR -> {
+                            Log.d(TAG, "👨‍⚕️ Navigating to Doctor Dashboard")
+                            (activity as? MainActivity)?.showDoctorDashboard()
+                        }
+                        UserType.ADMIN -> {
+                            Log.d(TAG, "👔 Navigating to Admin Dashboard")
+                            (activity as? MainActivity)?.showAdminDashboard()
+                        }
                     }
                 }
                 state.error != null -> {
                     btnLogin.isEnabled = true
                     btnLogin.text = "Masuk"
                     Toast.makeText(context, state.error, Toast.LENGTH_SHORT).show()
+                    Log.e(TAG, "❌ Login error: ${state.error}")
                 }
             }
         }
@@ -122,6 +149,7 @@ class LoginFragment : Fragment() {
 
         if (!validateInput(email, password)) return
 
+        Log.d(TAG, "🔐 Attempting login with email: $email")
         authViewModel.login(email, password)
     }
 

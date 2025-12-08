@@ -7,14 +7,18 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * ✅ FIXED: DataSource sekarang menggunakan Firebase TANPA blocking Main Thread
+ * ✅ FIXED: DataSource sekarang load active booking dari Firebase per-user
+ * Tidak lagi mengandalkan single activeBooking variable
  */
 object DataSource {
 
     private const val TAG = "DataSource"
 
     private val firebaseRepo = FirebaseRepository()
-    private var activeBooking: Booking? = null
+
+    // ✅ CHANGED: activeBooking sekarang adalah Map per userId
+    // Key = userId, Value = Booking
+    private var activeBookingMap: MutableMap<String, Booking> = mutableMapOf()
 
     // Cache untuk performa
     private var cachedDoctors: List<Doctor>? = null
@@ -288,9 +292,9 @@ object DataSource {
         return getDefaultTimeSlots()
     }
 
-// ===============================
-// 📋 BOOKING / ANTRIAN
-// ===============================
+    // ===============================
+    // 📋 BOOKING / ANTRIAN
+    // ===============================
 
     fun getBookingHistory(): List<Booking> {
         if (!shouldRefreshCache() && cachedBookings != null) {
@@ -315,20 +319,70 @@ object DataSource {
         }
     }
 
+    /**
+     * ✅ FIXED: Set active booking untuk USER TERTENTU
+     */
     fun setActiveBooking(booking: Booking) {
-        activeBooking = booking
+        val userId = booking.userId
+        if (userId.isNotEmpty()) {
+            activeBookingMap[userId] = booking
+            Log.d(TAG, "✅ Set active booking for user $userId: ${booking.id}")
+        }
         addToHistory(booking)
     }
 
-    fun getActiveBooking(): Booking? = activeBooking
+    /**
+     * ✅ FIXED: Get active booking untuk USER TERTENTU
+     * Jika tidak ada di memory, cari dari cache/Firebase
+     */
+    fun getActiveBooking(): Booking? {
+        // Legacy support - return first active if any
+        return activeBookingMap.values.firstOrNull()
+    }
 
     /**
-     * ✅ Clear active booking and mark as COMPLETED
-     * This is the original clearActiveBooking behavior
+     * ✅ NEW: Get active booking untuk USER TERTENTU berdasarkan userId
+     */
+    fun getActiveBookingForUser(userId: String): Booking? {
+        // 1. Cek di memory map dulu
+        val memoryBooking = activeBookingMap[userId]
+        if (memoryBooking != null) {
+            Log.d(TAG, "✅ Found active booking in memory for user $userId")
+            return memoryBooking
+        }
+
+        // 2. Cek di cached bookings
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val activeFromCache = cachedBookings?.find { booking ->
+            booking.userId == userId &&
+                    booking.date == today &&
+                    (booking.status == BookingStatus.WAITING || booking.status == BookingStatus.CALLED)
+        }
+
+        if (activeFromCache != null) {
+            // Simpan ke memory untuk akses cepat berikutnya
+            activeBookingMap[userId] = activeFromCache
+            Log.d(TAG, "✅ Found active booking in cache for user $userId: ${activeFromCache.id}")
+            return activeFromCache
+        }
+
+        Log.d(TAG, "⚠️ No active booking found for user $userId")
+        return null
+    }
+
+    /**
+     * ✅ NEW: Check apakah user tertentu punya active booking
+     */
+    fun hasActiveBookingForUser(userId: String): Boolean {
+        return getActiveBookingForUser(userId) != null
+    }
+
+    /**
+     * ✅ FIXED: Clear active booking untuk USER TERTENTU dan mark as COMPLETED
      */
     fun clearActiveBooking() {
-        activeBooking?.let { booking ->
-            // Update status to COMPLETED
+        // Legacy - clear semua
+        activeBookingMap.values.forEach { booking ->
             scope.launch {
                 try {
                     firebaseRepo.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
@@ -338,64 +392,96 @@ object DataSource {
                 }
             }
         }
-        activeBooking = null
-        Log.d(TAG, "✅ Active booking cleared and marked as completed")
+        activeBookingMap.clear()
+        Log.d(TAG, "✅ All active bookings cleared and marked as completed")
     }
 
     /**
-     * ✅ OPTIMIZED: Complete active booking dengan update cache lokal langsung
+     * ✅ NEW: Clear active booking untuk USER TERTENTU
      */
-    fun completeActiveBooking() {
-        activeBooking?.let { booking ->
-            Log.d(TAG, "🔄 Completing booking: ${booking.id}")
-
-            // ✅ STEP 1: Update status menjadi COMPLETED
-            val completedBooking = booking.copy(status = BookingStatus.COMPLETED)
-
-            // ✅ STEP 2: Update cache lokal LANGSUNG (tidak tunggu Firebase)
-            cachedBookings = cachedBookings?.map { cachedBooking ->
-                if (cachedBooking.id == booking.id) {
-                    Log.d(TAG, "  ✅ Updated booking ${booking.id} in cache to COMPLETED")
-                    completedBooking
-                } else {
-                    cachedBooking
-                }
-            }
-
-            // ✅ STEP 3: Clear active booking
-            activeBooking = null
-
-            // ✅ STEP 4: Update di Firebase (async, di background)
+    fun clearActiveBookingForUser(userId: String) {
+        val booking = activeBookingMap[userId]
+        if (booking != null) {
             scope.launch {
                 try {
                     firebaseRepo.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
-                    Log.d(TAG, "  ✅ Booking ${booking.id} updated to COMPLETED in Firebase")
-
-                    // ✅ Optional: Reload cache setelah Firebase update
-                    delay(500)
-                    forceLoadFromFirebase()
-
+                    Log.d(TAG, "✅ Booking ${booking.id} for user $userId marked as COMPLETED")
                 } catch (e: Exception) {
-                    Log.e(TAG, "  ❌ Error updating booking in Firebase: ${e.message}", e)
+                    Log.e(TAG, "❌ Error updating booking status: ${e.message}", e)
                 }
             }
-
-            Log.d(TAG, "✅ Booking ${booking.id} completed successfully")
-        } ?: run {
-            Log.w(TAG, "⚠️ No active booking to complete")
+            activeBookingMap.remove(userId)
         }
+        Log.d(TAG, "✅ Active booking cleared for user $userId")
+    }
+
+    /**
+     * ✅ OPTIMIZED: Complete active booking untuk USER TERTENTU
+     */
+    fun completeActiveBooking() {
+        // Legacy - complete first active
+        val booking = activeBookingMap.values.firstOrNull() ?: return
+        completeActiveBookingForUser(booking.userId)
+    }
+
+    /**
+     * ✅ NEW: Complete active booking untuk USER TERTENTU
+     */
+    fun completeActiveBookingForUser(userId: String) {
+        val booking = activeBookingMap[userId] ?: return
+
+        Log.d(TAG, "🔄 Completing booking for user $userId: ${booking.id}")
+
+        // ✅ STEP 1: Update status menjadi COMPLETED
+        val completedBooking = booking.copy(status = BookingStatus.COMPLETED)
+
+        // ✅ STEP 2: Update cache lokal LANGSUNG
+        cachedBookings = cachedBookings?.map { cachedBooking ->
+            if (cachedBooking.id == booking.id) {
+                Log.d(TAG, "  ✅ Updated booking ${booking.id} in cache to COMPLETED")
+                completedBooking
+            } else {
+                cachedBooking
+            }
+        }
+
+        // ✅ STEP 3: Clear dari memory map
+        activeBookingMap.remove(userId)
+
+        // ✅ STEP 4: Update di Firebase (async)
+        scope.launch {
+            try {
+                firebaseRepo.updateBookingStatus(booking.id, BookingStatus.COMPLETED)
+                Log.d(TAG, "  ✅ Booking ${booking.id} updated to COMPLETED in Firebase")
+
+                delay(500)
+                forceLoadFromFirebase()
+
+            } catch (e: Exception) {
+                Log.e(TAG, "  ❌ Error updating booking in Firebase: ${e.message}", e)
+            }
+        }
+
+        Log.d(TAG, "✅ Booking ${booking.id} completed successfully for user $userId")
     }
 
     /**
      * ✅ Clear active booking WITHOUT updating status
-     * Use this after you've already updated the booking status
      */
     fun clearActiveBookingOnly() {
-        activeBooking = null
-        Log.d(TAG, "✅ Active booking cleared (status already updated)")
+        activeBookingMap.clear()
+        Log.d(TAG, "✅ Active booking map cleared (status already updated)")
     }
 
-    fun hasActiveBooking(): Boolean = activeBooking != null
+    /**
+     * ✅ NEW: Clear active booking untuk user tertentu tanpa update status
+     */
+    fun clearActiveBookingOnlyForUser(userId: String) {
+        activeBookingMap.remove(userId)
+        Log.d(TAG, "✅ Active booking cleared for user $userId (status already updated)")
+    }
+
+    fun hasActiveBooking(): Boolean = activeBookingMap.isNotEmpty()
 
     fun updateBookingStatus(bookingId: String, newStatus: BookingStatus) {
         scope.launch {
@@ -441,8 +527,21 @@ object DataSource {
         } ?: emptyList()
     }
 
+    /**
+     * ✅ FIXED: Get next queue number untuk DOKTER + TANGGAL tertentu
+     */
     fun getNextQueueNumber(): Int {
         val maxQueue = cachedBookings?.maxOfOrNull { it.queueNumber } ?: 0
+        return maxQueue + 1
+    }
+
+    /**
+     * ✅ NEW: Get next queue number untuk DOKTER + TANGGAL tertentu
+     */
+    fun getNextQueueNumberForDoctor(doctorName: String, date: String): Int {
+        val maxQueue = cachedBookings
+            ?.filter { it.doctorName == doctorName && it.date == date }
+            ?.maxOfOrNull { it.queueNumber } ?: 0
         return maxQueue + 1
     }
 
@@ -484,8 +583,30 @@ object DataSource {
             Log.d(TAG, "  - Specializations: ${cachedSpecializations?.size ?: 0}")
             Log.d(TAG, "  - Bookings: ${cachedBookings?.size ?: 0}")
 
+            // ✅ NEW: Rebuild activeBookingMap dari cache
+            rebuildActiveBookingMap()
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error loading cache: ${e.message}", e)
         }
+    }
+
+    /**
+     * ✅ NEW: Rebuild activeBookingMap dari cached bookings
+     * Dipanggil setelah forceLoadFromFirebase
+     */
+    private fun rebuildActiveBookingMap() {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        cachedBookings?.filter { booking ->
+            booking.date == today &&
+                    booking.userId.isNotEmpty() &&
+                    (booking.status == BookingStatus.WAITING || booking.status == BookingStatus.CALLED)
+        }?.forEach { booking ->
+            activeBookingMap[booking.userId] = booking
+            Log.d(TAG, "  ✅ Restored active booking for user ${booking.userId}: ${booking.id}")
+        }
+
+        Log.d(TAG, "✅ Active booking map rebuilt: ${activeBookingMap.size} active bookings")
     }
 }
