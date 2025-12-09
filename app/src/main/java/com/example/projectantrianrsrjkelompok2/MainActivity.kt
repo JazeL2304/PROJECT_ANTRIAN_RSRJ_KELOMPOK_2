@@ -266,11 +266,6 @@ class MainActivity : AppCompatActivity() {
                     loadFragment(ViewReportFragment())
                     true
                 }
-                R.id.nav_settings -> {
-                    showBottomNavigation()
-                    loadFragment(AdminSettingsFragment())
-                    true
-                }
                 else -> false
             }
         }

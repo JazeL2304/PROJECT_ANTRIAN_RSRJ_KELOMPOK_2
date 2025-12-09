@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="3dp"
+    app:cardBackgroundColor="@android:color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Doctor Name -->
+        <TextView
+            android:id="@+id/tvDoctorName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dr. Ahmad Santoso"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Doctor Email -->
+        <TextView
+            android:id="@+id/tvDoctorEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📧 ahmad@hospital.com"
+            android:textSize="13sp"
+            android:textColor="#616161"
+            android:layout_marginBottom="4dp"/>
+
+        <!-- Doctor Schedule -->
+        <TextView
+            android:id="@+id/tvDoctorSchedule"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🕒 Senin-Jumat 08:00-16:00"
+            android:textSize="13sp"
+            android:textColor="#616161"
+            android:layout_marginBottom="12dp"/>
+
+        <!-- Edit Schedule Button -->
+        <Button
+            android:id="@+id/btnEditSchedule"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="✏️ Edit Jadwal"
+            android:textSize="13sp"
+            android:textColor="@android:color/white"
+            android:background="@drawable/btn_solid_teal"
+            android:elevation="0dp"/>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

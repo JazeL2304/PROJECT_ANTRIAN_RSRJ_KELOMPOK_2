@@ -8,11 +8,12 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.example.projectantrianrsrjkelompok2.BookingStatus
 import com.example.projectantrianrsrjkelompok2.ProfileFragment
 import com.example.projectantrianrsrjkelompok2.R
 import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
+import java.text.SimpleDateFormat
+import java.util.*
 
 class AdminDashboardFragment : Fragment() {
 
@@ -58,7 +59,7 @@ class AdminDashboardFragment : Fragment() {
         }
 
         // =============================
-        // ✅ BUTTON NAVIGATION — FIX
+        // ✅ BUTTON NAVIGATION
         // =============================
         view.findViewById<Button>(R.id.btnManageDoctor).setOnClickListener {
             navigateTo(ManageDoctorFragment())
@@ -68,16 +69,69 @@ class AdminDashboardFragment : Fragment() {
             navigateTo(ManagePatientFragment())
         }
 
-        view.findViewById<Button>(R.id.btnManageSchedule).setOnClickListener {
-            navigateTo(ManageScheduleFragment())
-        }
-
         view.findViewById<Button>(R.id.btnViewReports).setOnClickListener {
             navigateTo(ViewReportFragment())
         }
 
         // =============================
-        // REALTIME DASHBOARD
+        // 🔧 FIX DOCTOR NAME - LONG PRESS "KELOLA DOKTER"
+        // =============================
+        view.findViewById<Button>(R.id.btnManageDoctor).setOnLongClickListener {
+
+            // Dialog konfirmasi
+            android.app.AlertDialog.Builder(requireContext())
+                .setTitle("🔧 Fix Nama Dokter")
+                .setMessage(
+                    "Update nama di Firebase:\n\n" +
+                            "users/doc001/fullName\n\n" +
+                            "DARI:\n" +
+                            "\"Dr. Ahmad Susanto\"\n\n" +
+                            "MENJADI:\n" +
+                            "\"Dr. Ahmad Santoso\"\n\n" +
+                            "Lanjutkan?"
+                )
+                .setPositiveButton("Ya, Update!") { _, _ ->
+
+                    // ✅ UPDATE FIREBASE
+                    com.google.firebase.database.FirebaseDatabase.getInstance()
+                        .getReference("users/doc001/fullName")
+                        .setValue("Dr. Ahmad Santoso")  // ← Santoso (bukan Susanto!)
+                        .addOnSuccessListener {
+
+                            // ✅ Success
+                            android.widget.Toast.makeText(
+                                requireContext(),
+                                "✅ BERHASIL!\n\n" +
+                                        "Nama berhasil diubah:\n" +
+                                        "Susanto → Santoso\n\n" +
+                                        "⚠️ DOKTER HARUS LOGOUT & LOGIN ULANG!",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+
+                            android.util.Log.d("ADMIN_FIX", "✅ SUCCESS: users/doc001/fullName → Dr. Ahmad Santoso")
+                        }
+                        .addOnFailureListener { e ->
+
+                            // ❌ Failed
+                            android.widget.Toast.makeText(
+                                requireContext(),
+                                "❌ GAGAL!\n\n" +
+                                        "Error: ${e.message}\n\n" +
+                                        "Cek Firebase Rules!",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+
+                            android.util.Log.e("ADMIN_FIX", "❌ FAILED: ${e.message}")
+                        }
+                }
+                .setNegativeButton("Batal", null)
+                .show()
+
+            true  // Return true = consume long click event
+        }
+
+        // =============================
+        // ✅ REALTIME DASHBOARD - UPDATED
         // =============================
         startRealtimeAdmin()
     }
@@ -90,51 +144,51 @@ class AdminDashboardFragment : Fragment() {
     }
 
     // =====================================================
-    // ✅ REALTIME ADMIN DASHBOARD
+    // ✅ REALTIME ADMIN DASHBOARD - UPDATED VERSION
     // =====================================================
     private fun startRealtimeAdmin() {
-
         BookingRepository.clearListeners()
 
-        BookingRepository.listenActiveQueue { bookings ->
+        // ✅ Dapatkan tanggal hari ini dalam format yang sama dengan Firebase
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            .format(Date())
 
-            val unique = bookings.distinctBy {
-                "${it.patientName}|${it.time}|${it.queueNumber}"
-            }
+        android.util.Log.d("AdminDashboard", "📅 Fetching stats for date: $today")
 
-            tvTotalPatients.text =
-                unique.map { it.patientName }
-                    .distinct()
-                    .size
-                    .toString()
+        // ✅ Gunakan fungsi baru yang ambil data berdasarkan tanggal
+        BookingRepository.listenDashboardStats(today) {
+                totalPatients,
+                totalDoctors,
+                todayBookings,
+                activeQueues,
+                waitingList
+            ->
+            android.util.Log.d("AdminDashboard", "📊 Stats received:")
+            android.util.Log.d("AdminDashboard", "   - Total Patients: $totalPatients")
+            android.util.Log.d("AdminDashboard", "   - Total Doctors: $totalDoctors")
+            android.util.Log.d("AdminDashboard", "   - Today Bookings: $todayBookings")
+            android.util.Log.d("AdminDashboard", "   - Active Queues: $activeQueues")
 
-            tvTotalDoctors.text =
-                unique.map { it.doctorName }
-                    .distinct()
-                    .size
-                    .toString()
+            // ✅ Update UI
+            tvTotalPatients.text = totalPatients.toString()
+            tvTotalDoctors.text = totalDoctors.toString()
+            tvTodayBookings.text = todayBookings.toString()
+            tvActiveQueues.text = activeQueues.toString()
 
-            tvTodayBookings.text = unique.size.toString()
-
-            val waiting = unique.filter {
-                it.status == BookingStatus.WAITING ||
-                        it.status == BookingStatus.CALLED
-            }.sortedBy { it.queueNumber }
-
-            tvActiveQueues.text = waiting.size.toString()
-
+            // ✅ Tampilkan daftar antrian
             val sb = StringBuilder()
             sb.append("📋 Pasien yang Menunggu:\n\n")
 
-            if (waiting.isEmpty()) {
-                sb.append("Tidak ada pasien")
+            if (waitingList.isEmpty()) {
+                sb.append("Belum ada pasien yang menunggu")
             } else {
-                waiting.take(5).forEachIndexed { i, b ->
-                    sb.append("• No. ${i + 1} - ${b.patientName}\n")
-                    sb.append("  Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
-                    sb.append("  Waktu: ${b.time}\n")
-                    // ✅ FIX: Langsung panggil toDisplayString() dari enum
-                    sb.append("  Status: ${b.status.toDisplayString()}\n\n")
+                waitingList.take(5).forEachIndexed { i, b ->
+                    sb.append("${i + 1}. ${b.patientName}\n")
+                    sb.append("   Dokter: ${b.doctorName}\n")
+                    sb.append("   Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
+                    sb.append("   Antrian: No. ${b.queueNumber}\n")
+                    sb.append("   Waktu: ${b.time}\n")
+                    sb.append("   Status: ${b.status.toDisplayString()}\n\n")
                 }
             }
 

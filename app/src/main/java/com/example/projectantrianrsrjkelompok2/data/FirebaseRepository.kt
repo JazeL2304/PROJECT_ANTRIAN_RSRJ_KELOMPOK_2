@@ -632,4 +632,80 @@ class FirebaseRepository {
             false
         }
     }
+
+    // =============== TAMBAHAN UNTUK ADMIN ===============
+
+    /**
+     * Mendapatkan jumlah dokter - untuk statistik admin
+     */
+    suspend fun getDoctorCount(): Int {
+        return try {
+            val doctors = getAllDoctors()
+            doctors.size
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error getting doctor count: ${e.message}")
+            0
+        }
+    }
+
+    /**
+     * Mendapatkan jumlah pasien - untuk statistik admin
+     */
+    suspend fun getPatientCount(): Int {
+        return try {
+            val patients = getAllPatients()
+            patients.size
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error getting patient count: ${e.message}")
+            0
+        }
+    }
+
+    /**
+     * Mendapatkan jumlah booking - untuk statistik admin
+     */
+    suspend fun getBookingCount(): Int {
+        return try {
+            val bookings = getBookingHistory()
+            bookings.size
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error getting booking count: ${e.message}")
+            0
+        }
+    }
+
+    /**
+     * Mendapatkan booking berdasarkan tanggal tertentu
+     */
+    suspend fun getBookingsByDate(date: String): List<Booking> {
+        return try {
+            Log.d(TAG, "📥 Fetching bookings for date: $date")
+            val snapshot = bookingsRef.orderByChild("date").equalTo(date).get().await()
+            val bookings = snapshot.children.mapNotNull {
+                it.getValue(Booking::class.java)
+            }.sortedBy { it.queueNumber }
+            Log.d(TAG, "✅ Found ${bookings.size} bookings for $date")
+            bookings
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error getting bookings by date: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Update jadwal dokter berdasarkan ID
+     */
+    suspend fun updateDoctorSchedule(doctorId: Int, newSchedule: String): Boolean {
+        return try {
+            doctorsRef.child(doctorId.toString())
+                .child("schedule")
+                .setValue(newSchedule)
+                .await()
+            Log.d(TAG, "✅ Doctor schedule updated: ID $doctorId")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error updating doctor schedule: ${e.message}", e)
+            false
+        }
+    }
 }

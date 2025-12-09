@@ -1,30 +1,40 @@
 package com.example.projectantrianrsrjkelompok2.admin
 
-import android.app.AlertDialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
-import com.example.projectantrianrsrjkelompok2.DataSource
-import com.example.projectantrianrsrjkelompok2.Patient
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.projectantrianrsrjkelompok2.Booking
 import com.example.projectantrianrsrjkelompok2.R
+import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
+/**
+ * ✅ RECYCLERVIEW VERSION: Lebih reliable daripada ListView
+ */
 class ManagePatientFragment : Fragment() {
 
-    private lateinit var etName: EditText
-    private lateinit var etGender: EditText
-    private lateinit var etAge: EditText
-    private lateinit var etAddress: EditText
-    private lateinit var btnAddPatient: Button
-    private lateinit var listViewPatients: ListView
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var tvEmptyMessage: TextView
 
-    private var patientList = mutableListOf<Patient>()
-    private lateinit var adapter: PatientAdapter // ✅ Simpan reference adapter
+    private val bookingList = mutableListOf<Booking>()
+    private lateinit var adapter: BookingRecyclerAdapter
+
+    private val database = FirebaseDatabase.getInstance()
+    private val bookingsRef = database.getReference("bookings")
+
+    private val TAG = "ManagePatientFragment"
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.fragment_manage_patient, container, false)
@@ -33,111 +43,109 @@ class ManagePatientFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        etName = view.findViewById(R.id.etPatientName)
-        etGender = view.findViewById(R.id.etPatientGender)
-        etAge = view.findViewById(R.id.etPatientAge)
-        etAddress = view.findViewById(R.id.etPatientAddress)
-        btnAddPatient = view.findViewById(R.id.btnAddPatient)
-        listViewPatients = view.findViewById(R.id.listPatients)
+        // ✅ Gunakan RecyclerView
+        recyclerView = view.findViewById(R.id.recyclerPatients)
+        tvEmptyMessage = view.findViewById(R.id.tvEmptyPatientMessage)
 
-        btnAddPatient.setOnClickListener { addPatient() }
+        // Setup RecyclerView
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        adapter = BookingRecyclerAdapter(bookingList)
+        recyclerView.adapter = adapter
+
         loadPatients()
     }
 
     private fun loadPatients() {
-        patientList.clear()
-        patientList.addAll(DataSource.getAllPatients())
+        lifecycleScope.launch {
+            try {
+                Log.d(TAG, "🔍 Loading data...")
 
-        if (patientList.isEmpty()) {
-            val emptyAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, listOf("Belum ada pasien terdaftar."))
-            listViewPatients.adapter = emptyAdapter
-            return
-        }
+                val snapshot = bookingsRef.get().await()
 
-        // ✅ Create custom adapter dan simpan reference-nya
-        adapter = PatientAdapter(requireContext(), patientList)
-        listViewPatients.adapter = adapter
-    }
+                bookingList.clear()
 
-    private fun addPatient() {
-        val name = etName.text.toString().trim()
-        val gender = etGender.text.toString().trim()
-        val ageText = etAge.text.toString().trim()
-        val address = etAddress.text.toString().trim()
-
-        if (name.isEmpty() || gender.isEmpty() || ageText.isEmpty() || address.isEmpty()) {
-            Toast.makeText(requireContext(), "⚠️ Semua kolom wajib diisi!", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val age = ageText.toIntOrNull()
-        if (age == null || age <= 0) {
-            Toast.makeText(requireContext(), "⚠️ Usia tidak valid!", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val newPatient = Patient(
-            id = (patientList.maxOfOrNull { it.id } ?: 0) + 1,
-            name = name,
-            gender = gender,
-            age = age,
-            address = address
-        )
-
-        val success = DataSource.addPatient(newPatient)
-        if (success) {
-            Toast.makeText(requireContext(), "✅ Pasien berhasil ditambahkan", Toast.LENGTH_SHORT).show()
-            clearInputs()
-            loadPatients()
-        } else {
-            Toast.makeText(requireContext(), "⚠️ Pasien sudah terdaftar di alamat tersebut!", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun clearInputs() {
-        etName.text.clear()
-        etGender.text.clear()
-        etAge.text.clear()
-        etAddress.text.clear()
-    }
-
-    // ✅ CUSTOM ADAPTER dengan proper delete handling
-    inner class PatientAdapter(
-        private val context: android.content.Context,
-        private val patients: MutableList<Patient>
-    ) : ArrayAdapter<Patient>(context, 0, patients) {
-
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val view = convertView ?: LayoutInflater.from(context)
-                .inflate(R.layout.item_patient, parent, false)
-
-            val patient = patients[position]
-            val tvInfo = view.findViewById<TextView>(R.id.tvPatientInfo)
-            val btnDelete = view.findViewById<ImageButton>(R.id.btnDeletePatient)
-
-            tvInfo.text = "${patient.name} (${patient.gender}, ${patient.age} th)\nAlamat: ${patient.address}"
-
-            btnDelete.setOnClickListener {
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Hapus Pasien")
-                    .setMessage("Apakah Anda yakin ingin menghapus ${patient.name}?")
-                    .setPositiveButton("Hapus") { _, _ ->
-                        // ✅ FIXED: Hapus dari DataSource
-                        DataSource.removePatient(patient)
-
-                        // ✅ FIXED: Hapus dari list lokal
-                        patients.removeAt(position)
-
-                        // ✅ FIXED: Notify adapter untuk update UI
-                        notifyDataSetChanged()
-
-                        Toast.makeText(requireContext(), "🗑️ ${patient.name} dihapus", Toast.LENGTH_SHORT).show()
+                for (child in snapshot.children) {
+                    val booking = child.getValue(Booking::class.java)
+                    if (booking != null) {
+                        Log.d(TAG, "✅ Adding: ${booking.patientName}")
+                        bookingList.add(booking)
                     }
-                    .setNegativeButton("Batal", null)
-                    .show()
+                }
+
+                bookingList.sortByDescending { it.createdAt }
+
+                Log.d(TAG, "📊 Total items: ${bookingList.size}")
+
+                if (bookingList.isEmpty()) {
+                    recyclerView.visibility = View.GONE
+                    tvEmptyMessage.visibility = View.VISIBLE
+                } else {
+                    recyclerView.visibility = View.VISIBLE
+                    tvEmptyMessage.visibility = View.GONE
+                    adapter.notifyDataSetChanged()
+                    Log.d(TAG, "✅ notifyDataSetChanged() called")
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error: ${e.message}", e)
+                Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /**
+     * ✅ RecyclerView Adapter (lebih reliable)
+     */
+    inner class BookingRecyclerAdapter(
+        private val bookings: MutableList<Booking>
+    ) : RecyclerView.Adapter<BookingRecyclerAdapter.BookingViewHolder>() {
+
+        inner class BookingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val tvPatientName: TextView = view.findViewById(R.id.tvPatientName)
+            val tvPatientInfo: TextView = view.findViewById(R.id.tvPatientInfo)
+            val tvPatientStats: TextView = view.findViewById(R.id.tvPatientStats)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookingViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_patient_admin, parent, false)
+            Log.d(TAG, "📦 Creating view holder")
+            return BookingViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: BookingViewHolder, position: Int) {
+            val booking = bookings[position]
+            Log.d(TAG, "🎨 Binding position $position: ${booking.patientName}")
+
+            holder.tvPatientName.text = booking.patientName
+
+            holder.tvPatientInfo.text = buildString {
+                append("👨‍⚕️ Dokter: ${booking.doctorName}\n")
+                append("🏥 Spesialisasi: ${booking.specialization}")
             }
 
-            return view
+            holder.tvPatientStats.text = buildString {
+                append("📅 ${booking.date} ${booking.time}\n")
+                append("🎫 Antrian #${booking.queueNumber} • ")
+                append(when (booking.status.name) {
+                    "WAITING" -> "⏳ Menunggu"
+                    "CALLED" -> "✅ Dipanggil"
+                    "COMPLETED" -> "✔️ Selesai"
+                    "CANCELLED" -> "❌ Dibatalkan"
+                    else -> booking.status.name
+                })
+            }
         }
+
+        override fun getItemCount(): Int {
+            Log.d(TAG, "🔢 getItemCount: ${bookings.size}")
+            return bookings.size
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "🔄 onResume")
+        loadPatients()
     }
 }

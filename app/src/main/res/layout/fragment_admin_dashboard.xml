@@ -309,7 +309,7 @@
                     android:id="@+id/btnManageDoctor"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:text="👨‍⚕️ Kelola Dokter"
+                    android:text="👨‍⚕️ KELOLA DOKTER"
                     android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="@android:color/white"
@@ -321,7 +321,7 @@
                     android:id="@+id/btnManagePatient"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:text="🧍‍♀️ Kelola Pasien"
+                    android:text="🧍‍♀️ KELOLA PASIEN"
                     android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="@android:color/white"
@@ -329,23 +329,13 @@
                     android:layout_marginBottom="12dp"
                     android:elevation="2dp"/>
 
-                <Button
-                    android:id="@+id/btnManageSchedule"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:text="📅 Kelola Jadwal Dokter"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/white"
-                    android:background="@drawable/btn_solid_teal"
-                    android:layout_marginBottom="12dp"
-                    android:elevation="2dp"/>
+                <!-- ❌ BUTTON "KELOLA JADWAL DOKTER" DIHAPUS! -->
 
                 <Button
                     android:id="@+id/btnViewReports"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:text="📊 Lihat Laporan Rumah Sakit"
+                    android:text="📊 LIHAT LAPORAN RUMAH SAKIT"
                     android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="@android:color/white"

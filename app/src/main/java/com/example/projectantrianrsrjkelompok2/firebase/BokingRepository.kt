@@ -98,8 +98,88 @@ object BookingRepository {
     }
 
     // ==========================================================
-// QUEUE PER DOKTER  ✅ FIX: Ambil SEMUA status termasuk COMPLETED
-// ==========================================================
+    // ✅ BOOKING HARI INI (SEMUA STATUS) - UNTUK DASHBOARD ADMIN
+    // ==========================================================
+    fun listenTodayBookings(
+        today: String,  // Format: "2025-12-09"
+        onUpdate: (List<Booking>) -> Unit
+    ) {
+        val query = ref.orderByChild("date")
+            .equalTo(today)
+
+        val listener = createListener { bookings ->
+            // ✅ Ambil SEMUA booking hari ini (termasuk COMPLETED)
+            val unique = bookings.distinctBy {
+                "${it.patientName}|${it.queueNumber}|${it.time}|${it.date}"
+            }
+
+            onUpdate(unique)
+        }
+
+        query.addValueEventListener(listener)
+        activeListeners.add(query to listener)
+    }
+
+    // ==========================================================
+    // ✅ STATISTIK LENGKAP HARI INI - UNTUK DASHBOARD
+    // ==========================================================
+    fun listenDashboardStats(
+        today: String,
+        onUpdate: (
+            totalPatients: Int,
+            totalDoctors: Int,
+            todayBookings: Int,
+            activeQueues: Int,
+            waitingList: List<Booking>
+        ) -> Unit
+    ) {
+        val query = ref.orderByChild("date")
+            .equalTo(today)
+
+        val listener = createListener { bookings ->
+            android.util.Log.d("BookingRepository", "📊 Raw bookings from Firebase: ${bookings.size}")
+
+            // ✅ Hilangkan duplikat
+            val unique = bookings.distinctBy {
+                "${it.patientName}|${it.queueNumber}|${it.time}|${it.date}"
+            }
+
+            android.util.Log.d("BookingRepository", "📊 Unique bookings: ${unique.size}")
+            unique.forEach {
+                android.util.Log.d("BookingRepository", "   - ${it.patientName} | Queue: ${it.queueNumber} | Status: ${it.status}")
+            }
+
+            // ✅ Hitung total pasien unik
+            val totalPatients = unique.map { it.patientName }
+                .distinct()
+                .size
+
+            // ✅ Hitung total dokter unik
+            val totalDoctors = unique.map { it.doctorName }
+                .distinct()
+                .size
+
+            // ✅ Total booking hari ini (semua status)
+            val todayBookings = unique.size
+
+            // ✅ Antrian aktif (WAITING + CALLED saja)
+            val waiting = unique.filter {
+                it.status == BookingStatus.WAITING ||
+                        it.status == BookingStatus.CALLED
+            }.sortedBy { it.queueNumber }
+
+            val activeQueues = waiting.size
+
+            onUpdate(totalPatients, totalDoctors, todayBookings, activeQueues, waiting)
+        }
+
+        query.addValueEventListener(listener)
+        activeListeners.add(query to listener)
+    }
+
+    // ==========================================================
+    // QUEUE PER DOKTER  ✅ FIX: Ambil SEMUA status termasuk COMPLETED
+    // ==========================================================
     fun listenQueueByDoctor(
         doctorName: String,
         date: String?,

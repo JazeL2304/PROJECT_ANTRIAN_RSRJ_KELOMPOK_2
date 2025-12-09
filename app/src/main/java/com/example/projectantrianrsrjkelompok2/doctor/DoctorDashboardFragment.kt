@@ -7,10 +7,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
+import com.example.projectantrianrsrjkelompok2.R  // ← TAMBAHKAN INI!
 import com.example.projectantrianrsrjkelompok2.*
-import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.database.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,6 +27,10 @@ class DoctorDashboardFragment : Fragment() {
 
     private lateinit var pref: PreferencesHelper
     private var doctorName = ""
+
+    private val database = FirebaseDatabase.getInstance()
+    private val bookingsRef = database.getReference("bookings")
+    private var bookingsListener: ValueEventListener? = null
 
     companion object {
         private const val TAG = "DoctorDashboard"
@@ -43,8 +48,7 @@ class DoctorDashboardFragment : Fragment() {
 
         pref = PreferencesHelper(requireContext())
 
-        // ✅ FIX: Gunakan getUserFullName() bukan getDoctorName()
-        // Karena LoginFragment menyimpan ke KEY_USER_FULL_NAME
+        // ✅ Get nama dokter dari login
         doctorName = pref.getUserFullName() ?: pref.getDoctorName() ?: "Dokter"
 
         Log.d(TAG, "👨‍⚕️ Doctor logged in: $doctorName")
@@ -64,14 +68,12 @@ class DoctorDashboardFragment : Fragment() {
                 ?.navigateToFragment(ProfileFragment())
         }
 
-        // ✅ PERBAIKAN: Langsung trigger bottom nav untuk Antrian
         view.findViewById<Button>(R.id.btnViewQueue).setOnClickListener {
             requireActivity()
                 .findViewById<BottomNavigationView>(R.id.bottom_navigation)
                 ?.selectedItemId = R.id.nav_doctor_queue
         }
 
-        // ✅ PERBAIKAN: Langsung trigger bottom nav untuk Riwayat
         view.findViewById<Button>(R.id.btnPatientHistory).setOnClickListener {
             requireActivity()
                 .findViewById<BottomNavigationView>(R.id.bottom_navigation)
@@ -81,52 +83,118 @@ class DoctorDashboardFragment : Fragment() {
         startRealtime()
     }
 
-    // ==========================================================
-    // ✅ REALTIME SAFE + AUTO NUMBER + FIX COMPLETED COUNT + ICON CENTANG
-    // ==========================================================
-    private fun startRealtime() {
+    /**
+     * ✅ Helper: Normalisasi nama dokter
+     * Menghilangkan "Dr.", "dr.", trim, lowercase
+     */
+    private fun normalizeName(name: String): String {
+        return name
+            .replace("Dr.", "", ignoreCase = true)
+            .replace("dr.", "", ignoreCase = true)
+            .trim()
+            .lowercase()
+    }
 
-        BookingRepository.clearListeners()
+    /**
+     * ✅ REALTIME LISTENER - MANUAL FILTER
+     */
+    private fun startRealtime() {
 
         Log.d(TAG, "📡 Starting realtime listener for doctor: $doctorName")
 
-        // ✅ FIXED: Pastikan doctorName tidak kosong
         if (doctorName.isEmpty() || doctorName == "Dokter") {
             Log.e(TAG, "❌ Doctor name is empty or default!")
             tvRecentPatients.text = "❌ Error: Nama dokter tidak ditemukan.\nSilakan login ulang."
             return
         }
 
-        // ✅ Ambil SEMUA booking dokter ini (tidak hanya hari ini)
-        // PENTING: BookingRepository.listenQueueByDoctor harus diubah dulu
-        // agar mengambil SEMUA status (WAITING, CALLED, COMPLETED)
-        BookingRepository.listenQueueByDoctor(
-            doctorName,
-            null  // null = ambil semua tanggal
-        ) { bookings ->
+        // ✅ Normalize nama dokter yang login
+        val normalizedLoggedDoctor = normalizeName(doctorName)
+        Log.d(TAG, "🔍 Normalized logged doctor: '$normalizedLoggedDoctor'")
 
-            Log.d(TAG, "📥 Received ${bookings.size} bookings for $doctorName")
+        // ✅ Listen to ALL bookings
+        bookingsListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
 
-            val unique = bookings.distinctBy {
-                "${it.patientName}|${it.queueNumber}|${it.time}"
+                Log.d(TAG, "📥 Received ${snapshot.childrenCount} total bookings")
+
+                val allBookings = mutableListOf<Booking>()
+
+                for (child in snapshot.children) {
+                    try {
+                        val map = child.value as? Map<String, Any> ?: continue
+
+                        val bookingDoctorName = map["doctorName"] as? String ?: ""
+
+                        // ✅ Normalize nama dokter di booking
+                        val normalizedBookingDoctor = normalizeName(bookingDoctorName)
+
+                        Log.d(TAG, "🔍 Comparing: '$normalizedBookingDoctor' vs '$normalizedLoggedDoctor'")
+
+                        // ✅ Filter: hanya booking untuk dokter ini
+                        if (normalizedBookingDoctor == normalizedLoggedDoctor) {
+
+                            val booking = Booking(
+                                firebaseId = child.key ?: "",
+                                id = map["id"] as? String ?: "",
+                                patientName = map["patientName"] as? String ?: "",
+                                doctorName = bookingDoctorName,
+                                specialization = map["specialization"] as? String ?: "",
+                                date = map["date"] as? String ?: "",
+                                time = map["time"] as? String ?: "",
+                                queueNumber = (map["queueNumber"] as? Long)?.toInt() ?: 0,
+                                complaint = map["complaint"] as? String ?: "",
+                                status = try {
+                                    BookingStatus.valueOf(
+                                        (map["status"] as? String ?: "WAITING").uppercase()
+                                    )
+                                } catch (e: Exception) {
+                                    BookingStatus.WAITING
+                                },
+                                diagnosis = map["diagnosis"] as? String ?: "",
+                                prescription = map["prescription"] as? String ?: "",
+                                createdAt = (map["createdAt"] as? Long) ?: 0L
+                            )
+
+                            allBookings.add(booking)
+                            Log.d(TAG, "✅ Match: ${booking.patientName} (${booking.date})")
+                        }
+
+                    } catch (e: Exception) {
+                        Log.e(TAG, "⚠️ Error parsing booking: ${e.message}")
+                    }
+                }
+
+                Log.d(TAG, "📊 Total bookings for this doctor: ${allBookings.size}")
+
+                // ✅ Remove duplicates
+                val unique = allBookings.distinctBy {
+                    "${it.patientName}|${it.queueNumber}|${it.time}"
+                }
+
+                updateDashboardUI(unique)
             }
 
-            updateDashboardUI(unique)
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "❌ Database error: ${error.message}")
+                tvRecentPatients.text = "❌ Error loading data: ${error.message}"
+            }
         }
+
+        bookingsRef.addValueEventListener(bookingsListener!!)
     }
 
     private fun updateDashboardUI(list: List<Booking>) {
 
         Log.d(TAG, "📊 Updating dashboard with ${list.size} bookings")
 
-        // ✅ Filter pasien yang menunggu/dipanggil (WAITING atau CALLED)
-        val waiting =
-            list.filter {
-                it.status == BookingStatus.WAITING ||
-                        it.status == BookingStatus.CALLED
-            }.sortedBy { it.queueNumber }
+        // ✅ Filter pasien yang menunggu/dipanggil
+        val waiting = list.filter {
+            it.status == BookingStatus.WAITING ||
+                    it.status == BookingStatus.CALLED
+        }.sortedBy { it.queueNumber }
 
-        // ✅ Filter pasien yang sudah selesai (COMPLETED)
+        // ✅ Filter pasien yang sudah selesai
         val completed = list.filter {
             it.status == BookingStatus.COMPLETED
         }
@@ -135,26 +203,25 @@ class DoctorDashboardFragment : Fragment() {
         Log.d(TAG, "  - Waiting/Called: ${waiting.size}")
         Log.d(TAG, "  - Completed: ${completed.size}")
 
-        // ✅ UPDATE STATISTIK - SEKARANG AKAN BENAR!
+        // ✅ UPDATE STATISTIK
         tvTotalPatientsToday.text = list.size.toString()
         tvActiveQueue.text = waiting.size.toString()
-        tvCompletedToday.text = completed.size.toString()  // ← INI SEKARANG AKAN BERTAMBAH!
+        tvCompletedToday.text = completed.size.toString()
 
-        // ✅ TAMPILKAN SEMUA PASIEN (MENUNGGU + SELESAI) DENGAN ICON
+        // ✅ TAMPILKAN SEMUA PASIEN
         val sb = StringBuilder()
 
         if (list.isEmpty()) {
             sb.append("✅ Tidak ada pasien hari ini\n\n")
             sb.append("Klik tombol 'Lihat Antrian Pasien' untuk melihat riwayat lengkap")
         } else {
-            // ✅ SECTION 1: Pasien yang Menunggu
+            // Section 1: Pasien yang Menunggu
             if (waiting.isNotEmpty()) {
                 sb.append("⏱️ Pasien yang Menunggu:\n\n")
 
                 waiting.take(3).forEachIndexed { index, b ->
                     val noDisplay = index + 1
 
-                    // Icon berdasarkan status
                     val statusIcon = when(b.status) {
                         BookingStatus.CALLED -> "📢"
                         else -> "⏳"
@@ -171,14 +238,13 @@ class DoctorDashboardFragment : Fragment() {
                 }
             }
 
-            // ✅ SECTION 2: Pasien yang Selesai (dengan icon centang ✅)
+            // Section 2: Pasien yang Selesai
             if (completed.isNotEmpty()) {
                 sb.append("✅ Pasien Selesai Hari Ini:\n\n")
 
                 completed.take(3).forEachIndexed { index, b ->
                     val noDisplay = index + 1
 
-                    // ✅ ICON CENTANG untuk yang selesai
                     sb.append("✅ No. $noDisplay - ${b.patientName}\n")
                     sb.append("   Keluhan: ${b.complaint.ifEmpty { "-" }}\n")
                     sb.append("   Waktu: ${b.time}\n")
@@ -190,7 +256,6 @@ class DoctorDashboardFragment : Fragment() {
                 }
             }
 
-            // ✅ Info tambahan
             if (waiting.isEmpty() && completed.isNotEmpty()) {
                 sb.append("\n🎉 Semua pasien sudah selesai!")
             }
@@ -201,6 +266,9 @@ class DoctorDashboardFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        BookingRepository.clearListeners()
+        // ✅ Remove listener
+        bookingsListener?.let {
+            bookingsRef.removeEventListener(it)
+        }
     }
 }

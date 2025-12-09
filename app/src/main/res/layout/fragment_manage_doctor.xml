@@ -27,127 +27,50 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tambah dan kelola data dokter"
+            android:text="Data dokter dari akun terdaftar"
             android:textColor="#E0FFFFFF"
             android:textSize="13sp"/>
 
     </LinearLayout>
 
     <!-- CONTENT AREA -->
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <LinearLayout
+        <!-- Doctor List Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📋 Daftar Dokter Terdaftar"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:layout_marginBottom="12dp"/>
+
+        <!-- Empty Message -->
+        <TextView
+            android:id="@+id/tvEmptyDoctorMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:text="Belum ada dokter terdaftar"
+            android:textSize="14sp"
+            android:textColor="#757575"
+            android:gravity="center"
+            android:padding="20dp"
+            android:visibility="gone"/>
 
-            <!-- Add Doctor Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="4dp">
+        <!-- ✅ RECYCLERVIEW -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerDoctors"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="vertical"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="➕ Tambah Dokter Baru"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="#00897B"
-                        android:layout_marginBottom="16dp"/>
-
-                    <!-- Doctor Name Input -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        app:boxBackgroundColor="#F5F5F5"
-                        app:boxCornerRadiusBottomEnd="12dp"
-                        app:boxCornerRadiusBottomStart="12dp"
-                        app:boxCornerRadiusTopEnd="12dp"
-                        app:boxCornerRadiusTopStart="12dp"
-                        app:boxStrokeColor="#00897B">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etDoctorName"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="Nama Dokter"
-                            android:inputType="textPersonName"
-                            android:textSize="14sp"/>
-
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Specialization Input -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        app:boxBackgroundColor="#F5F5F5"
-                        app:boxCornerRadiusBottomEnd="12dp"
-                        app:boxCornerRadiusBottomStart="12dp"
-                        app:boxCornerRadiusTopEnd="12dp"
-                        app:boxCornerRadiusTopStart="12dp"
-                        app:boxStrokeColor="#00897B">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etDoctorSpecialization"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="Spesialisasi (Umum, Gigi, Mata...)"
-                            android:inputType="text"
-                            android:textSize="14sp"/>
-
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Add Button -->
-                    <Button
-                        android:id="@+id/btnAddDoctor"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="➕ Tambah Dokter"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/white"
-                        android:background="@drawable/btn_solid_teal"
-                        android:elevation="2dp"/>
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- Doctor List Section -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📋 Daftar Dokter"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#212121"
-                android:layout_marginBottom="12dp"/>
-
-            <!-- Doctor List -->
-            <ListView
-                android:id="@+id/listDoctors"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:divider="@android:color/transparent"
-                android:dividerHeight="8dp"/>
-
-        </LinearLayout>
-
-    </ScrollView>
+    </LinearLayout>
 
 </LinearLayout>
