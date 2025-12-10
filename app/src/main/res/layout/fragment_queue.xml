@@ -208,7 +208,7 @@
 
             </LinearLayout>
 
-            <!-- ✅ NEW: Complete Button (hanya muncul saat dipanggil) -->
+            <!-- ✅ Complete Button -->
             <Button
                 android:id="@+id/btn_complete_queue"
                 android:layout_width="match_parent"
