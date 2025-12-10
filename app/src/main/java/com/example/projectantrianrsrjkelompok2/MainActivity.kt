@@ -24,6 +24,7 @@ import com.example.projectantrianrsrjkelompok2.fragment_news
 
 // ========== FRAGMENT ADMIN ==========
 import com.example.projectantrianrsrjkelompok2.admin.AdminDashboardFragment
+import com.example.projectantrianrsrjkelompok2.admin.BookingHistoryFragment
 import com.example.projectantrianrsrjkelompok2.admin.ManageDoctorFragment
 import com.example.projectantrianrsrjkelompok2.admin.ManagePatientFragment
 import com.example.projectantrianrsrjkelompok2.admin.ManageScheduleFragment
@@ -44,13 +45,14 @@ import com.example.projectantrianrsrjkelompok2.utils.FirebaseDataMigration
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 /**
- * ✅ UPDATED MainActivity - With Auto Migration
+ * ✅ UPDATED MainActivity - With Auto Migration & Admin History
  *
  * FITUR BARU:
  * 1. Auto-update admin001 → "angelica"
  * 2. Auto-update doc002 password → "siti123"
  * 3. Auto-hash semua password plain text
  * 4. Jalan otomatis saat app start
+ * 5. ✅ Menu History untuk Admin (NEW)
  */
 class MainActivity : AppCompatActivity() {
 
@@ -248,6 +250,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * ⚙️ Setup Bottom Navigation untuk ADMIN
+     * ✅ UPDATED: Menambahkan menu History
      */
     private fun setupAdminNavigation() {
         bottomNavigation.menu.clear()
@@ -263,6 +266,12 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_reports -> {
                     showBottomNavigation()
                     loadFragment(ViewReportFragment())
+                    true
+                }
+                // ✅ MENU BARU: History
+                R.id.nav_admin_history -> {
+                    showBottomNavigation()
+                    loadFragment(BookingHistoryFragment())
                     true
                 }
                 else -> false

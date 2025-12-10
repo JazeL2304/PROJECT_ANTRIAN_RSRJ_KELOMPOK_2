@@ -10,6 +10,12 @@ import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import com.example.projectantrianrsrjkelompok2.utils.PasswordHasher
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
 
 /**
  * ✅ FIXED: Firebase Repository dengan parsing yang lebih toleran
@@ -99,12 +105,16 @@ class FirebaseRepository {
                             // ✅ FIXED: Gunakan parseUserFromSnapshot
                             val user = parseUserFromSnapshot(child)
                             if (user != null) {
-                                val isPasswordValid = if (PasswordHasher.isBCryptHash(user.password)) {
-                                    PasswordHasher.verifyPassword(password, user.password)
-                                } else {
-                                    Log.w(TAG, "⚠️ Warning: User ${user.email} still using plain text password")
-                                    user.password == password
-                                }
+                                val isPasswordValid =
+                                    if (PasswordHasher.isBCryptHash(user.password)) {
+                                        PasswordHasher.verifyPassword(password, user.password)
+                                    } else {
+                                        Log.w(
+                                            TAG,
+                                            "⚠️ Warning: User ${user.email} still using plain text password"
+                                        )
+                                        user.password == password
+                                    }
 
                                 if (isPasswordValid) {
                                     Log.d(TAG, "✅ Login successful: ${user.email}")
@@ -138,12 +148,18 @@ class FirebaseRepository {
                             continuation.resume(false)
                         } else {
                             try {
-                                val hashedPassword = PasswordHasher.hashPassword(userAccount.password)
-                                val userWithHashedPassword = userAccount.copy(password = hashedPassword)
+                                val hashedPassword =
+                                    PasswordHasher.hashPassword(userAccount.password)
+                                val userWithHashedPassword =
+                                    userAccount.copy(password = hashedPassword)
 
-                                usersRef.child(userWithHashedPassword.id).setValue(userWithHashedPassword)
+                                usersRef.child(userWithHashedPassword.id)
+                                    .setValue(userWithHashedPassword)
                                     .addOnSuccessListener {
-                                        Log.d(TAG, "✅ User registered with hashed password: ${userAccount.email}")
+                                        Log.d(
+                                            TAG,
+                                            "✅ User registered with hashed password: ${userAccount.email}"
+                                        )
                                         continuation.resume(true)
                                     }
                                     .addOnFailureListener { e ->
@@ -415,7 +431,8 @@ class FirebaseRepository {
         return try {
             Log.d(TAG, "📥 Fetching specializations from Firebase...")
             val snapshot = specializationsRef.get().await()
-            val specializations = snapshot.children.mapNotNull { it.getValue(Specialization::class.java) }
+            val specializations =
+                snapshot.children.mapNotNull { it.getValue(Specialization::class.java) }
 
             if (specializations.isEmpty()) {
                 Log.w(TAG, "⚠️ No specializations in Firebase, returning defaults")
@@ -706,6 +723,47 @@ class FirebaseRepository {
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error updating doctor schedule: ${e.message}", e)
             false
+        }
+    }
+
+    /**
+     * ✅ FIXED: Mendapatkan semua booking sebagai Map untuk BookingHistoryFragment
+     * Perbaikan: database.child() → database.getReference()
+     */
+    suspend fun getAllBookingsMap(): List<Map<String, Any?>> {
+        return suspendCancellableCoroutine { continuation ->
+            // ✅ FIX: Gunakan getReference() bukan child()
+            database.getReference("bookings")
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val bookings = mutableListOf<Map<String, Any?>>()
+
+                        for (bookingSnapshot in snapshot.children) {
+                            try {
+                                // ✅ Safe casting dengan error handling
+                                val booking = bookingSnapshot.value as? Map<*, *>
+                                if (booking != null) {
+                                    @Suppress("UNCHECKED_CAST")
+                                    val bookingWithId =
+                                        booking.toMutableMap() as MutableMap<String, Any?>
+                                    bookingWithId["bookingId"] = bookingSnapshot.key
+                                    bookings.add(bookingWithId)
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "❌ Error parsing booking: ${e.message}")
+                                continue // Skip booking yang error
+                            }
+                        }
+
+                        Log.d(TAG, "✅ Loaded ${bookings.size} bookings as Map")
+                        continuation.resume(bookings)
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        Log.e(TAG, "❌ Error getting bookings: ${error.message}")
+                        continuation.resumeWithException(Exception(error.message))
+                    }
+                })
         }
     }
 }

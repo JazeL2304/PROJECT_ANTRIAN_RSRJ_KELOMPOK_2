@@ -10,6 +10,10 @@
         android:id="@+id/nav_reports"
         android:icon="@android:drawable/ic_menu_info_details"
         android:title="Laporan" />
-
+    <!-- Tambahkan item menu baru untuk History -->
+    <item
+        android:id="@+id/nav_admin_history"
+        android:icon="@drawable/ic_history"
+        android:title="History" />
 
 </menu>

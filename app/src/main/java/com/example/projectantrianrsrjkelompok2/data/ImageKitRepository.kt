@@ -67,14 +67,22 @@ class ImageKitRepository(private val context: Context) {
 
     /**
      * ✅ Get authentication parameters dari backend
+     * 🔧 FIXED: Tambah no-cache headers dan validasi expire time
      */
     private suspend fun getAuthParams(): AuthParams? {
         return try {
             Log.d(TAG, "🔐 Getting auth params from backend...")
 
-            val client = OkHttpClient()
+            // ✅ FIX 1: Tambah no-cache headers
+            val client = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build()
+
             val request = Request.Builder()
                 .url(AUTH_BACKEND_URL)
+                .addHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+                .addHeader("Pragma", "no-cache")
                 .get()
                 .build()
 
@@ -90,16 +98,27 @@ class ImageKitRepository(private val context: Context) {
                     publicKey = json.getString("publicKey")
                 )
 
-                // ✅ DEBUG: Cek waktu
+                // ✅ FIX 2: Validasi expire time lebih ketat
                 val expireTime = authParams.expire.toLongOrNull() ?: 0
                 val currentTime = System.currentTimeMillis() / 1000
                 val diff = expireTime - currentTime
 
                 Log.d(TAG, "✅ Auth params received")
-                Log.d(TAG, "   - Current time: $currentTime")
+                Log.d(TAG, "   - Device time: $currentTime")
                 Log.d(TAG, "   - Expire time: $expireTime")
-                Log.d(TAG, "   - Difference: ${diff}s (should be ~3600s)")
+                Log.d(TAG, "   - Time until expire: ${diff}s (should be ~3600s)")
 
+                // ✅ FIX 3: Validasi apakah expire time valid
+                if (diff < 10) {
+                    Log.e(TAG, "❌ Auth token already expired or about to expire! Diff: ${diff}s")
+                    return null
+                }
+                if (diff > 3595) {
+                    Log.e(TAG, "❌ Expire time too long (${diff}s), need fresh auth from backend")
+                    return null
+                }
+
+                Log.d(TAG, "✅ Auth params validation passed")
                 authParams
             } else {
                 Log.e(TAG, "❌ Failed to get auth params: ${response.code}")
@@ -113,22 +132,46 @@ class ImageKitRepository(private val context: Context) {
 
     /**
      * ✅ Upload profile picture to ImageKit
+     * 🔧 FIXED: Tambah validasi sebelum upload dan retry mechanism
      */
     suspend fun uploadProfilePicture(
         imageUri: Uri,
-        userId: String
+        userId: String,
+        retryCount: Int = 0
     ): ImageKitUploadResponse? {
         return try {
-            Log.d(TAG, "📤 Starting image upload for user: $userId")
+            Log.d(TAG, "📤 Starting image upload for user: $userId (attempt ${retryCount + 1})")
 
-            // Step 1: Get authentication params dari backend
-            Log.d(TAG, "🔐 Getting authentication...")
+            // Step 1: Get FRESH authentication params dari backend
+            Log.d(TAG, "🔐 Getting FRESH authentication...")
             val authParams = getAuthParams()
             if (authParams == null) {
                 Log.e(TAG, "❌ Cannot get authentication parameters")
+
+                // ✅ FIX 4: Retry jika gagal get auth (max 2 retry)
+                if (retryCount < 2) {
+                    Log.w(TAG, "⚠️ Retrying to get auth params...")
+                    delay(1000) // Wait 1 second
+                    return uploadProfilePicture(imageUri, userId, retryCount + 1)
+                }
                 return null
             }
             Log.d(TAG, "✅ Authentication params received")
+
+            // ✅ FIX 5: Cek lagi sebelum mulai compress (karena compress butuh waktu)
+            val expireTime = authParams.expire.toLongOrNull() ?: 0
+            val currentTime = System.currentTimeMillis() / 1000
+            val timeLeft = expireTime - currentTime
+
+            if (timeLeft < 30) {
+                Log.e(TAG, "❌ Not enough time to upload! Time left: ${timeLeft}s")
+                if (retryCount < 2) {
+                    Log.w(TAG, "⚠️ Getting new auth params...")
+                    delay(500)
+                    return uploadProfilePicture(imageUri, userId, retryCount + 1)
+                }
+                return null
+            }
 
             // Step 2: Compress image
             Log.d(TAG, "🔄 Compressing image...")
@@ -138,6 +181,23 @@ class ImageKitRepository(private val context: Context) {
                 return null
             }
             Log.d(TAG, "📦 Image compressed: ${compressedFile.length() / 1024}KB")
+
+            // ✅ FIX 6: Cek lagi setelah compress sebelum upload
+            val currentTime2 = System.currentTimeMillis() / 1000
+            val timeLeft2 = expireTime - currentTime2
+
+            Log.d(TAG, "⏱️ Time check before upload:")
+            Log.d(TAG, "   - Time left: ${timeLeft2}s")
+
+            if (timeLeft2 < 10) {
+                Log.e(TAG, "❌ Auth about to expire! Getting new auth...")
+                compressedFile.delete()
+                if (retryCount < 2) {
+                    delay(500)
+                    return uploadProfilePicture(imageUri, userId, retryCount + 1)
+                }
+                return null
+            }
 
             // Step 3: Prepare upload parameters
             val fileName = "profile_${userId}_${System.currentTimeMillis()}.jpg"
@@ -161,6 +221,7 @@ class ImageKitRepository(private val context: Context) {
 
             // Step 5: Upload to ImageKit dengan authentication
             Log.d(TAG, "☁️ Uploading to ImageKit with authentication...")
+            Log.d(TAG, "   - Time left: ${timeLeft2}s")
 
             val response = apiService.uploadImageAuthenticated(
                 file = filePart,
@@ -189,6 +250,16 @@ class ImageKitRepository(private val context: Context) {
                 val errorBody = response.errorBody()?.string()
                 Log.e(TAG, "❌ Upload failed: ${response.code()} - ${response.message()}")
                 Log.e(TAG, "   Error body: $errorBody")
+
+                // ✅ FIX 7: Jika error 400 expire, retry dengan auth baru
+                if (response.code() == 400 && errorBody?.contains("expire") == true) {
+                    Log.w(TAG, "⚠️ Expire error detected, retrying with new auth...")
+                    if (retryCount < 2) {
+                        delay(1000)
+                        return uploadProfilePicture(imageUri, userId, retryCount + 1)
+                    }
+                }
+
                 null
             }
 
@@ -208,9 +279,6 @@ class ImageKitRepository(private val context: Context) {
                 Log.d(TAG, "File ID: $fileId")
 
                 // Backend delete endpoint
-                val deleteBackendUrl = "$AUTH_BACKEND_URL-delete" // Jadi: .../imagekit-auth-delete
-
-                // Atau lebih explicit:
                 val deleteUrl = AUTH_BACKEND_URL.replace("/imagekit-auth", "/imagekit-delete")
 
                 // Create request body
