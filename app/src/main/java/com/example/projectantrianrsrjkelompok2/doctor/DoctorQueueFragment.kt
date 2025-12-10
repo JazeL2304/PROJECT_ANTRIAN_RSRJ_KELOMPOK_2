@@ -9,6 +9,8 @@ import com.example.projectantrianrsrjkelompok2.*
 import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import com.google.firebase.database.FirebaseDatabase
+import com.example.projectantrianrsrjkelompok2.model.DiagnosisData
+import com.example.projectantrianrsrjkelompok2.model.MedicineData
 
 class DoctorQueueFragment : Fragment() {
 
@@ -129,8 +131,8 @@ class DoctorQueueFragment : Fragment() {
     }
 
     // =====================================================
-    // ✅ DIALOG FORM - Input Diagnosis & Resep
-    // =====================================================
+// ✅ DIALOG FORM - Pilih Diagnosis & Resep dari Dropdown
+// =====================================================
     private fun showCompletionDialog(booking: Booking) {
 
         // Create custom layout programmatically
@@ -159,9 +161,9 @@ class DoctorQueueFragment : Fragment() {
         }
         container.addView(tvPatient)
 
-        // Diagnosis Label
+        // ==================== DIAGNOSIS SECTION ====================
         val tvDiagnosisLabel = TextView(requireContext()).apply {
-            text = "🩺 Diagnosis:"
+            text = "🩺 Pilih Diagnosis:"
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(android.graphics.Color.parseColor("#424242"))
@@ -169,15 +171,30 @@ class DoctorQueueFragment : Fragment() {
         }
         container.addView(tvDiagnosisLabel)
 
-        // Diagnosis Input
-        val etDiagnosis = EditText(requireContext()).apply {
-            hint = "Contoh: Demam Tifoid"
-            setText(booking.diagnosis)
+        // Diagnosis Spinner
+        val spinnerDiagnosis = Spinner(requireContext()).apply {
             setPadding(24, 24, 24, 24)
             setBackgroundColor(android.graphics.Color.parseColor("#F5F5F5"))
-            setSingleLine(true)
         }
-        container.addView(etDiagnosis)
+
+        val diagnosisAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            DiagnosisData.getDiagnosisNames()
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        spinnerDiagnosis.adapter = diagnosisAdapter
+
+        // Set selected diagnosis jika ada
+        if (booking.diagnosis.isNotEmpty()) {
+            val position = DiagnosisData.getDiagnosisNames().indexOf(booking.diagnosis)
+            if (position >= 0) {
+                spinnerDiagnosis.setSelection(position)
+            }
+        }
+
+        container.addView(spinnerDiagnosis)
 
         // Spacing
         val spacer1 = View(requireContext()).apply {
@@ -187,61 +204,163 @@ class DoctorQueueFragment : Fragment() {
         }
         container.addView(spacer1)
 
-        // Prescription Label
-        val tvPrescriptionLabel = TextView(requireContext()).apply {
-            text = "💊 Resep Obat:"
+        // ==================== MEDICINE SECTION ====================
+        val tvMedicineLabel = TextView(requireContext()).apply {
+            text = "💊 Pilih Resep Obat (bisa pilih lebih dari 1):"
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(android.graphics.Color.parseColor("#424242"))
             setPadding(0, 0, 0, 8)
         }
-        container.addView(tvPrescriptionLabel)
+        container.addView(tvMedicineLabel)
 
-        // Prescription Input (Multiline)
-        val etPrescription = EditText(requireContext()).apply {
-            hint = "Contoh:\n- Paracetamol 500mg (3x1)\n- Amoxicillin 500mg (3x1)\n- Vitamin C (1x1)"
-            setText(booking.prescription)
-            setPadding(24, 24, 24, 24)
+        // Selected medicines container
+        val selectedMedicinesLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 16, 24, 16)
             setBackgroundColor(android.graphics.Color.parseColor("#F5F5F5"))
-            minLines = 4
-            maxLines = 6
-            gravity = Gravity.TOP or Gravity.START
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                    android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
         }
-        container.addView(etPrescription)
+        container.addView(selectedMedicinesLayout)
+
+        val selectedMedicines = mutableListOf<String>()
+
+        // Load existing prescription
+        if (booking.prescription.isNotEmpty()) {
+            booking.prescription.split("\n").forEach { med ->
+                if (med.isNotBlank()) {
+                    selectedMedicines.add(med.trim())
+                }
+            }
+        }
+
+        // Function to update selected medicines display
+        fun updateSelectedMedicinesView() {
+            selectedMedicinesLayout.removeAllViews()
+
+            if (selectedMedicines.isEmpty()) {
+                val tvEmpty = TextView(requireContext()).apply {
+                    text = "Belum ada obat dipilih"
+                    textSize = 12f
+                    setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
+                    setPadding(0, 16, 0, 16)
+                }
+                selectedMedicinesLayout.addView(tvEmpty)
+            } else {
+                selectedMedicines.forEachIndexed { index, medicine ->
+                    val itemLayout = LinearLayout(requireContext()).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        setPadding(0, 8, 0, 8)
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+
+                    val tvMedicine = TextView(requireContext()).apply {
+                        text = "• $medicine"
+                        textSize = 13f
+                        setTextColor(android.graphics.Color.parseColor("#424242"))
+                        layoutParams = LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1f
+                        )
+                    }
+                    itemLayout.addView(tvMedicine)
+
+                    val btnRemove = Button(requireContext()).apply {
+                        text = "❌"
+                        textSize = 12f
+                        setPadding(16, 8, 16, 8)
+                        setOnClickListener {
+                            selectedMedicines.removeAt(index)
+                            updateSelectedMedicinesView()
+                        }
+                    }
+                    itemLayout.addView(btnRemove)
+
+                    selectedMedicinesLayout.addView(itemLayout)
+                }
+            }
+        }
+
+        // Initial display
+        updateSelectedMedicinesView()
+
+        // Spacing
+        val spacer2 = View(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 16
+            )
+        }
+        container.addView(spacer2)
+
+        // Medicine Spinner
+        val spinnerMedicine = Spinner(requireContext()).apply {
+            setPadding(24, 24, 24, 24)
+            setBackgroundColor(android.graphics.Color.parseColor("#E3F2FD"))
+        }
+
+        val medicineAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            MedicineData.getMedicineDescriptions()
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        spinnerMedicine.adapter = medicineAdapter
+        container.addView(spinnerMedicine)
+
+        // Spacing
+        val spacer3 = View(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 8
+            )
+        }
+        container.addView(spacer3)
+
+        // Add Medicine Button
+        val btnAddMedicine = Button(requireContext()).apply {
+            text = "➕ Tambah Obat"
+            setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+            setTextColor(android.graphics.Color.WHITE)
+            setPadding(32, 16, 32, 16)
+            setOnClickListener {
+                val selectedMedicine = spinnerMedicine.selectedItem.toString()
+                if (!selectedMedicines.contains(selectedMedicine)) {
+                    selectedMedicines.add(selectedMedicine)
+                    updateSelectedMedicinesView()
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "⚠️ Obat sudah ditambahkan!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+        container.addView(btnAddMedicine)
 
         // Create Dialog
         val dialog = AlertDialog.Builder(requireContext())
             .setView(container)
-            .setPositiveButton("✅ Selesaikan", null) // Set null dulu
+            .setPositiveButton("✅ Selesaikan", null)
             .setNegativeButton("❌ Batal", null)
             .create()
 
         dialog.setOnShowListener {
-            // Custom button behavior
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val diagnosis = etDiagnosis.text.toString().trim()
-                val prescription = etPrescription.text.toString().trim()
+                val diagnosis = spinnerDiagnosis.selectedItem.toString()
 
                 // Validasi
-                if (diagnosis.isEmpty()) {
+                if (selectedMedicines.isEmpty()) {
                     Toast.makeText(
                         requireContext(),
-                        "⚠️ Diagnosis tidak boleh kosong!",
+                        "⚠️ Pilih minimal 1 obat!",
                         Toast.LENGTH_SHORT
                     ).show()
                     return@setOnClickListener
                 }
 
-                if (prescription.isEmpty()) {
-                    Toast.makeText(
-                        requireContext(),
-                        "⚠️ Resep tidak boleh kosong!",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnClickListener
-                }
+                // Format prescription
+                val prescription = selectedMedicines.joinToString("\n") { "- $it" }
 
                 // Save ke Firebase
                 saveCompletionData(booking, diagnosis, prescription)

@@ -24,7 +24,6 @@ import com.example.projectantrianrsrjkelompok2.fragment_news
 
 // ========== FRAGMENT ADMIN ==========
 import com.example.projectantrianrsrjkelompok2.admin.AdminDashboardFragment
-import com.example.projectantrianrsrjkelompok2.admin.AdminSettingsFragment
 import com.example.projectantrianrsrjkelompok2.admin.ManageDoctorFragment
 import com.example.projectantrianrsrjkelompok2.admin.ManagePatientFragment
 import com.example.projectantrianrsrjkelompok2.admin.ManageScheduleFragment

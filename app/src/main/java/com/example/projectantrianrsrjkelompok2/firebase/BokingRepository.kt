@@ -277,4 +277,34 @@ object BookingRepository {
         }
         activeListeners.clear()
     }
+
+    // Tambahkan method ini di BookingRepository.kt
+
+// Tambahkan di BookingRepository.kt
+
+    fun listenHistoryByUserId(
+        userId: String,
+        onUpdate: (List<Booking>) -> Unit
+    ) {
+        val query = ref.orderByChild("userId")
+            .equalTo(userId)
+
+        val listener = createListener { bookings ->
+            // Filter hanya COMPLETED
+            val completed = bookings.filter { b ->
+                b.status == BookingStatus.COMPLETED
+            }
+                .distinctBy {
+                    "${it.patientName}|${it.queueNumber}|${it.time}|${it.date}"
+                }
+                .sortedByDescending { b ->
+                    b.createdAt
+                }
+
+            onUpdate(completed)
+        }
+
+        query.addValueEventListener(listener)
+        activeListeners.add(query to listener)
+    }
 }

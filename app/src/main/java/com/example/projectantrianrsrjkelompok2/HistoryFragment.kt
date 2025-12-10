@@ -11,6 +11,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
+import com.example.projectantrianrsrjkelompok2.firebase.BookingRepository
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 import java.text.SimpleDateFormat
 import java.util.*
@@ -20,6 +21,9 @@ class HistoryFragment : Fragment() {
     private lateinit var layoutHistoryContainer: LinearLayout
     private lateinit var layoutEmptyState: LinearLayout
     private lateinit var tvHistoryCount: TextView
+
+    private val historyList = mutableListOf<Booking>()
+    private var userId = ""
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,7 +37,18 @@ class HistoryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initViews(view)
-        loadHistoryData()
+
+        val pref = PreferencesHelper(requireContext())
+        userId = pref.getUserId() ?: ""
+
+        if (userId.isEmpty()) {
+            Log.e("HistoryFragment", "❌ User not logged in!")
+            showEmptyState()
+            Toast.makeText(requireContext(), "Silakan login terlebih dahulu", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        loadHistoryFromFirebase()
     }
 
     private fun initViews(view: View) {
@@ -45,100 +60,25 @@ class HistoryFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         Log.d("HistoryFragment", "🔄 onResume - Refreshing history data")
-        loadHistoryData()
+        if (userId.isNotEmpty()) {
+            loadHistoryFromFirebase()
+        }
     }
 
-    private fun loadHistoryData() {
-        try {
-            // ✅ STEP 1: Get current logged in user ID
-            val currentUserId = PreferencesHelper.getUserId(requireContext())
+    private fun loadHistoryFromFirebase() {
+        Log.d("HistoryFragment", "📥 Loading history from Firebase for userId: $userId")
 
-            if (currentUserId.isNullOrEmpty()) {
-                Log.e("HistoryFragment", "❌ User not logged in!")
-                showEmptyState()
-                Toast.makeText(
-                    requireContext(),
-                    "Silakan login terlebih dahulu",
-                    Toast.LENGTH_SHORT
-                ).show()
-                return
-            }
+        BookingRepository.listenHistoryByUserId(userId) { bookings ->
+            Log.d("HistoryFragment", "✅ Received ${bookings.size} history items from Firebase")
 
-            Log.d("HistoryFragment", "📊 Loading history for userId: $currentUserId")
+            historyList.clear()
+            historyList.addAll(bookings)
 
-            // ✅ STEP 2: Get ALL bookings from database
-            val allBookings = DataSource.getBookingHistory()
-
-            Log.d("HistoryFragment", "  - Total bookings in database: ${allBookings.size}")
-
-            // ✅ STEP 3: Filter by current user
-            val userBookings = allBookings.filter { booking ->
-                val belongsToUser = booking.userId == currentUserId
-
-                // Debug log
-                if (belongsToUser) {
-                    Log.d("HistoryFragment", "  ✅ ${booking.id} belongs to $currentUserId")
-                } else {
-                    Log.d("HistoryFragment", "  ❌ ${booking.id} belongs to ${booking.userId}")
-                }
-
-                belongsToUser
-            }
-
-            Log.d("HistoryFragment", "  - Current user's bookings: ${userBookings.size}")
-
-            // ✅ STEP 4: Filter by status (COMPLETED or CANCELLED)
-            val historyBookings = userBookings.filter { booking ->
-                booking.status == BookingStatus.COMPLETED ||
-                        booking.status == BookingStatus.CANCELLED
-            }
-
-            Log.d("HistoryFragment", "  - History bookings (COMPLETED + CANCELLED): ${historyBookings.size}")
-
-            // ✅ STEP 5: Remove duplicates
-            val uniqueBookings = historyBookings
-                .distinctBy {
-                    "${it.patientName}|${it.queueNumber}|${it.date}|${it.doctorName}"
-                }
-                .sortedByDescending { it.createdAt }
-
-            Log.d("HistoryFragment", "  - Unique history: ${uniqueBookings.size}")
-
-            // Debug: Log duplicates if any
-            if (historyBookings.size != uniqueBookings.size) {
-                Log.w("HistoryFragment", "⚠️ Duplicates removed: ${historyBookings.size - uniqueBookings.size}")
-            }
-
-            // Log final result
-            val completedCount = uniqueBookings.count { it.status == BookingStatus.COMPLETED }
-            val cancelledCount = uniqueBookings.count { it.status == BookingStatus.CANCELLED }
-
-            Log.d("HistoryFragment", "✅ History for user $currentUserId:")
-            Log.d("HistoryFragment", "  - Completed: $completedCount")
-            Log.d("HistoryFragment", "  - Cancelled: $cancelledCount")
-            Log.d("HistoryFragment", "  - Total: ${uniqueBookings.size}")
-
-            uniqueBookings.forEachIndexed { index, booking ->
-                val statusIcon = when (booking.status) {
-                    BookingStatus.COMPLETED -> "✅"
-                    BookingStatus.CANCELLED -> "❌"
-                    else -> "📋"
-                }
-                Log.d("HistoryFragment", "  $statusIcon ${index + 1}. ${booking.patientName} (Q${booking.queueNumber})")
-            }
-
-            if (uniqueBookings.isEmpty()) {
-                Log.w("HistoryFragment", "⚠️ No history for user: $currentUserId")
+            if (historyList.isEmpty()) {
                 showEmptyState()
             } else {
-                Log.d("HistoryFragment", "✅ Displaying ${uniqueBookings.size} items")
-                showHistoryList(uniqueBookings)
+                showHistoryList(historyList)
             }
-
-        } catch (e: Exception) {
-            Log.e("HistoryFragment", "❌ Error loading history: ${e.message}", e)
-            e.printStackTrace()
-            showEmptyState()
         }
     }
 
@@ -152,29 +92,17 @@ class HistoryFragment : Fragment() {
         layoutHistoryContainer.visibility = View.VISIBLE
         layoutEmptyState.visibility = View.GONE
 
-        val completedCount = bookings.count { it.status == BookingStatus.COMPLETED }
-        val cancelledCount = bookings.count { it.status == BookingStatus.CANCELLED }
-
-        tvHistoryCount.text = when {
-            completedCount > 0 && cancelledCount > 0 ->
-                "${bookings.size} riwayat ($completedCount selesai, $cancelledCount dibatalkan)"
-            completedCount > 0 ->
-                "${bookings.size} riwayat selesai"
-            cancelledCount > 0 ->
-                "${bookings.size} riwayat dibatalkan"
-            else ->
-                "${bookings.size} riwayat"
-        }
+        tvHistoryCount.text = "${bookings.size} riwayat ditemukan"
 
         layoutHistoryContainer.removeAllViews()
 
-        bookings.forEach { booking ->
-            val cardView = createBookingCard(booking)
+        bookings.forEachIndexed { index, booking ->
+            val cardView = createHistoryCard(booking, index + 1)
             layoutHistoryContainer.addView(cardView)
         }
     }
 
-    private fun createBookingCard(booking: Booking): CardView {
+    private fun createHistoryCard(booking: Booking, number: Int): CardView {
         val cardView = CardView(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -182,15 +110,20 @@ class HistoryFragment : Fragment() {
             ).apply {
                 bottomMargin = dpToPx(12)
             }
-            radius = dpToPx(8).toFloat()
+            radius = dpToPx(12).toFloat()
             cardElevation = dpToPx(4).toFloat()
+            setCardBackgroundColor(Color.WHITE)
 
-            val bgColor = when (booking.status) {
-                BookingStatus.COMPLETED -> Color.parseColor("#E8F5E9")
-                BookingStatus.CANCELLED -> Color.parseColor("#F5F5F5")
-                else -> Color.WHITE
+            isClickable = true
+            isFocusable = true
+            // Fix: Gunakan TypedValue untuk mendapatkan drawable dari attribute
+            val outValue = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+            foreground = context.getDrawable(outValue.resourceId)
+
+            setOnClickListener {
+                showDetailDialog(booking)
             }
-            setCardBackgroundColor(bgColor)
         }
 
         val container = LinearLayout(requireContext()).apply {
@@ -199,6 +132,7 @@ class HistoryFragment : Fragment() {
             setPadding(padding, padding, padding, padding)
         }
 
+        // ==================== HEADER ====================
         val header = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
@@ -207,10 +141,10 @@ class HistoryFragment : Fragment() {
             )
         }
 
-        val tvQueueNumber = TextView(requireContext()).apply {
-            text = "No. ${booking.queueNumber}"
+        val tvNumber = TextView(requireContext()).apply {
+            text = "#$number"
             textSize = 18f
-            setTextColor(Color.parseColor("#2196F3"))
+            setTextColor(Color.parseColor("#1976D2"))
             setTypeface(null, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(
                 0,
@@ -220,83 +154,223 @@ class HistoryFragment : Fragment() {
         }
 
         val tvStatus = TextView(requireContext()).apply {
-            val (statusText, statusColor) = when (booking.status) {
-                BookingStatus.COMPLETED -> "✅ Selesai" to "#4CAF50"
-                BookingStatus.CANCELLED -> "❌ Dibatalkan" to "#9E9E9E"
-                BookingStatus.MISSED -> "⚠️ Terlewat" to "#F44336"
-                BookingStatus.CALLED -> "🔔 Dipanggil" to "#FF9800"
-                BookingStatus.WAITING -> "⏳ Menunggu" to "#2196F3"
-            }
-
-            text = statusText
+            text = "✅ Selesai"
             textSize = 12f
             setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD)
             val padding = dpToPx(8)
             setPadding(padding, padding/2, padding, padding/2)
-
-            val shape = android.graphics.drawable.GradientDrawable().apply {
-                setColor(Color.parseColor(statusColor))
-                cornerRadius = dpToPx(4).toFloat()
-            }
-            background = shape
+            background = createRoundedBackground("#4CAF50")
         }
 
-        header.addView(tvQueueNumber)
+        header.addView(tvNumber)
         header.addView(tvStatus)
 
-        val separator = View(requireContext()).apply {
+        // ==================== DOCTOR INFO ====================
+        val doctorInfoLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            val padding = dpToPx(12)
+            setPadding(padding, padding, padding, padding)
+            setBackgroundColor(Color.parseColor("#F5F5F5"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                2
+                LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                val margin = dpToPx(12)
-                topMargin = margin
-                bottomMargin = margin
+                topMargin = dpToPx(12)
+            }
+        }
+
+        val tvDoctorLabel = TextView(requireContext()).apply {
+            text = "👨‍⚕️ Dokter"
+            textSize = 12f
+            setTextColor(Color.parseColor("#757575"))
+        }
+
+        val tvDoctor = TextView(requireContext()).apply {
+            text = booking.doctorName
+            textSize = 16f
+            setTextColor(Color.parseColor("#212121"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, dpToPx(4), 0, 0)
+        }
+
+        val tvSpec = TextView(requireContext()).apply {
+            text = booking.specialization
+            textSize = 14f
+            setTextColor(Color.parseColor("#616161"))
+        }
+
+        val tvDateTime = TextView(requireContext()).apply {
+            text = "📅 ${formatDate(booking.date)} • ${booking.time}"
+            textSize = 13f
+            setTextColor(Color.parseColor("#757575"))
+            setPadding(0, dpToPx(4), 0, 0)
+        }
+
+        doctorInfoLayout.addView(tvDoctorLabel)
+        doctorInfoLayout.addView(tvDoctor)
+        doctorInfoLayout.addView(tvSpec)
+        doctorInfoLayout.addView(tvDateTime)
+
+        // ==================== COMPLAINT ====================
+        val tvComplaintLabel = TextView(requireContext()).apply {
+            text = "💬 Keluhan"
+            textSize = 12f
+            setTextColor(Color.parseColor("#757575"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, dpToPx(12), 0, dpToPx(4))
+        }
+
+        val tvComplaint = TextView(requireContext()).apply {
+            text = booking.complaint.ifEmpty { "-" }
+            textSize = 14f
+            setTextColor(Color.parseColor("#424242"))
+        }
+
+        // ==================== DIVIDER ====================
+        val divider = View(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                1
+            ).apply {
+                topMargin = dpToPx(12)
+                bottomMargin = dpToPx(12)
             }
             setBackgroundColor(Color.parseColor("#E0E0E0"))
         }
 
-        val tvDoctor = TextView(requireContext()).apply {
-            text = "👨‍⚕️ ${booking.doctorName}"
-            textSize = 14f
-            setTextColor(Color.BLACK)
+        // ==================== DIAGNOSIS ====================
+        val tvDiagnosisLabel = TextView(requireContext()).apply {
+            text = "🩺 Diagnosis"
+            textSize = 12f
+            setTextColor(Color.parseColor("#757575"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, 0, 0, dpToPx(4))
         }
 
-        val tvSpec = TextView(requireContext()).apply {
-            text = "🏥 ${booking.specialization}"
-            textSize = 13f
-            setTextColor(Color.parseColor("#666666"))
-            setPadding(0, dpToPx(4), 0, 0)
-        }
-
-        val tvDateTime = TextView(requireContext()).apply {
-            text = "📅 ${formatDate(booking.date)} | 🕘 ${booking.time}"
-            textSize = 13f
-            setTextColor(Color.parseColor("#666666"))
-            setPadding(0, dpToPx(4), 0, 0)
-        }
-
-        container.addView(header)
-        container.addView(separator)
-        container.addView(tvDoctor)
-        container.addView(tvSpec)
-        container.addView(tvDateTime)
-
-        if (booking.status == BookingStatus.CANCELLED) {
-            val tvCancelledNote = TextView(requireContext()).apply {
-                text = "💬 Antrian ini telah dibatalkan"
-                textSize = 12f
-                setTextColor(Color.parseColor("#9E9E9E"))
-                setTypeface(null, android.graphics.Typeface.ITALIC)
-                setPadding(0, dpToPx(8), 0, 0)
+        val tvDiagnosis = TextView(requireContext()).apply {
+            text = if (booking.diagnosis.isNotEmpty()) {
+                booking.diagnosis
+            } else {
+                "(Belum diisi dokter)"
             }
-            container.addView(tvCancelledNote)
+            textSize = 15f
+            setTextColor(if (booking.diagnosis.isNotEmpty()) {
+                Color.parseColor("#D32F2F")
+            } else {
+                Color.parseColor("#9E9E9E")
+            })
+            setTypeface(null, if (booking.diagnosis.isNotEmpty()) {
+                android.graphics.Typeface.BOLD
+            } else {
+                android.graphics.Typeface.ITALIC
+            })
         }
+
+        // ==================== PRESCRIPTION ====================
+        val tvPrescriptionLabel = TextView(requireContext()).apply {
+            text = "💊 Resep Obat"
+            textSize = 12f
+            setTextColor(Color.parseColor("#757575"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, dpToPx(12), 0, dpToPx(4))
+        }
+
+        val tvPrescription = TextView(requireContext()).apply {
+            text = if (booking.prescription.isNotEmpty()) {
+                booking.prescription
+            } else {
+                "(Belum diisi dokter)"
+            }
+            textSize = 14f
+            setTextColor(if (booking.prescription.isNotEmpty()) {
+                Color.parseColor("#424242")
+            } else {
+                Color.parseColor("#9E9E9E")
+            })
+            setTypeface(null, if (booking.prescription.isEmpty()) {
+                android.graphics.Typeface.ITALIC
+            } else {
+                android.graphics.Typeface.NORMAL
+            })
+            setPadding(dpToPx(8), 0, 0, 0)
+        }
+
+        // ==================== TAP HINT ====================
+        val tvTapHint = TextView(requireContext()).apply {
+            text = "👆 Ketuk untuk detail lengkap"
+            textSize = 11f
+            setTextColor(Color.parseColor("#9E9E9E"))
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, dpToPx(12), 0, 0)
+        }
+
+        // ==================== ADD ALL VIEWS ====================
+        container.addView(header)
+        container.addView(doctorInfoLayout)
+        container.addView(tvComplaintLabel)
+        container.addView(tvComplaint)
+        container.addView(divider)
+        container.addView(tvDiagnosisLabel)
+        container.addView(tvDiagnosis)
+        container.addView(tvPrescriptionLabel)
+        container.addView(tvPrescription)
+        container.addView(tvTapHint)
 
         cardView.addView(container)
 
         return cardView
+    }
+
+    private fun showDetailDialog(booking: Booking) {
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(60, 40, 60, 40)
+        }
+
+        val tvTitle = TextView(requireContext()).apply {
+            text = "📋 Detail Riwayat Pemeriksaan"
+            textSize = 20f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.parseColor("#212121"))
+            setPadding(0, 0, 0, 24)
+        }
+        container.addView(tvTitle)
+
+        val tvContent = TextView(requireContext()).apply {
+            text = """
+👨‍⚕️ Dokter:
+   ${booking.doctorName}
+   ${booking.specialization}
+
+📅 Tanggal & Waktu:
+   ${formatDate(booking.date)} • ${booking.time}
+
+💬 Keluhan Saya:
+   ${booking.complaint.ifEmpty { "-" }}
+
+🩺 Diagnosis Dokter:
+   ${booking.diagnosis.ifEmpty { "(Belum diisi)" }}
+
+💊 Resep Obat:
+${if (booking.prescription.isNotEmpty()) {
+                booking.prescription.split("\n").joinToString("\n") { "   $it" }
+            } else {
+                "   (Belum diisi)"
+            }}
+
+✅ Status: Pemeriksaan Selesai
+            """.trimIndent()
+            textSize = 14f
+            setTextColor(Color.parseColor("#424242"))
+            setLineSpacing(8f, 1f)
+        }
+        container.addView(tvContent)
+
+        android.app.AlertDialog.Builder(requireContext())
+            .setView(container)
+            .setPositiveButton("Tutup", null)
+            .show()
     }
 
     private fun formatDate(dateString: String): String {
@@ -310,8 +384,20 @@ class HistoryFragment : Fragment() {
         }
     }
 
+    private fun createRoundedBackground(colorHex: String): android.graphics.drawable.GradientDrawable {
+        return android.graphics.drawable.GradientDrawable().apply {
+            setColor(Color.parseColor(colorHex))
+            cornerRadius = dpToPx(4).toFloat()
+        }
+    }
+
     private fun dpToPx(dp: Int): Int {
         val density = resources.displayMetrics.density
         return (dp * density).toInt()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        BookingRepository.clearListeners()
     }
 }
