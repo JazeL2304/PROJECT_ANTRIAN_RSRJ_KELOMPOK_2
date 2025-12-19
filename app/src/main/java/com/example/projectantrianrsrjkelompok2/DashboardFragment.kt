@@ -72,7 +72,7 @@ class DashboardFragment : Fragment() {
 
     private fun setupUI() {
         val username = preferencesHelper.getUsername()
-        tvWelcome.text = "Selamat Datang, $username! 👋"
+        tvWelcome.text = "Selamat Datang, $username!"
 
         val currentDate =
             SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
@@ -80,10 +80,6 @@ class DashboardFragment : Fragment() {
 
         tvCurrentDate.text = currentDate
     }
-
-    // ================================
-    // ✅ REALTIME DASHBOARD LOAD
-    // ================================
     private fun loadDashboardData() {
 
         lifecycleScope.launch {

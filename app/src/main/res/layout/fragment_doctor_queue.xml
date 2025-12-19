@@ -19,7 +19,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="📋 Antrian Pasien"
+            android:text="Antrian Pasien"
             android:textColor="@android:color/white"
             android:textSize="24sp"
             android:textStyle="bold"
@@ -90,7 +90,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="💡 Tap pasien untuk mengubah status:\n• Menunggu → Dipanggil → Selesai"
+                android:text="Tap pasien untuk mengubah status:\n• Menunggu → Dipanggil → Selesai"
                 android:textSize="12sp"
                 android:textColor="#1976D2"
                 android:padding="12dp"

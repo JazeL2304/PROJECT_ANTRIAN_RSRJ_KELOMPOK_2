@@ -43,7 +43,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Buat Akun Baru 🎉"
+                    android:text="Buat Akun Baru!"
                     android:textSize="28sp"
                     android:textStyle="bold"
                     android:textColor="#212121"

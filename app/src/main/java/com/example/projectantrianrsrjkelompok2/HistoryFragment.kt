@@ -42,7 +42,7 @@ class HistoryFragment : Fragment() {
         userId = pref.getUserId() ?: ""
 
         if (userId.isEmpty()) {
-            Log.e("HistoryFragment", "❌ User not logged in!")
+            Log.e("HistoryFragment", "User not logged in!")
             showEmptyState()
             Toast.makeText(requireContext(), "Silakan login terlebih dahulu", Toast.LENGTH_SHORT).show()
             return
@@ -59,17 +59,17 @@ class HistoryFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        Log.d("HistoryFragment", "🔄 onResume - Refreshing history data")
+        Log.d("HistoryFragment", "onResume - Refreshing history data")
         if (userId.isNotEmpty()) {
             loadHistoryFromFirebase()
         }
     }
 
     private fun loadHistoryFromFirebase() {
-        Log.d("HistoryFragment", "📥 Loading history from Firebase for userId: $userId")
+        Log.d("HistoryFragment", "Loading history from Firebase for userId: $userId")
 
         BookingRepository.listenHistoryByUserId(userId) { bookings ->
-            Log.d("HistoryFragment", "✅ Received ${bookings.size} history items from Firebase")
+            Log.d("HistoryFragment", "Received ${bookings.size} history items from Firebase")
 
             historyList.clear()
             historyList.addAll(bookings)
@@ -116,7 +116,7 @@ class HistoryFragment : Fragment() {
 
             isClickable = true
             isFocusable = true
-            // Fix: Gunakan TypedValue untuk mendapatkan drawable dari attribute
+
             val outValue = android.util.TypedValue()
             context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
             foreground = context.getDrawable(outValue.resourceId)
@@ -142,7 +142,7 @@ class HistoryFragment : Fragment() {
         }
 
         val tvNumber = TextView(requireContext()).apply {
-            text = "#$number"
+            text = "No. $number" // Hapus #, ganti jadi "No." biar rapi
             textSize = 18f
             setTextColor(Color.parseColor("#1976D2"))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -154,7 +154,7 @@ class HistoryFragment : Fragment() {
         }
 
         val tvStatus = TextView(requireContext()).apply {
-            text = "✅ Selesai"
+            text = "Selesai" // Hapus Icon Centang
             textSize = 12f
             setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -181,7 +181,7 @@ class HistoryFragment : Fragment() {
         }
 
         val tvDoctorLabel = TextView(requireContext()).apply {
-            text = "👨‍⚕️ Dokter"
+            text = "Dokter" // Hapus Emoji Dokter
             textSize = 12f
             setTextColor(Color.parseColor("#757575"))
         }
@@ -201,7 +201,7 @@ class HistoryFragment : Fragment() {
         }
 
         val tvDateTime = TextView(requireContext()).apply {
-            text = "📅 ${formatDate(booking.date)} • ${booking.time}"
+            text = "${formatDate(booking.date)} • ${booking.time}" // Hapus Emoji Kalender
             textSize = 13f
             setTextColor(Color.parseColor("#757575"))
             setPadding(0, dpToPx(4), 0, 0)
@@ -214,7 +214,7 @@ class HistoryFragment : Fragment() {
 
         // ==================== COMPLAINT ====================
         val tvComplaintLabel = TextView(requireContext()).apply {
-            text = "💬 Keluhan"
+            text = "Keluhan" // Hapus Emoji Chat
             textSize = 12f
             setTextColor(Color.parseColor("#757575"))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -241,7 +241,7 @@ class HistoryFragment : Fragment() {
 
         // ==================== DIAGNOSIS ====================
         val tvDiagnosisLabel = TextView(requireContext()).apply {
-            text = "🩺 Diagnosis"
+            text = "Diagnosis" // Hapus Emoji Stetoskop
             textSize = 12f
             setTextColor(Color.parseColor("#757575"))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -269,7 +269,7 @@ class HistoryFragment : Fragment() {
 
         // ==================== PRESCRIPTION ====================
         val tvPrescriptionLabel = TextView(requireContext()).apply {
-            text = "💊 Resep Obat"
+            text = "Resep Obat" // Hapus Emoji Obat
             textSize = 12f
             setTextColor(Color.parseColor("#757575"))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -298,7 +298,7 @@ class HistoryFragment : Fragment() {
 
         // ==================== TAP HINT ====================
         val tvTapHint = TextView(requireContext()).apply {
-            text = "👆 Ketuk untuk detail lengkap"
+            text = "Ketuk untuk detail lengkap" // Hapus Emoji Jari
             textSize = 11f
             setTextColor(Color.parseColor("#9E9E9E"))
             gravity = android.view.Gravity.CENTER
@@ -329,7 +329,7 @@ class HistoryFragment : Fragment() {
         }
 
         val tvTitle = TextView(requireContext()).apply {
-            text = "📋 Detail Riwayat Pemeriksaan"
+            text = "Detail Riwayat Pemeriksaan" // Hapus Emoji Clipboard
             textSize = 20f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.parseColor("#212121"))
@@ -338,28 +338,29 @@ class HistoryFragment : Fragment() {
         container.addView(tvTitle)
 
         val tvContent = TextView(requireContext()).apply {
+            // Bersihkan emoji di Detail Dialog juga
             text = """
-👨‍⚕️ Dokter:
+Dokter:
    ${booking.doctorName}
    ${booking.specialization}
 
-📅 Tanggal & Waktu:
+Tanggal & Waktu:
    ${formatDate(booking.date)} • ${booking.time}
 
-💬 Keluhan Saya:
+Keluhan Saya:
    ${booking.complaint.ifEmpty { "-" }}
 
-🩺 Diagnosis Dokter:
+Diagnosis Dokter:
    ${booking.diagnosis.ifEmpty { "(Belum diisi)" }}
 
-💊 Resep Obat:
+Resep Obat:
 ${if (booking.prescription.isNotEmpty()) {
                 booking.prescription.split("\n").joinToString("\n") { "   $it" }
             } else {
                 "   (Belum diisi)"
             }}
 
-✅ Status: Pemeriksaan Selesai
+Status: Pemeriksaan Selesai
             """.trimIndent()
             textSize = 14f
             setTextColor(Color.parseColor("#424242"))

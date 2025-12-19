@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SIMPAN DI: res/layout/item_history_card.xml -->
 <androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -16,7 +15,6 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Header: Queue Number & Status -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -38,7 +36,7 @@
                 android:id="@+id/tvStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="✅ Selesai"
+                android:text="Selesai"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
                 android:paddingTop="6dp"
@@ -49,39 +47,35 @@
                 android:background="@drawable/bg_status_completed"/>
         </LinearLayout>
 
-        <!-- Patient Name -->
         <TextView
             android:id="@+id/tvPatientName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="👤 jasiin"
+            android:text="Nama Pasien"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="#1976D2"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Date & Time -->
         <TextView
             android:id="@+id/tvDateTime"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📅 2025-12-08 • 23:30"
+            android:text="2025-12-08 • 23:30"
             android:textSize="14sp"
             android:textColor="#757575"
             android:layout_marginBottom="12dp"/>
 
-        <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="#E0E0E0"
             android:layout_marginBottom="12dp"/>
 
-        <!-- Complaint -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="💬 Keluhan:"
+            android:text="Keluhan:"
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="#666666"
@@ -98,11 +92,10 @@
             android:maxLines="2"
             android:ellipsize="end"/>
 
-        <!-- Diagnosis -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🩺 Diagnosis:"
+            android:text="Diagnosis:"
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="#666666"
@@ -119,11 +112,10 @@
             android:maxLines="2"
             android:ellipsize="end"/>
 
-        <!-- Prescription -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="💊 Resep Obat:"
+            android:text="Resep Obat:"
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="#666666"
@@ -140,11 +132,10 @@
             android:maxLines="3"
             android:ellipsize="end"/>
 
-        <!-- Footer Note -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="💡 Tap untuk detail lengkap • Long press untuk hapus"
+            android:text="Tap untuk detail lengkap • Long press untuk hapus"
             android:textSize="11sp"
             android:textColor="#9E9E9E"
             android:textStyle="italic"

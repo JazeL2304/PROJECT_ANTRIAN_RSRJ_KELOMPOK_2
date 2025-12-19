@@ -45,7 +45,7 @@ class AdminDashboardFragment : Fragment() {
         tvActiveQueues = view.findViewById(R.id.tv_active_queues)
         tvRecentBookings = view.findViewById(R.id.tv_recent_bookings)
 
-        tvGreeting.text = "Selamat Datang, ${pref.getUsername()} 👋"
+        tvGreeting.text = "Selamat Datang, ${pref.getUsername()}"
 
         // =============================
         // PROFILE
@@ -59,7 +59,7 @@ class AdminDashboardFragment : Fragment() {
         }
 
         // =============================
-        // ✅ BUTTON NAVIGATION
+        // BUTTON NAVIGATION
         // =============================
         view.findViewById<Button>(R.id.btnManageDoctor).setOnClickListener {
             navigateTo(ManageDoctorFragment())
@@ -74,13 +74,12 @@ class AdminDashboardFragment : Fragment() {
         }
 
         // =============================
-        // 🔧 FIX DOCTOR NAME - LONG PRESS "KELOLA DOKTER"
+        // FIX DOCTOR NAME (Hidden Feature)
         // =============================
         view.findViewById<Button>(R.id.btnManageDoctor).setOnLongClickListener {
 
-            // Dialog konfirmasi
             android.app.AlertDialog.Builder(requireContext())
-                .setTitle("🔧 Fix Nama Dokter")
+                .setTitle("Fix Nama Dokter") // HAPUS EMOJI OBENG
                 .setMessage(
                     "Update nama di Firebase:\n\n" +
                             "users/doc001/fullName\n\n" +
@@ -92,47 +91,41 @@ class AdminDashboardFragment : Fragment() {
                 )
                 .setPositiveButton("Ya, Update!") { _, _ ->
 
-                    // ✅ UPDATE FIREBASE
                     com.google.firebase.database.FirebaseDatabase.getInstance()
                         .getReference("users/doc001/fullName")
-                        .setValue("Dr. Ahmad Santoso")  // ← Santoso (bukan Susanto!)
+                        .setValue("Dr. Ahmad Santoso")
                         .addOnSuccessListener {
 
-                            // ✅ Success
                             android.widget.Toast.makeText(
                                 requireContext(),
-                                "✅ BERHASIL!\n\n" +
+                                "BERHASIL!\n\n" +
                                         "Nama berhasil diubah:\n" +
                                         "Susanto → Santoso\n\n" +
-                                        "⚠️ DOKTER HARUS LOGOUT & LOGIN ULANG!",
+                                        "DOKTER HARUS LOGOUT & LOGIN ULANG!",
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
 
-                            android.util.Log.d("ADMIN_FIX", "✅ SUCCESS: users/doc001/fullName → Dr. Ahmad Santoso")
+                            android.util.Log.d("ADMIN_FIX", "SUCCESS: users/doc001/fullName → Dr. Ahmad Santoso")
                         }
                         .addOnFailureListener { e ->
 
-                            // ❌ Failed
                             android.widget.Toast.makeText(
                                 requireContext(),
-                                "❌ GAGAL!\n\n" +
+                                "GAGAL!\n\n" + // HAPUS EMOJI SILANG
                                         "Error: ${e.message}\n\n" +
                                         "Cek Firebase Rules!",
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
 
-                            android.util.Log.e("ADMIN_FIX", "❌ FAILED: ${e.message}")
+                            android.util.Log.e("ADMIN_FIX", "FAILED: ${e.message}")
                         }
                 }
                 .setNegativeButton("Batal", null)
                 .show()
 
-            true  // Return true = consume long click event
+            true
         }
 
-        // =============================
-        // ✅ REALTIME DASHBOARD - UPDATED
-        // =============================
         startRealtimeAdmin()
     }
 
@@ -144,18 +137,16 @@ class AdminDashboardFragment : Fragment() {
     }
 
     // =====================================================
-    // ✅ REALTIME ADMIN DASHBOARD - UPDATED VERSION
+    // REALTIME ADMIN DASHBOARD
     // =====================================================
     private fun startRealtimeAdmin() {
         BookingRepository.clearListeners()
 
-        // ✅ Dapatkan tanggal hari ini dalam format yang sama dengan Firebase
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             .format(Date())
 
-        android.util.Log.d("AdminDashboard", "📅 Fetching stats for date: $today")
+        android.util.Log.d("AdminDashboard", "Fetching stats for date: $today") // HAPUS EMOJI KALENDER
 
-        // ✅ Gunakan fungsi baru yang ambil data berdasarkan tanggal
         BookingRepository.listenDashboardStats(today) {
                 totalPatients,
                 totalDoctors,
@@ -163,21 +154,19 @@ class AdminDashboardFragment : Fragment() {
                 activeQueues,
                 waitingList
             ->
-            android.util.Log.d("AdminDashboard", "📊 Stats received:")
+            android.util.Log.d("AdminDashboard", "Stats received:") // HAPUS EMOJI CHART
             android.util.Log.d("AdminDashboard", "   - Total Patients: $totalPatients")
             android.util.Log.d("AdminDashboard", "   - Total Doctors: $totalDoctors")
             android.util.Log.d("AdminDashboard", "   - Today Bookings: $todayBookings")
             android.util.Log.d("AdminDashboard", "   - Active Queues: $activeQueues")
 
-            // ✅ Update UI
             tvTotalPatients.text = totalPatients.toString()
             tvTotalDoctors.text = totalDoctors.toString()
             tvTodayBookings.text = todayBookings.toString()
             tvActiveQueues.text = activeQueues.toString()
 
-            // ✅ Tampilkan daftar antrian
             val sb = StringBuilder()
-            sb.append("📋 Pasien yang Menunggu:\n\n")
+            sb.append("Pasien yang Menunggu:\n\n") // HAPUS EMOJI CLIPBOARD
 
             if (waitingList.isEmpty()) {
                 sb.append("Belum ada pasien yang menunggu")

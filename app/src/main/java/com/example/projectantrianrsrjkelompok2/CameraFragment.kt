@@ -220,7 +220,7 @@ class CameraFragment : Fragment() {
 
             Toast.makeText(
                 requireContext(),
-                "✅ Foto profil berhasil disimpan!",
+                "Foto profil berhasil disimpan!",
                 Toast.LENGTH_LONG
             ).show()
 
@@ -228,7 +228,7 @@ class CameraFragment : Fragment() {
         } ?: run {
             Toast.makeText(
                 requireContext(),
-                "❌ Error: Foto tidak ditemukan",
+                "Error: Foto tidak ditemukan",
                 Toast.LENGTH_SHORT
             ).show()
         }

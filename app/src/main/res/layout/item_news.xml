@@ -62,7 +62,6 @@
                 android:layout_weight="1"
                 android:textSize="12sp"
                 android:textColor="#9E9E9E"
-                android:drawableStart="@android:drawable/ic_menu_recent_history"
                 android:drawablePadding="4dp"
                 android:drawableTint="#9E9E9E"/>
 

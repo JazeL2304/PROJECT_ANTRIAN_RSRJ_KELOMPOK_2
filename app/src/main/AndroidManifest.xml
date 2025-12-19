@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ✅ PERMISSIONS -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -12,7 +11,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- ✅ CAMERA FEATURE -->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -27,11 +25,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PROJECT_ANTRIAN_RSRJ_KELOMPOK_2">
 
-        <!-- ✅ MAIN ACTIVITY -->
         <activity
-            android:name=".MainActivity"
+            android:name=".SplashActivity"
             android:exported="true"
-            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.PROJECT_ANTRIAN_RSRJ_KELOMPOK_2">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -39,7 +35,12 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ FILE PROVIDER (untuk camera) -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.PROJECT_ANTRIAN_RSRJ_KELOMPOK_2" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -48,8 +49,6 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
-        </provider>
-
+        </provider>+
     </application>
-
 </manifest>

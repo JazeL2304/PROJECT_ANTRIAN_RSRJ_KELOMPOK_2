@@ -76,7 +76,7 @@ class ViewReportFragment : Fragment() {
     private fun loadStatistics() {
         lifecycleScope.launch {
             try {
-                Log.d(TAG, "🔍 Loading statistics...")
+                Log.d(TAG, "Loading statistics...")
 
                 val doctorCount = countDoctors()
                 val patientCount = countUniquePatients()
@@ -86,7 +86,7 @@ class ViewReportFragment : Fragment() {
                 tvPatientCount.text = patientCount.toString()
                 tvBookingCount.text = bookingCount.toString()
 
-                Log.d(TAG, "✅ Statistics: Doctors=$doctorCount, Patients=$patientCount, Bookings=$bookingCount")
+                Log.d(TAG, "Statistics: Doctors=$doctorCount, Patients=$patientCount, Bookings=$bookingCount")
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Error loading statistics: ${e.message}", e)
@@ -123,7 +123,7 @@ class ViewReportFragment : Fragment() {
                 }
             }
 
-            Log.d(TAG, "📊 Unique patients: ${uniquePatients.size}")
+            Log.d(TAG, "Unique patients: ${uniquePatients.size}")
             uniquePatients.size
 
         } catch (e: Exception) {
@@ -155,7 +155,7 @@ class ViewReportFragment : Fragment() {
 
                 // ✅ Get today's date in format YYYY-MM-DD
                 val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                Log.d(TAG, "📅 Today's date: $todayDate")
+                Log.d(TAG, "Today's date: $todayDate")
 
                 val bookings = mutableListOf<BookingInfo>()
 
@@ -182,7 +182,7 @@ class ViewReportFragment : Fragment() {
                             )
 
                             bookings.add(booking)
-                            Log.d(TAG, "✅ Today's booking: ${booking.patientName} - Queue #${booking.queueNumber}")
+                            Log.d(TAG, "Today's booking: ${booking.patientName} - Queue #${booking.queueNumber}")
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "⚠️ Error parsing booking: ${e.message}")
@@ -192,7 +192,7 @@ class ViewReportFragment : Fragment() {
                 // Sort by queueNumber
                 bookings.sortBy { it.queueNumber }
 
-                Log.d(TAG, "📊 Total bookings today: ${bookings.size}")
+                Log.d(TAG, "Total bookings today: ${bookings.size}")
                 displayBookings(bookings)
 
             } catch (e: Exception) {
@@ -264,7 +264,7 @@ class ViewReportFragment : Fragment() {
         }
 
         val tvQueue = TextView(requireContext()).apply {
-            text = "🎫 #${booking.queueNumber}"
+            text = "#${booking.queueNumber}"
             textSize = 18f
             setTextColor(Color.parseColor("#1976D2"))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -303,7 +303,7 @@ class ViewReportFragment : Fragment() {
         }
 
         val tvPatientLabel = TextView(requireContext()).apply {
-            text = "👤 Pasien"
+            text = "Pasien"
             textSize = 12f
             setTextColor(Color.parseColor("#757575"))
         }
@@ -317,13 +317,13 @@ class ViewReportFragment : Fragment() {
         }
 
         val tvDoctor = TextView(requireContext()).apply {
-            text = "👨‍⚕️ ${booking.doctorName}"
+            text = "${booking.doctorName}"
             textSize = 14f
             setTextColor(Color.parseColor("#616161"))
         }
 
         val tvDateTime = TextView(requireContext()).apply {
-            text = "📅 ${booking.date} ⏰ ${booking.time}"
+            text = "${booking.date} ${booking.time}"
             textSize = 13f
             setTextColor(Color.parseColor("#757575"))
             setPadding(0, dpToPx(4), 0, 0)
@@ -337,7 +337,7 @@ class ViewReportFragment : Fragment() {
         // ==================== COMPLAINT ====================
         if (booking.complaint.isNotEmpty()) {
             val tvComplaintLabel = TextView(requireContext()).apply {
-                text = "💬 Keluhan"
+                text = "Keluhan"
                 textSize = 12f
                 setTextColor(Color.parseColor("#757575"))
                 setTypeface(null, android.graphics.Typeface.BOLD)
@@ -374,7 +374,7 @@ class ViewReportFragment : Fragment() {
             container.addView(divider)
 
             val tvDiagnosisLabel = TextView(requireContext()).apply {
-                text = "🩺 Diagnosis"
+                text = "Diagnosis"
                 textSize = 12f
                 setTextColor(Color.parseColor("#757575"))
                 setTypeface(null, android.graphics.Typeface.BOLD)
@@ -436,7 +436,7 @@ class ViewReportFragment : Fragment() {
 
         // ==================== TAP HINT ====================
         val tvTapHint = TextView(requireContext()).apply {
-            text = "👆 Ketuk untuk detail lengkap"
+            text = "Ketuk untuk detail lengkap"
             textSize = 11f
             setTextColor(Color.parseColor("#9E9E9E"))
             gravity = android.view.Gravity.CENTER
@@ -458,7 +458,7 @@ class ViewReportFragment : Fragment() {
         }
 
         val tvTitle = TextView(requireContext()).apply {
-            text = "📋 Detail Booking"
+            text = "Detail Booking"
             textSize = 20f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.parseColor("#212121"))
@@ -468,18 +468,18 @@ class ViewReportFragment : Fragment() {
 
         val tvContent = TextView(requireContext()).apply {
             text = buildString {
-                append("🎫 Nomor Antrian: #${booking.queueNumber}\n\n")
-                append("👤 Pasien: ${booking.patientName}\n")
-                append("👨‍⚕️ Dokter: ${booking.doctorName}\n")
-                append("📅 Tanggal: ${booking.date}\n")
-                append("⏰ Waktu: ${booking.time}\n\n")
+                append("   Nomor Antrian: #${booking.queueNumber}\n\n")
+                append("   Pasien: ${booking.patientName}\n")
+                append("   Dokter: ${booking.doctorName}\n")
+                append("   Tanggal: ${booking.date}\n")
+                append("   Waktu: ${booking.time}\n\n")
 
                 if (booking.complaint.isNotEmpty()) {
                     append("💬 Keluhan:\n   ${booking.complaint}\n\n")
                 }
 
                 if (booking.status == "COMPLETED") {
-                    append("🩺 Diagnosis:\n   ${booking.diagnosis.ifEmpty { "(Belum diisi)" }}\n\n")
+                    append("Diagnosis:\n   ${booking.diagnosis.ifEmpty { "(Belum diisi)" }}\n\n")
                     append("💊 Resep Obat:\n")
                     if (booking.prescription.isNotEmpty()) {
                         booking.prescription.split("\n").forEach {
@@ -637,7 +637,7 @@ class ViewReportFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "🔄 onResume, reload data")
+        Log.d(TAG, "onResume, reload data")
         loadStatistics()
         loadTodayBookings()
     }

@@ -78,7 +78,7 @@ class DoctorAddHistoryFragment : Fragment() {
         )
 
         DataSource.addToHistory(newBooking)
-        Toast.makeText(requireContext(), "✅ Riwayat pasien berhasil disimpan", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), "Riwayat pasien berhasil disimpan", Toast.LENGTH_SHORT).show()
 
         // Kosongkan form
         etPatientName.text.clear()

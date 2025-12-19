@@ -71,7 +71,7 @@ class ManageDoctorFragment : Fragment() {
     private fun loadDoctorData() {
         lifecycleScope.launch {
             try {
-                Log.d(TAG, "🔍 Loading doctors from 'doctors' table...")
+                Log.d(TAG, "Loading doctors from 'doctors' table...")
 
                 val snapshot = doctorsRef.get().await()
 
@@ -105,7 +105,7 @@ class ManageDoctorFragment : Fragment() {
                 // Sort by id
                 doctorList.sortBy { it.id }
 
-                Log.d(TAG, "📊 Total doctors: ${doctorList.size}")
+                Log.d(TAG, "Total doctors: ${doctorList.size}")
 
                 // Update UI
                 if (doctorList.isEmpty()) {
@@ -153,8 +153,8 @@ class ManageDoctorFragment : Fragment() {
             val doctor = doctors[position]
 
             holder.tvDoctorName.text = doctor.name
-            holder.tvDoctorEmail.text = "🏥 ${doctor.specialization}"
-            holder.tvDoctorSchedule.text = "🕒 ${doctor.schedule}"
+            holder.tvDoctorEmail.text = "${doctor.specialization}"
+            holder.tvDoctorSchedule.text = "${doctor.schedule}"
 
             // Edit jadwal
             holder.btnEditSchedule.setOnClickListener {
@@ -203,7 +203,7 @@ class ManageDoctorFragment : Fragment() {
     private fun updateDoctorSchedule(doctor: DoctorData, newSchedule: String, position: Int) {
         lifecycleScope.launch {
             try {
-                Log.d(TAG, "💾 Updating schedule for ${doctor.name}")
+                Log.d(TAG, "Updating schedule for ${doctor.name}")
 
                 // Update di Firebase doctors/${id}/schedule
                 val updates = mapOf<String, Any>(
@@ -236,7 +236,7 @@ class ManageDoctorFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "🔄 onResume")
+        Log.d(TAG, "onResume")
         loadDoctorData()
     }
 }

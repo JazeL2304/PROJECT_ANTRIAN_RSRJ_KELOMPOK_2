@@ -19,7 +19,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import com.example.projectantrianrsrjkelompok2.utils.PreferencesHelper
 
-
 class BookingFragment : Fragment() {
 
     private lateinit var spinnerSpecialization: Spinner
@@ -32,7 +31,6 @@ class BookingFragment : Fragment() {
     private lateinit var btnConfirmBooking: Button
     private lateinit var progressBar: ProgressBar
 
-    // ✅ NEW: Views for blocking booking when there's active queue
     private lateinit var layoutBookingBlocked: LinearLayout
     private lateinit var tvBlockedMessage: TextView
     private lateinit var btnViewQueue: Button
@@ -49,7 +47,6 @@ class BookingFragment : Fragment() {
     private var isProcessing = false
     private var isDataLoaded = false
 
-    // ✅ NEW: Store active booking info
     private var activeBooking: Booking? = null
     private var hasActiveQueue = false
 
@@ -66,8 +63,6 @@ class BookingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initViews(view)
-
-        // ✅ CRITICAL: Check active queue FIRST before loading anything else
         checkActiveQueueAndSetup()
     }
 
@@ -82,35 +77,28 @@ class BookingFragment : Fragment() {
         btnConfirmBooking = view.findViewById(R.id.btn_confirm_booking)
         progressBar = view.findViewById(R.id.progress_bar)
 
-        // ✅ NEW: Initialize blocking views (you'll need to add these to XML)
-        // If these views don't exist in your XML, they'll throw error
-        // I'll provide the XML layout separately
         try {
             layoutBookingBlocked = view.findViewById(R.id.layout_booking_blocked)
             tvBlockedMessage = view.findViewById(R.id.tv_blocked_message)
             btnViewQueue = view.findViewById(R.id.btn_view_queue)
             layoutBookingForm = view.findViewById(R.id.layout_booking_form)
         } catch (e: Exception) {
-            Log.e(TAG, "⚠️ Blocking views not found in layout. Feature disabled.")
+            Log.e(TAG, "Blocking views not found in layout. Feature disabled.")
         }
     }
 
-    // ======================================================
-    // ✅ NEW: CHECK ACTIVE QUEUE BEFORE ALLOWING BOOKING
-    // ======================================================
     private fun checkActiveQueueAndSetup() {
         val currentUserId = PreferencesHelper.getUserId(requireContext())
 
         if (currentUserId.isNullOrEmpty()) {
-            toast("❌ Silakan login terlebih dahulu")
+            toast("Silakan login terlebih dahulu")
             (activity as? MainActivity)?.navigateToFragment(LoginFragment())
             return
         }
 
         showLoading(true)
-        Log.d(TAG, "🔍 Checking active queue for user: $currentUserId")
+        Log.d(TAG, "Checking active queue for user: $currentUserId")
 
-        // Query all bookings for this user
         val ref = com.google.firebase.database.FirebaseDatabase.getInstance()
             .getReference("bookings")
 
@@ -125,22 +113,15 @@ class BookingFragment : Fragment() {
                         it.getValue(Booking::class.java)?.copy(firebaseId = it.key ?: "")
                     }
 
-                    Log.d(TAG, "📋 Found ${userBookings.size} bookings for user")
-
-                    // Check if there's any active booking (WAITING or CALLED)
                     val active = userBookings.firstOrNull {
                         it.status == BookingStatus.WAITING || it.status == BookingStatus.CALLED
                     }
 
                     if (active != null) {
-                        // User has active queue - BLOCK BOOKING
-                        Log.d(TAG, "🚫 Active queue found: ${active.id}")
                         activeBooking = active
                         hasActiveQueue = true
                         showBlockedState(active)
                     } else {
-                        // No active queue - ALLOW BOOKING
-                        Log.d(TAG, "✅ No active queue - allowing booking")
                         hasActiveQueue = false
                         showBookingForm()
                     }
@@ -150,20 +131,13 @@ class BookingFragment : Fragment() {
 
                 override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
                     if (!isAdded) return
-
-                    Log.e(TAG, "❌ Error checking queue: ${error.message}")
                     showLoading(false)
-
-                    // On error, allow booking (fail-safe)
                     hasActiveQueue = false
                     showBookingForm()
                 }
             })
     }
 
-    // ======================================================
-    // ✅ NEW: SHOW BLOCKED STATE WITH ACTIVE QUEUE INFO
-    // ======================================================
     private fun showBlockedState(booking: Booking) {
         try {
             layoutBookingForm.visibility = View.GONE
@@ -179,31 +153,23 @@ class BookingFragment : Fragment() {
             tvBlockedMessage.text = message
 
             btnViewQueue.setOnClickListener {
-                Log.d(TAG, "Navigating to Queue Fragment")
                 (activity as? MainActivity)?.navigateToFragment(QueueFragment())
             }
 
-            Log.d(TAG, "Booking blocked - showing active queue info")
-
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing blocked state: ${e.message}")
             showActiveQueueDialog(booking)
         }
     }
 
-    // ======================================================
-    // ✅ NEW: DIALOG FOR ACTIVE QUEUE (Fallback if XML views not available)
-    // ======================================================
     private fun showActiveQueueDialog(booking: Booking) {
         val dialogView = LayoutInflater.from(requireContext())
             .inflate(R.layout.dialog_active_queue, null)
 
         val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
-            .setCancelable(false) // ✅ User tidak bisa dismiss dengan tap di luar
+            .setCancelable(false)
             .create()
 
-        // Find views
         val tvQueueNumber = dialogView.findViewById<TextView>(R.id.tv_queue_number)
         val tvStatus = dialogView.findViewById<TextView>(R.id.tv_status)
         val tvDoctorName = dialogView.findViewById<TextView>(R.id.tv_doctor_name)
@@ -213,7 +179,6 @@ class BookingFragment : Fragment() {
         val tvComplaint = dialogView.findViewById<TextView>(R.id.tv_complaint)
         val btnViewQueue = dialogView.findViewById<Button>(R.id.btn_view_queue)
 
-        // Set data
         tvQueueNumber.text = "#${booking.queueNumber}"
         tvStatus.text = booking.status.toDisplayString()
         tvDoctorName.text = booking.doctorName
@@ -222,7 +187,6 @@ class BookingFragment : Fragment() {
         tvTime.text = booking.time
         tvComplaint.text = booking.complaint
 
-        // Set status color
         val statusColor = when (booking.status) {
             BookingStatus.WAITING -> R.color.warning_orange
             BookingStatus.CALLED -> R.color.info_blue
@@ -230,7 +194,6 @@ class BookingFragment : Fragment() {
         }
         tvStatus.setTextColor(resources.getColor(statusColor, null))
 
-        // ✅ HANYA 1 BUTTON ACTION - Langsung navigate ke QueueFragment
         btnViewQueue.setOnClickListener {
             dialog.dismiss()
             (activity as? MainActivity)?.navigateToFragment(QueueFragment())
@@ -238,56 +201,37 @@ class BookingFragment : Fragment() {
 
         dialog.show()
     }
-    // ======================================================
-    // ✅ NEW: SHOW BOOKING FORM (When no active queue)
-    // ======================================================
+
     private fun showBookingForm() {
         try {
             layoutBookingBlocked.visibility = View.GONE
             layoutBookingForm.visibility = View.VISIBLE
         } catch (e: Exception) {
-            // Views not found, continue normally
         }
-
-        // Load user data and setup form
         loadUserNameAndSetup()
         loadDataAndSetupUI()
     }
 
-    // ======================================================
-    // ✅ ENHANCED: Prevent booking if somehow bypassed the check
-    // ======================================================
     private fun createBooking() {
-
-        // ✅ DOUBLE CHECK: Even if user somehow reached this point
         if (hasActiveQueue) {
-            toast("❌ Anda sudah memiliki antrian aktif!")
-            Log.e(TAG, "⚠️ Booking attempted with active queue!")
-            checkActiveQueueAndSetup() // Re-check and block
+            toast("Anda sudah memiliki antrian aktif!")
+            checkActiveQueueAndSetup()
             return
         }
 
         val currentUserId = PreferencesHelper.getUserId(requireContext())
 
         if (currentUserId.isNullOrEmpty()) {
-            toast("❌ Silakan login terlebih dahulu")
-            Log.e(TAG, "❌ User not logged in!")
+            toast("Silakan login terlebih dahulu")
             (activity as? MainActivity)?.navigateToFragment(LoginFragment())
             return
         }
-
-        Log.d(TAG, "👤 Creating booking for userId: $currentUserId")
 
         val queueNumber = DataSource.getBookingHistory().count { booking ->
             booking.date == selectedDate &&
                     booking.doctorName == selectedDoctor!!.name &&
                     booking.status != BookingStatus.CANCELLED
         } + 1
-
-        Log.d(TAG, "📊 Queue calculation:")
-        Log.d(TAG, "  - Date: $selectedDate")
-        Log.d(TAG, "  - Doctor: ${selectedDoctor!!.name}")
-        Log.d(TAG, "  - Assigned Queue #: $queueNumber")
 
         val doctorInitial = selectedDoctor!!.name.take(2).uppercase()
         val dateShort = selectedDate.replace("-", "")
@@ -310,46 +254,26 @@ class BookingFragment : Fragment() {
             userId = currentUserId
         )
 
-        Log.d(TAG, "📋 New booking:")
-        Log.d(TAG, "  - Booking ID: ${booking.id}")
-        Log.d(TAG, "  - Queue #: ${booking.queueNumber}")
-        Log.d(TAG, "  - Patient: ${booking.patientName}")
-        Log.d(TAG, "  - Doctor: ${booking.doctorName}")
-        Log.d(TAG, "  - Date: ${booking.date}")
-        Log.d(TAG, "  - Status: ${booking.status}")
-        Log.d(TAG, "  - User ID: $currentUserId")
-
         showLoading(true)
 
         BookingRepository.addBooking(booking) { success ->
-
             if (!isAdded) return@addBooking
 
             requireActivity().runOnUiThread {
-
                 showLoading(false)
 
                 if (!success) {
-                    toast("❌ Gagal simpan booking")
-                    Log.e(TAG, "❌ Failed to save booking")
+                    toast("Gagal simpan booking")
                     return@runOnUiThread
                 }
 
-                Log.d(TAG, "✅ Booking saved successfully!")
-
                 DataSource.setActiveBooking(booking)
+                toast("Booking berhasil! Antrian Anda: #$queueNumber")
 
-                toast("✅ Booking berhasil! Antrian Anda: #$queueNumber")
-
-                (activity as? MainActivity)
-                    ?.navigateToFragment(QueueFragment())
+                (activity as? MainActivity)?.navigateToFragment(QueueFragment())
             }
         }
     }
-
-    // ======================================================
-    // EXISTING METHODS (unchanged)
-    // ======================================================
 
     private fun loadUserNameAndSetup() {
         val userName = PreferencesHelper.getUserFullName(requireContext())
@@ -360,11 +284,8 @@ class BookingFragment : Fragment() {
             etPatientName.isFocusable = false
             etPatientName.isFocusableInTouchMode = false
             etPatientName.alpha = 0.6f
-
-            Log.d(TAG, "✅ User name loaded: $userName (field disabled)")
         } else {
-            toast("⚠️ Silakan login terlebih dahulu")
-            Log.w(TAG, "⚠️ User not logged in or fullName is empty")
+            toast("Silakan login terlebih dahulu")
             (activity as? MainActivity)?.navigateToFragment(LoginFragment())
         }
     }
@@ -399,7 +320,8 @@ class BookingFragment : Fragment() {
         val specializations = DataSource.getSpecializations()
         val names = mutableListOf("Pilih Layanan Klinik")
 
-        names.addAll(specializations.map { "${it.emoji} ${it.name}" })
+        // Perbaikan: Hapus ${it.emoji} agar hanya menampilkan nama
+        names.addAll(specializations.map { it.name })
 
         spinnerSpecialization.adapter =
             ArrayAdapter(
@@ -437,9 +359,10 @@ class BookingFragment : Fragment() {
     private fun updateDoctorSpinner() {
         val names = mutableListOf("Pilih Dokter")
 
+        // Perbaikan: Hapus emoji kalender dan icon shift
         names.addAll(
             doctors.map {
-                "${it.name}\n📅 ${it.schedule} ${getShiftLabel(it.schedule)}"
+                "${it.name}\nJadwal: ${it.schedule}"
             }
         )
 
@@ -523,14 +446,14 @@ class BookingFragment : Fragment() {
 
     private fun showDoctorOffDialog() {
         AlertDialog.Builder(requireContext())
-            .setTitle("❌ Dokter Tidak Tersedia")
+            .setTitle("Dokter Tidak Tersedia")
             .setMessage("""
                 Maaf, ${selectedDoctor?.name} tidak praktik di hari yang Anda pilih.
                 
-                📅 Jadwal Praktik:
+                Jadwal Praktik:
                 ${selectedDoctor?.getWorkingDaysString()}
                 
-                ⏰ Jam Praktik:
+                Jam Praktik:
                 ${selectedDoctor?.getWorkingHours()}
                 
                 Silakan pilih tanggal lain sesuai jadwal praktik dokter.
@@ -566,7 +489,7 @@ class BookingFragment : Fragment() {
             spinnerTime.isEnabled = currentTimeSlots.size > 1
 
             if (currentTimeSlots.size == 1) {
-                toast("⚠️ Tidak ada jam praktik tersedia untuk tanggal ini")
+                toast("Tidak ada jam praktik tersedia untuk tanggal ini")
             }
         }
     }
@@ -657,7 +580,7 @@ class BookingFragment : Fragment() {
 
         if (isSelectedDateToday() && !isTimeFuture(selectedTime)) {
             AlertDialog.Builder(requireContext())
-                .setTitle("⏰ Jam Sudah Lewat")
+                .setTitle("Jam Sudah Lewat")
                 .setMessage("Jam yang Anda pilih sudah lewat. Silakan pilih jam yang lain.")
                 .setPositiveButton("OK") { dialog, _ ->
                     dialog.dismiss()
@@ -668,11 +591,11 @@ class BookingFragment : Fragment() {
 
         if (!selectedDoctor!!.isTimeValid(selectedTime, selectedDate)) {
             AlertDialog.Builder(requireContext())
-                .setTitle("⚠️ Jam Tidak Sesuai")
+                .setTitle("Jam Tidak Sesuai")
                 .setMessage("""
                     Jam yang Anda pilih tidak sesuai dengan jadwal praktik dokter.
                     
-                    ⏰ Jam Praktik ${selectedDoctor?.name}:
+                    Jam Praktik ${selectedDoctor?.name}:
                     ${selectedDoctor?.getWorkingHours()}
                 """.trimIndent())
                 .setPositiveButton("OK") { dialog, _ ->
@@ -721,9 +644,6 @@ class BookingFragment : Fragment() {
 
     private fun isNightShift(schedule: String): Boolean =
         schedule.contains("20") || schedule.contains("21")
-
-    private fun getShiftLabel(schedule: String) =
-        if (isNightShift(schedule)) "🌙" else "☀"
 
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show) View.VISIBLE else View.GONE

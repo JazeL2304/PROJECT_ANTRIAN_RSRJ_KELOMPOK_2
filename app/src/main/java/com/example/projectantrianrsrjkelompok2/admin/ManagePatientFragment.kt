@@ -58,7 +58,7 @@ class ManagePatientFragment : Fragment() {
     private fun loadPatients() {
         lifecycleScope.launch {
             try {
-                Log.d(TAG, "🔍 Loading data...")
+                Log.d(TAG, "Loading data...")
 
                 val snapshot = bookingsRef.get().await()
 
@@ -74,7 +74,7 @@ class ManagePatientFragment : Fragment() {
 
                 bookingList.sortByDescending { it.createdAt }
 
-                Log.d(TAG, "📊 Total items: ${bookingList.size}")
+                Log.d(TAG, "Total items: ${bookingList.size}")
 
                 if (bookingList.isEmpty()) {
                     recyclerView.visibility = View.GONE
@@ -83,7 +83,7 @@ class ManagePatientFragment : Fragment() {
                     recyclerView.visibility = View.VISIBLE
                     tvEmptyMessage.visibility = View.GONE
                     adapter.notifyDataSetChanged()
-                    Log.d(TAG, "✅ notifyDataSetChanged() called")
+                    Log.d(TAG, "notifyDataSetChanged() called")
                 }
 
             } catch (e: Exception) {
@@ -109,24 +109,24 @@ class ManagePatientFragment : Fragment() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookingViewHolder {
             val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.item_patient_admin, parent, false)
-            Log.d(TAG, "📦 Creating view holder")
+            Log.d(TAG, "Creating view holder")
             return BookingViewHolder(view)
         }
 
         override fun onBindViewHolder(holder: BookingViewHolder, position: Int) {
             val booking = bookings[position]
-            Log.d(TAG, "🎨 Binding position $position: ${booking.patientName}")
+            Log.d(TAG, "Binding position $position: ${booking.patientName}")
 
             holder.tvPatientName.text = booking.patientName
 
             holder.tvPatientInfo.text = buildString {
-                append("👨‍⚕️ Dokter: ${booking.doctorName}\n")
-                append("🏥 Spesialisasi: ${booking.specialization}")
+                append("Dokter: ${booking.doctorName}\n")
+                append("Spesialisasi: ${booking.specialization}")
             }
 
             holder.tvPatientStats.text = buildString {
-                append("📅 ${booking.date} ${booking.time}\n")
-                append("🎫 Antrian #${booking.queueNumber} • ")
+                append("${booking.date} ${booking.time}\n")
+                append("Antrian #${booking.queueNumber} • ")
                 append(when (booking.status.name) {
                     "WAITING" -> "⏳ Menunggu"
                     "CALLED" -> "✅ Dipanggil"
@@ -138,14 +138,14 @@ class ManagePatientFragment : Fragment() {
         }
 
         override fun getItemCount(): Int {
-            Log.d(TAG, "🔢 getItemCount: ${bookings.size}")
+            Log.d(TAG, "getItemCount: ${bookings.size}")
             return bookings.size
         }
     }
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "🔄 onResume")
+        Log.d(TAG, "onResume")
         loadPatients()
     }
 }

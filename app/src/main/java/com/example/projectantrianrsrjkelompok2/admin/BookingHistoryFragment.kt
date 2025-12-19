@@ -10,10 +10,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.cardview.widget.CardView
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.example.projectantrianrsrjkelompok2.BookingStatus
 import com.example.projectantrianrsrjkelompok2.R
 import com.example.projectantrianrsrjkelompok2.data.FirebaseRepository
 import kotlinx.coroutines.launch
@@ -33,7 +31,6 @@ class BookingHistoryFragment : Fragment() {
 
     private var allBookings: List<Map<String, Any?>> = emptyList()
 
-    // ✅ Support multiple date formats
     private val firebaseDateFormat1 = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     private val firebaseDateFormat2 = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -47,7 +44,6 @@ class BookingHistoryFragment : Fragment() {
 
         repository = FirebaseRepository()
 
-        // ✅ Match dengan ID di XML yang sudah ada
         historyContainer = view.findViewById(R.id.containerHistory)
         loadingProgress = view.findViewById(R.id.progressBar)
         emptyStateText = view.findViewById(R.id.tvEmptyHistory)
@@ -102,29 +98,21 @@ class BookingHistoryFragment : Fragment() {
         ).show()
     }
 
-    /**
-     * ✅ Parse date string dengan support multiple formats
-     */
     private fun parseDate(dateStr: String?): Date? {
         if (dateStr.isNullOrBlank()) return null
 
         return try {
-            // Try format 1: dd/MM/yyyy
             firebaseDateFormat1.parse(dateStr)
         } catch (e1: Exception) {
             try {
-                // Try format 2: yyyy-MM-dd
                 firebaseDateFormat2.parse(dateStr)
             } catch (e2: Exception) {
-                Log.e(TAG, "❌ Cannot parse date: $dateStr")
+                Log.e(TAG, "Cannot parse date: $dateStr")
                 null
             }
         }
     }
 
-    /**
-     * ✅ Compare two dates (ignore time)
-     */
     private fun isSameDay(date1: Date, date2: Date): Boolean {
         val cal1 = Calendar.getInstance().apply { time = date1 }
         val cal2 = Calendar.getInstance().apply { time = date2 }
@@ -133,9 +121,6 @@ class BookingHistoryFragment : Fragment() {
                 cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
 
-    /**
-     * ✅ Check if date is in same week
-     */
     private fun isSameWeek(date: Date, referenceDate: Date): Boolean {
         val cal1 = Calendar.getInstance().apply {
             time = date
@@ -156,9 +141,6 @@ class BookingHistoryFragment : Fragment() {
                 cal1.get(Calendar.WEEK_OF_YEAR) == cal2.get(Calendar.WEEK_OF_YEAR)
     }
 
-    /**
-     * ✅ Check if date is in same month
-     */
     private fun isSameMonth(date: Date, referenceDate: Date): Boolean {
         val cal1 = Calendar.getInstance().apply { time = date }
         val cal2 = Calendar.getInstance().apply { time = referenceDate }
@@ -168,7 +150,7 @@ class BookingHistoryFragment : Fragment() {
     }
 
     private fun loadBookingHistory() {
-        Log.d(TAG, "🔄 Loading booking history...")
+        Log.d(TAG, "Loading booking history...")
         loadingProgress.visibility = View.VISIBLE
         historyContainer.visibility = View.GONE
         emptyStateText.visibility = View.GONE
@@ -176,39 +158,19 @@ class BookingHistoryFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 allBookings = repository.getAllBookingsMap()
-                Log.d(TAG, "✅ Total bookings loaded: ${allBookings.size}")
-
-                // ✅ DEBUG: Print semua booking untuk debugging
-                allBookings.forEachIndexed { index, booking ->
-                    Log.d(TAG, "📋 Booking #$index:")
-                    Log.d(TAG, "   - ID: ${booking["bookingId"]}")
-                    Log.d(TAG, "   - Patient: ${booking["patientName"]}")
-                    Log.d(TAG, "   - Status: ${booking["status"]}")
-                    Log.d(TAG, "   - Date: ${booking["date"]}")
-                    Log.d(TAG, "   - Queue: ${booking["queueNumber"]}")
-
-                    // Parse dan log tanggal yang sudah di-parse
-                    val dateStr = booking["date"] as? String
-                    val parsedDate = parseDate(dateStr)
-                    if (parsedDate != null) {
-                        Log.d(TAG, "   - Parsed Date: ${displayDateFormat.format(parsedDate)}")
-                    } else {
-                        Log.e(TAG, "   - ❌ Failed to parse date: $dateStr")
-                    }
-                }
+                Log.d(TAG, "Total bookings loaded: ${allBookings.size}")
 
                 loadingProgress.visibility = View.GONE
 
                 if (allBookings.isEmpty()) {
-                    Log.w(TAG, "⚠️ No bookings found in Firebase!")
+                    Log.w(TAG, "No bookings found in Firebase!")
                     showEmptyState()
                 } else {
-                    Log.d(TAG, "✅ Applying default filter (Semua Waktu)...")
                     updateTotalCounter(allBookings.size)
                     applyFilter("Semua Waktu")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error loading booking history: ${e.message}", e)
+                Log.e(TAG, "Error loading booking history: ${e.message}", e)
                 loadingProgress.visibility = View.GONE
                 showEmptyState()
                 Toast.makeText(
@@ -221,95 +183,27 @@ class BookingHistoryFragment : Fragment() {
     }
 
     private fun applyFilter(filterType: String) {
-        Log.d(TAG, "🔍 Applying filter: $filterType")
-
         historyContainer.removeAllViews()
-
         val today = Date()
-        Log.d(TAG, "   Current date: ${displayDateFormat.format(today)}")
-
         val filteredBookings = when (filterType) {
-            "Semua Waktu" -> {
-                Log.d(TAG, "   Filter: ALL TIME - showing all ${allBookings.size} bookings")
-                allBookings
+            "Semua Waktu" -> allBookings
+            "Hari Ini" -> allBookings.filter { booking ->
+                val dateStr = booking["date"] as? String
+                val bookingDate = parseDate(dateStr)
+                if (bookingDate != null) isSameDay(bookingDate, today) else false
             }
-            "Hari Ini" -> {
-                Log.d(TAG, "   Filter: TODAY")
-                allBookings.filter { booking ->
-                    val dateStr = booking["date"] as? String
-                    val bookingDate = parseDate(dateStr)
-
-                    val match = if (bookingDate != null) {
-                        isSameDay(bookingDate, today)
-                    } else {
-                        false
-                    }
-
-                    if (match) {
-                        Log.d(TAG, "   ✅ Match TODAY: ${booking["patientName"]} on $dateStr")
-                    } else if (bookingDate != null) {
-                        Log.d(TAG, "   ❌ Not today: ${booking["patientName"]} on $dateStr (parsed: ${displayDateFormat.format(bookingDate)})")
-                    }
-
-                    match
-                }
+            "Minggu Ini" -> allBookings.filter { booking ->
+                val dateStr = booking["date"] as? String
+                val bookingDate = parseDate(dateStr)
+                if (bookingDate != null) isSameWeek(bookingDate, today) else false
             }
-            "Minggu Ini" -> {
-                Log.d(TAG, "   Filter: THIS WEEK")
-                val calendar = Calendar.getInstance()
-                Log.d(TAG, "   Week of year: ${calendar.get(Calendar.WEEK_OF_YEAR)}, Year: ${calendar.get(Calendar.YEAR)}")
-
-                allBookings.filter { booking ->
-                    val dateStr = booking["date"] as? String
-                    val bookingDate = parseDate(dateStr)
-
-                    val match = if (bookingDate != null) {
-                        isSameWeek(bookingDate, today)
-                    } else {
-                        false
-                    }
-
-                    if (match) {
-                        Log.d(TAG, "   ✅ Match THIS WEEK: ${booking["patientName"]} on $dateStr")
-                    } else if (bookingDate != null) {
-                        val bookingCal = Calendar.getInstance().apply { time = bookingDate }
-                        Log.d(TAG, "   ❌ Not this week: ${booking["patientName"]} - Week ${bookingCal.get(Calendar.WEEK_OF_YEAR)}")
-                    }
-
-                    match
-                }
-            }
-            "Bulan Ini" -> {
-                Log.d(TAG, "   Filter: THIS MONTH")
-                val calendar = Calendar.getInstance()
-                val currentMonth = calendar.get(Calendar.MONTH)
-                val currentYear = calendar.get(Calendar.YEAR)
-                Log.d(TAG, "   Month: $currentMonth, Year: $currentYear")
-
-                allBookings.filter { booking ->
-                    val dateStr = booking["date"] as? String
-                    val bookingDate = parseDate(dateStr)
-
-                    val match = if (bookingDate != null) {
-                        isSameMonth(bookingDate, today)
-                    } else {
-                        false
-                    }
-
-                    if (match) {
-                        Log.d(TAG, "   ✅ Match THIS MONTH: ${booking["patientName"]} on $dateStr")
-                    } else if (bookingDate != null) {
-                        val bookingCal = Calendar.getInstance().apply { time = bookingDate }
-                        Log.d(TAG, "   ❌ Not this month: ${booking["patientName"]} - Month ${bookingCal.get(Calendar.MONTH)}")
-                    }
-
-                    match
-                }
+            "Bulan Ini" -> allBookings.filter { booking ->
+                val dateStr = booking["date"] as? String
+                val bookingDate = parseDate(dateStr)
+                if (bookingDate != null) isSameMonth(bookingDate, today) else false
             }
             else -> allBookings
         }
-
-        Log.d(TAG, "📊 Filter result: ${filteredBookings.size} bookings")
 
         updateTotalCounter(filteredBookings.size)
 
@@ -320,7 +214,6 @@ class BookingHistoryFragment : Fragment() {
             emptyStateText.visibility = View.VISIBLE
             totalHistoryText.visibility = View.VISIBLE
 
-            // Sort by createdAt (descending)
             val sortedBookings = filteredBookings.sortedByDescending { booking ->
                 (booking["createdAt"] as? Long) ?: 0L
             }
@@ -329,15 +222,10 @@ class BookingHistoryFragment : Fragment() {
                 val cardView = createBookingCard(booking)
                 historyContainer.addView(cardView)
             }
-
-            Log.d(TAG, "✅ Displayed ${sortedBookings.size} booking cards")
         }
     }
 
     private fun applyCustomDateFilter(selectedDate: Date) {
-        val dateStr = displayDateFormat.format(selectedDate)
-        Log.d(TAG, "🔍 Custom date filter: $dateStr")
-
         historyContainer.removeAllViews()
 
         val filteredBookings = allBookings.filter { booking ->
@@ -350,8 +238,6 @@ class BookingHistoryFragment : Fragment() {
                 false
             }
         }
-
-        Log.d(TAG, "📊 Custom filter result: ${filteredBookings.size} bookings")
 
         updateTotalCounter(filteredBookings.size)
 
@@ -389,6 +275,7 @@ class BookingHistoryFragment : Fragment() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            setPadding(24, 24, 24, 24)
         }
 
         // Queue Number & Status Row
@@ -470,7 +357,7 @@ class BookingHistoryFragment : Fragment() {
         }
         contentLayout.addView(doctorText)
 
-        // Date & Time (with format conversion)
+        // Date & Time (BERSIH DARI EMOJI)
         val dateStr = booking["date"] as? String ?: "N/A"
         val displayDate = parseDate(dateStr)?.let {
             displayDateFormat.format(it)
@@ -478,7 +365,7 @@ class BookingHistoryFragment : Fragment() {
 
         val time = booking["time"] as? String ?: "N/A"
         val dateTimeText = TextView(requireContext()).apply {
-            text = "📅 $displayDate | ⏰ $time"
+            text = "$displayDate | $time" // EMOJI HAPUS
             textSize = 14f
             setTextColor(Color.DKGRAY)
             setPadding(0, 4, 0, 0)
@@ -487,7 +374,6 @@ class BookingHistoryFragment : Fragment() {
 
         cardView.addView(contentLayout)
 
-        // Click listener untuk detail
         cardView.setOnClickListener {
             showBookingDetail(booking)
         }
@@ -517,6 +403,7 @@ class BookingHistoryFragment : Fragment() {
             displayDateFormat.format(it)
         } ?: dateStr
 
+        // DETAIL BERSIH TANPA EMOJI
         val details = """
             Queue Number: #$queueNumber
             Status: $statusText
@@ -548,7 +435,7 @@ class BookingHistoryFragment : Fragment() {
         historyContainer.visibility = View.GONE
         emptyStateText.visibility = View.VISIBLE
         totalHistoryText.visibility = View.GONE
-        Log.d(TAG, "📭 Showing empty state")
+        Log.d(TAG, "Showing empty state") // Log message bersih
     }
 
     private fun updateTotalCounter(count: Int) {

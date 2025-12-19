@@ -16,7 +16,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📚 History Booking"
+            android:text="History Booking"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#212121"
@@ -48,7 +48,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🔍 Filter Periode"
+                    android:text="Filter Periode"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="#212121"
@@ -65,7 +65,7 @@
                     android:id="@+id/btnDateRange"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="📅 Pilih Rentang Tanggal"
+                    android:text="Pilih Rentang Tanggal"
                     android:textAllCaps="false"
                     android:visibility="gone"
                     android:backgroundTint="#2196F3" />
@@ -99,7 +99,7 @@
             android:id="@+id/tvEmptyHistory"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📭 Belum ada riwayat booking"
+            android:text="Belum ada riwayat booking"
             android:textSize="16sp"
             android:textColor="#757575"
             android:gravity="center"

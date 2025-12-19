@@ -103,9 +103,9 @@ class QueueFragment : Fragment() {
     private fun initMLModel() {
         try {
             predictionModel = EnhancedQueuePredictionModel(requireContext())
-            Log.d(TAG, "✅ ML Model initialized")
+            Log.d(TAG, "ML Model initialized")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to init ML model: ${e.message}", e)
+            Log.e(TAG, "Failed to init ML model: ${e.message}", e)
         }
     }
 
@@ -141,7 +141,7 @@ class QueueFragment : Fragment() {
         currentUserId = PreferencesHelper.getUserId(requireContext())
 
         if (currentUserId.isNullOrEmpty()) {
-            toast("❌ Silakan login terlebih dahulu")
+            toast("Silakan login terlebih dahulu")
             (activity as? MainActivity)?.navigateToFragment(LoginFragment())
             return
         }
@@ -167,7 +167,7 @@ class QueueFragment : Fragment() {
                     it.getValue(Booking::class.java)?.copy(firebaseId = it.key ?: "")
                 }
 
-                Log.d(TAG, "📋 Found ${userBookings.size} total bookings")
+                Log.d(TAG, "Found ${userBookings.size} total bookings")
 
                 // Find active booking for this user
                 val activeBooking = userBookings.firstOrNull {
@@ -176,13 +176,13 @@ class QueueFragment : Fragment() {
                 }
 
                 if (activeBooking != null) {
-                    Log.d(TAG, "✅ Active booking found: ${activeBooking.id}")
+                    Log.d(TAG, "Active booking found: ${activeBooking.id}")
                     currentUserBooking = activeBooking
 
                     // Load today's queue data for ML prediction
                     loadTodayQueueData(activeBooking)
                 } else {
-                    Log.d(TAG, "📭 No active booking found")
+                    Log.d(TAG, "No active booking found")
                     displayEmptyQueue()
                 }
 
@@ -191,7 +191,7 @@ class QueueFragment : Fragment() {
 
             override fun onCancelled(error: DatabaseError) {
                 if (!isAdded) return
-                Log.e(TAG, "❌ Firebase error: ${error.message}")
+                Log.e(TAG, "Firebase error: ${error.message}")
                 showLoading(false)
                 displayEmptyQueue()
             }
@@ -223,7 +223,7 @@ class QueueFragment : Fragment() {
                     }
                     .sortedBy { it.queueNumber }
 
-                Log.d(TAG, "📊 All bookings for ${activeBooking.doctorName} today: ${allBookingsForDoctor.size}")
+                Log.d(TAG, "All bookings for ${activeBooking.doctorName} today: ${allBookingsForDoctor.size}")
 
                 val currentQueue = calculateCurrentQueueGlobal(allBookingsForDoctor)
 
@@ -232,9 +232,9 @@ class QueueFragment : Fragment() {
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error loading queue data: ${e.message}", e)
+                Log.e(TAG, "Error loading queue data: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    toast("⚠️ Error loading data")
+                    toast("Error loading data")
                 }
             }
         }

@@ -23,7 +23,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📊 Laporan Rumah Sakit"
+                android:text="Laporan Rumah Sakit"
                 android:textColor="@android:color/white"
                 android:textSize="24sp"
                 android:textStyle="bold"
@@ -175,7 +175,7 @@
                 android:id="@+id/btnCallNextPatientAdmin"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="📢 Panggil Pasien Berikutnya"
+                android:text="Panggil Pasien Berikutnya"
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/white"
@@ -209,7 +209,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📋 Daftar Booking Hari Ini"
+                android:text="Daftar Booking Hari Ini"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#212121"

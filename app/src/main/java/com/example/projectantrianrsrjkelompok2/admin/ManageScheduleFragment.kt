@@ -70,7 +70,7 @@ class ManageScheduleFragment : Fragment() {
         doctorDisplayList.clear()
         val doctors = DataSource.getAllDoctors()
         doctors.forEach {
-            doctorDisplayList.add("${it.name}\nSpesialis: ${it.specialization}\n🕒 ${it.schedule}")
+            doctorDisplayList.add("${it.name}\nSpesialis: ${it.specialization}\n ${it.schedule}")
         }
         adapter.notifyDataSetChanged()
     }

@@ -31,7 +31,7 @@
             android:id="@+id/tvPatientInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="👨‍⚕️ Dokter: Dr. Ahmad\n🏥 Spesialisasi: Dokter Umum"
+            android:text="Dokter: Dr. Ahmad\nSpesialisasi: Dokter Umum"
             android:textSize="13sp"
             android:textColor="#616161"
             android:layout_marginBottom="8dp"/>
@@ -41,7 +41,7 @@
             android:id="@+id/tvPatientStats"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📅 08/12/2025 09:00\n🎫 Antrian #1 • ⏳ Menunggu"
+            android:text="08/12/2025 09:00\nAntrian #1 • Menunggu"
             android:textSize="12sp"
             android:textColor="#00897B"/>
 

@@ -11,7 +11,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- 🎨 GRADIENT HEADER WITH PROFILE ICON -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -26,7 +25,6 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <!-- LEFT: TEXT -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -36,7 +34,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="👨‍⚕️ Dashboard Dokter"
+                        android:text="Dashboard Dokter"
                         android:textColor="@android:color/white"
                         android:textSize="22sp"
                         android:textStyle="bold"/>
@@ -45,14 +43,12 @@
                         android:id="@+id/tv_greeting"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Selamat Datang, Dr. Ahmad! 👋"
+                        android:text="Selamat Datang, Dr. Ahmad!"
                         android:textColor="#E0FFFFFF"
                         android:textSize="14sp"
                         android:layout_marginTop="4dp"/>
-
                 </LinearLayout>
 
-                <!-- ✅ RIGHT: PROFILE ICON (CLICKABLE) -->
                 <ImageView
                     android:id="@+id/ivProfileIcon"
                     android:layout_width="40dp"
@@ -64,29 +60,24 @@
                     android:focusable="true"
                     android:foreground="?android:attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Profile Icon"/>
-
             </LinearLayout>
-
         </LinearLayout>
 
-        <!-- CONTENT AREA -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 📊 Statistics Section -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📊 Statistik Hari Ini"
+                android:text="Statistik Hari Ini"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#212121"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- Statistics Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -94,7 +85,6 @@
                 android:layout_marginBottom="24dp"
                 android:weightSum="3">
 
-                <!-- Total Pasien -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="0dp"
                     android:layout_height="120dp"
@@ -111,11 +101,11 @@
                         android:gravity="center"
                         android:padding="12dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="👥"
-                            android:textSize="32sp"
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_doctor_total"
+                            app:tint="#1976D2"
                             android:layout_marginBottom="8dp"/>
 
                         <TextView
@@ -135,12 +125,9 @@
                             android:textSize="11sp"
                             android:textColor="#616161"
                             android:gravity="center"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
-                <!-- Menunggu -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="0dp"
                     android:layout_height="120dp"
@@ -158,11 +145,11 @@
                         android:gravity="center"
                         android:padding="12dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="⏱️"
-                            android:textSize="32sp"
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_doctor_waiting"
+                            app:tint="#F57C00"
                             android:layout_marginBottom="8dp"/>
 
                         <TextView
@@ -182,12 +169,9 @@
                             android:textSize="11sp"
                             android:textColor="#616161"
                             android:gravity="center"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
-                <!-- Selesai -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="0dp"
                     android:layout_height="120dp"
@@ -204,11 +188,11 @@
                         android:gravity="center"
                         android:padding="12dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="✅"
-                            android:textSize="32sp"
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_doctor_completed"
+                            app:tint="#388E3C"
                             android:layout_marginBottom="8dp"/>
 
                         <TextView
@@ -228,18 +212,14 @@
                             android:textSize="11sp"
                             android:textColor="#616161"
                             android:gravity="center"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
-
             </LinearLayout>
 
-            <!-- ⚡ Quick Actions -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⚡ Quick Actions"
+                android:text="Quick Actions"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#212121"
@@ -249,7 +229,7 @@
                 android:id="@+id/btnViewQueue"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="📋 LIHAT ANTRIAN PASIEN"
+                android:text="LIHAT ANTRIAN PASIEN"
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/white"
@@ -261,7 +241,7 @@
                 android:id="@+id/btnPatientHistory"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="📂 RIWAYAT PASIEN"
+                android:text="RIWAYAT PASIEN"
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/white"
@@ -269,13 +249,10 @@
                 android:layout_marginBottom="12dp"
                 android:elevation="2dp"/>
 
-
-
-            <!-- 📋 Pasien yang Menunggu -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📋 Pasien yang Menunggu"
+                android:text="Pasien yang Menunggu"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#212121"
@@ -302,13 +279,8 @@
                         android:lineSpacingExtra="4dp"
                         android:padding="16dp"
                         android:fontFamily="monospace"/>
-
                 </ScrollView>
-
             </androidx.cardview.widget.CardView>
-
         </LinearLayout>
-
     </LinearLayout>
-
 </ScrollView>

@@ -18,7 +18,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🧍‍♀️ Kelola Pasien"
+            android:text="Kelola Pasien"
             android:textColor="@android:color/white"
             android:textSize="24sp"
             android:textStyle="bold"
@@ -45,7 +45,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="📋 Semua Data Booking Pasien"
+            android:text="Semua Data Booking Pasien"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="#212121"

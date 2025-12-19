@@ -11,7 +11,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- 🎨 GRADIENT HEADER WITH PROFILE -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -21,7 +20,6 @@
             android:padding="32dp"
             android:elevation="8dp">
 
-            <!-- Profile Photo -->
             <androidx.cardview.widget.CardView
                 android:layout_width="120dp"
                 android:layout_height="120dp"
@@ -39,7 +37,6 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- User Name -->
             <TextView
                 android:id="@+id/tvUserName"
                 android:layout_width="wrap_content"
@@ -50,7 +47,6 @@
                 android:textColor="@android:color/white"
                 android:layout_marginBottom="4dp"/>
 
-            <!-- User Email -->
             <TextView
                 android:id="@+id/tvUserEmail"
                 android:layout_width="wrap_content"
@@ -61,25 +57,22 @@
 
         </LinearLayout>
 
-        <!-- CONTENT AREA -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Section Title -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⚙️ Pengaturan Akun"
+                android:text="Pengaturan Akun"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#212121"
                 android:layout_marginBottom="16dp"
                 android:layout_marginTop="8dp"/>
 
-            <!-- Edit Name Card -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/btnEditName"
                 android:layout_width="match_parent"
@@ -98,11 +91,11 @@
                     android:padding="16dp"
                     android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="✏️"
-                        android:textSize="24sp"
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_settings_edit"
+                        app:tint="#1976D2"
                         android:layout_marginEnd="16dp"/>
 
                     <LinearLayout
@@ -139,7 +132,6 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Edit Password Card -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/btnEditPassword"
                 android:layout_width="match_parent"
@@ -158,11 +150,11 @@
                     android:padding="16dp"
                     android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🔒"
-                        android:textSize="24sp"
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_settings_password"
+                        app:tint="#1976D2"
                         android:layout_marginEnd="16dp"/>
 
                     <LinearLayout
@@ -199,7 +191,6 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Update Photo Card -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/btnVerifyIdentity"
                 android:layout_width="match_parent"
@@ -218,11 +209,11 @@
                     android:padding="16dp"
                     android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="📸"
-                        android:textSize="24sp"
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_settings_camera"
+                        app:tint="#1976D2"
                         android:layout_marginEnd="16dp"/>
 
                     <LinearLayout
@@ -259,12 +250,11 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Logout Button -->
             <Button
                 android:id="@+id/btnLogout"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="🚪 Logout"
+                android:text="Logout"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/white"

@@ -110,7 +110,7 @@ class DoctorQueueFragment : Fragment() {
 
                 Toast.makeText(
                     requireContext(),
-                    "📢 ${b.patientName} dipanggil!",
+                    "${b.patientName} dipanggil!",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -143,7 +143,7 @@ class DoctorQueueFragment : Fragment() {
 
         // Title
         val tvTitle = TextView(requireContext()).apply {
-            text = "📋 Selesaikan Pemeriksaan"
+            text = "Selesaikan Pemeriksaan"
             textSize = 20f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(android.graphics.Color.parseColor("#212121"))
@@ -153,7 +153,7 @@ class DoctorQueueFragment : Fragment() {
 
         // Patient Info
         val tvPatient = TextView(requireContext()).apply {
-            text = "👤 Pasien: ${booking.patientName}\n⏰ Waktu: ${booking.time}\n💬 Keluhan: ${booking.complaint.ifEmpty { "-" }}"
+            text = "Pasien: ${booking.patientName}\n Waktu: ${booking.time}\n Keluhan: ${booking.complaint.ifEmpty { "-" }}"
             textSize = 14f
             setTextColor(android.graphics.Color.parseColor("#616161"))
             setPadding(0, 0, 0, 24)
@@ -163,7 +163,7 @@ class DoctorQueueFragment : Fragment() {
 
         // ==================== DIAGNOSIS SECTION ====================
         val tvDiagnosisLabel = TextView(requireContext()).apply {
-            text = "🩺 Pilih Diagnosis:"
+            text = "Pilih Diagnosis:"
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(android.graphics.Color.parseColor("#424242"))
@@ -206,7 +206,7 @@ class DoctorQueueFragment : Fragment() {
 
         // ==================== MEDICINE SECTION ====================
         val tvMedicineLabel = TextView(requireContext()).apply {
-            text = "💊 Pilih Resep Obat (bisa pilih lebih dari 1):"
+            text = "Pilih Resep Obat (bisa pilih lebih dari 1):"
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(android.graphics.Color.parseColor("#424242"))
@@ -393,7 +393,7 @@ class DoctorQueueFragment : Fragment() {
             .addOnSuccessListener {
                 Toast.makeText(
                     requireContext(),
-                    "✅ ${booking.patientName} selesai diperiksa!\n📋 Data tersimpan.",
+                    "${booking.patientName} selesai diperiksa!\n Data tersimpan.",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -435,22 +435,22 @@ class DoctorQueueFragment : Fragment() {
 
             // Set data
             tvQueueNumber.text = "No. ${booking.queueNumber ?: position + 1}"
-            tvPatientName.text = "👤 ${booking.patientName}"
-            tvDateTime.text = "📅 ${booking.date} • ${booking.time}"
-            tvComplaint.text = "💬 ${booking.complaint.ifEmpty { "-" }}"
+            tvPatientName.text = "${booking.patientName}"
+            tvDateTime.text = "${booking.date} • ${booking.time}"
+            tvComplaint.text = "${booking.complaint.ifEmpty { "-" }}"
 
             // Set status badge dengan warna
             when (booking.status) {
                 BookingStatus.WAITING -> {
-                    tvStatus.text = "🕒 Menunggu"
+                    tvStatus.text = "Menunggu"
                     tvStatus.setBackgroundResource(R.drawable.bg_status_waiting)
                 }
                 BookingStatus.CALLED -> {
-                    tvStatus.text = "📢 Dipanggil"
+                    tvStatus.text = "Dipanggil"
                     tvStatus.setBackgroundResource(R.drawable.bg_status_called)
                 }
                 BookingStatus.COMPLETED -> {
-                    tvStatus.text = "✅ Selesai"
+                    tvStatus.text = "Selesai"
                     tvStatus.setBackgroundResource(R.drawable.bg_status_completed)
                 }
                 else -> {

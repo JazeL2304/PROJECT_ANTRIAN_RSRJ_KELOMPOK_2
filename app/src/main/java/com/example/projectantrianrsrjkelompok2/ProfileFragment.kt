@@ -58,7 +58,6 @@ class ProfileFragment : Fragment() {
     private var selectedImageUri: Uri? = null
     private var isUploading = false
 
-    // ✅ Temp file untuk camera
     private var tempCameraFile: File? = null
 
     // Image picker launcher (untuk galeri)
@@ -76,18 +75,17 @@ class ProfileFragment : Fragment() {
             Log.d(TAG, "URI: $uri")
 
             if (uri != null) {
-                Log.d(TAG, "✅ Valid URI received, handling...")
+                Log.d(TAG, "Valid URI received, handling...")
                 handleImageSelected(uri)
             } else {
-                Log.e(TAG, "❌ URI is NULL!")
+                Log.e(TAG, "URI is NULL!")
             }
         } else {
-            Log.w(TAG, "⚠️ Result not OK. Code: ${result.resultCode}")
+            Log.w(TAG, "Result not OK. Code: ${result.resultCode}")
         }
         Log.d(TAG, "=========================================")
     }
 
-    // ✅ Camera launcher
     private val cameraLauncher = registerForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
@@ -96,7 +94,7 @@ class ProfileFragment : Fragment() {
 
         if (success && tempCameraFile != null) {
             val uri = Uri.fromFile(tempCameraFile)
-            Log.d(TAG, "✅ Photo captured: $uri")
+            Log.d(TAG, "Photo captured: $uri")
             handleImageSelected(uri)
         } else {
             Log.e(TAG, "❌ Camera failed or file is null")
@@ -350,7 +348,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun openCamera() {
-        Log.d(TAG, "📷 openCamera() called")
+        Log.d(TAG, "openCamera() called")
 
         try {
             // Create temp file for camera
@@ -484,26 +482,26 @@ class ProfileFragment : Fragment() {
 
         if (isUploading) {
             Log.w(TAG, "⚠️ Already uploading!")
-            Toast.makeText(context, "⏳ Upload sedang berlangsung...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Upload sedang berlangsung...", Toast.LENGTH_SHORT).show()
             return
         }
 
         isUploading = true
         showLoading(true)
 
-        Log.d(TAG, "🔄 Starting upload to ImageKit...")
+        Log.d(TAG, "Starting upload to ImageKit...")
         Log.d(TAG, "URI: $uri")
 
         lifecycleScope.launch {
             try {
                 // Step 1: Upload to ImageKit
-                Log.d(TAG, "📤 Calling imageKitRepo.uploadProfilePicture()...")
+                Log.d(TAG, "Calling imageKitRepo.uploadProfilePicture()...")
 
                 val uploadResponse = withContext(Dispatchers.IO) {
                     imageKitRepo.uploadProfilePicture(uri, userId)
                 }
 
-                Log.d(TAG, "📥 Upload response received")
+                Log.d(TAG, "Upload response received")
                 Log.d(TAG, "Response: $uploadResponse")
 
                 if (uploadResponse != null) {
@@ -513,7 +511,7 @@ class ProfileFragment : Fragment() {
                     Log.d(TAG, "   - Size: ${uploadResponse.size / 1024}KB")
 
                     // Step 2: Save URL to Firebase
-                    Log.d(TAG, "💾 Saving to Firebase...")
+                    Log.d(TAG, "Saving to Firebase...")
 
                     val success = withContext(Dispatchers.IO) {
                         firebaseRepo.updateUserProfileImage(
@@ -607,19 +605,19 @@ class ProfileFragment : Fragment() {
 
         if (isUploading) {
             Log.w(TAG, "⚠️ Upload in progress!")
-            Toast.makeText(context, "⏳ Tunggu proses upload selesai...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Tunggu proses upload selesai...", Toast.LENGTH_SHORT).show()
             return
         }
 
         isUploading = true
         showLoading(true)
 
-        Log.d(TAG, "🗑️ Starting delete process...")
+        Log.d(TAG, "Starting delete process...")
 
         lifecycleScope.launch {
             try {
                 // Step 1: Get user data to get fileId
-                Log.d(TAG, "📥 Getting user data...")
+                Log.d(TAG, "Getting user data...")
 
                 val user = withContext(Dispatchers.IO) {
                     firebaseRepo.getUserById(userId)
@@ -640,7 +638,7 @@ class ProfileFragment : Fragment() {
                     Log.w(TAG, "⚠️ No file ID found, skipping ImageKit delete")
                 } else {
                     // Step 2: Delete from ImageKit
-                    Log.d(TAG, "🗑️ Deleting from ImageKit...")
+                    Log.d(TAG, "Deleting from ImageKit...")
 
                     val imageKitSuccess = withContext(Dispatchers.IO) {
                         imageKitRepo.deleteProfilePicture(fileId)
@@ -654,7 +652,7 @@ class ProfileFragment : Fragment() {
                 }
 
                 // Step 3: Delete from Firebase
-                Log.d(TAG, "🗑️ Deleting from Firebase...")
+                Log.d(TAG, "Deleting from Firebase...")
 
                 val firebaseSuccess = withContext(Dispatchers.IO) {
                     firebaseRepo.deleteUserProfileImage(userId)
@@ -741,7 +739,7 @@ class ProfileFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                Log.d(TAG, "🔄 Updating name to Firebase...")
+                Log.d(TAG, "Updating name to Firebase...")
                 Log.d(TAG, "User ID: $userId")
                 Log.d(TAG, "New Name: $newName")
 
@@ -844,7 +842,7 @@ class ProfileFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                Log.d(TAG, "🔄 Updating password to Firebase...")
+                Log.d(TAG, "Updating password to Firebase...")
                 Log.d(TAG, "User ID: $userId")
 
                 // Step 1: Get current user data

@@ -48,13 +48,13 @@ class DoctorDashboardFragment : Fragment() {
 
         pref = PreferencesHelper(requireContext())
 
-        // ✅ Get nama dokter dari login
+        // Get nama dokter dari login
         doctorName = pref.getUserFullName() ?: pref.getDoctorName() ?: "Dokter"
 
-        Log.d(TAG, "👨‍⚕️ Doctor logged in: $doctorName")
+        Log.d(TAG, "Doctor logged in: $doctorName")
 
         tvGreeting = view.findViewById(R.id.tv_greeting)
-        tvGreeting.text = "Selamat Datang, $doctorName! 👋"
+        tvGreeting.text = "Selamat Datang, $doctorName!"
 
         ivProfileIcon = view.findViewById(R.id.ivProfileIcon)
 
@@ -84,7 +84,7 @@ class DoctorDashboardFragment : Fragment() {
     }
 
     /**
-     * ✅ Helper: Normalisasi nama dokter
+     * Helper: Normalisasi nama dokter
      * Menghilangkan "Dr.", "dr.", trim, lowercase
      */
     private fun normalizeName(name: String): String {
@@ -96,7 +96,7 @@ class DoctorDashboardFragment : Fragment() {
     }
 
     /**
-     * ✅ REALTIME LISTENER - MANUAL FILTER
+     * REALTIME LISTENER - MANUAL FILTER
      */
     private fun startRealtime() {
 
@@ -110,13 +110,13 @@ class DoctorDashboardFragment : Fragment() {
 
         // ✅ Normalize nama dokter yang login
         val normalizedLoggedDoctor = normalizeName(doctorName)
-        Log.d(TAG, "🔍 Normalized logged doctor: '$normalizedLoggedDoctor'")
+        Log.d(TAG, "Normalized logged doctor: '$normalizedLoggedDoctor'")
 
         // ✅ Listen to ALL bookings
         bookingsListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
 
-                Log.d(TAG, "📥 Received ${snapshot.childrenCount} total bookings")
+                Log.d(TAG, "Received ${snapshot.childrenCount} total bookings")
 
                 val allBookings = mutableListOf<Booking>()
 
@@ -129,7 +129,7 @@ class DoctorDashboardFragment : Fragment() {
                         // ✅ Normalize nama dokter di booking
                         val normalizedBookingDoctor = normalizeName(bookingDoctorName)
 
-                        Log.d(TAG, "🔍 Comparing: '$normalizedBookingDoctor' vs '$normalizedLoggedDoctor'")
+                        Log.d(TAG, "Comparing: '$normalizedBookingDoctor' vs '$normalizedLoggedDoctor'")
 
                         // ✅ Filter: hanya booking untuk dokter ini
                         if (normalizedBookingDoctor == normalizedLoggedDoctor) {
@@ -157,7 +157,7 @@ class DoctorDashboardFragment : Fragment() {
                             )
 
                             allBookings.add(booking)
-                            Log.d(TAG, "✅ Match: ${booking.patientName} (${booking.date})")
+                            Log.d(TAG, "Match: ${booking.patientName} (${booking.date})")
                         }
 
                     } catch (e: Exception) {
@@ -165,7 +165,7 @@ class DoctorDashboardFragment : Fragment() {
                     }
                 }
 
-                Log.d(TAG, "📊 Total bookings for this doctor: ${allBookings.size}")
+                Log.d(TAG, "Total bookings for this doctor: ${allBookings.size}")
 
                 // ✅ Remove duplicates
                 val unique = allBookings.distinctBy {
@@ -186,7 +186,7 @@ class DoctorDashboardFragment : Fragment() {
 
     private fun updateDashboardUI(list: List<Booking>) {
 
-        Log.d(TAG, "📊 Updating dashboard with ${list.size} bookings")
+        Log.d(TAG, "Updating dashboard with ${list.size} bookings")
 
         // ✅ Filter pasien yang menunggu/dipanggil
         val waiting = list.filter {
@@ -212,12 +212,12 @@ class DoctorDashboardFragment : Fragment() {
         val sb = StringBuilder()
 
         if (list.isEmpty()) {
-            sb.append("✅ Tidak ada pasien hari ini\n\n")
+            sb.append("Tidak ada pasien hari ini\n\n")
             sb.append("Klik tombol 'Lihat Antrian Pasien' untuk melihat riwayat lengkap")
         } else {
             // Section 1: Pasien yang Menunggu
             if (waiting.isNotEmpty()) {
-                sb.append("⏱️ Pasien yang Menunggu:\n\n")
+                sb.append("⏱Pasien yang Menunggu:\n\n")
 
                 waiting.take(3).forEachIndexed { index, b ->
                     val noDisplay = index + 1
@@ -240,7 +240,7 @@ class DoctorDashboardFragment : Fragment() {
 
             // Section 2: Pasien yang Selesai
             if (completed.isNotEmpty()) {
-                sb.append("✅ Pasien Selesai Hari Ini:\n\n")
+                sb.append("Pasien Selesai Hari Ini:\n\n")
 
                 completed.take(3).forEachIndexed { index, b ->
                     val noDisplay = index + 1
@@ -257,7 +257,7 @@ class DoctorDashboardFragment : Fragment() {
             }
 
             if (waiting.isEmpty() && completed.isNotEmpty()) {
-                sb.append("\n🎉 Semua pasien sudah selesai!")
+                sb.append("\nSemua pasien sudah selesai!")
             }
         }
 

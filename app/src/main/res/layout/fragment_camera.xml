@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="#F8F9FA">
 
-    <!-- 🎨 GRADIENT HEADER -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -18,7 +17,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="📷 Foto Profil"
+            android:text="Foto Profil"
             android:textColor="@android:color/white"
             android:textSize="24sp"
             android:textStyle="bold"
@@ -31,10 +30,8 @@
             android:text="Ambil foto profil yang jelas"
             android:textColor="#E0FFFFFF"
             android:textSize="13sp"/>
-
     </LinearLayout>
 
-    <!-- CONTENT AREA -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -42,7 +39,6 @@
         android:padding="16dp"
         android:gravity="center">
 
-        <!-- Preview Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="280dp"
             android:layout_height="280dp"
@@ -55,7 +51,6 @@
                 android:layout_height="match_parent"
                 android:background="#E0E0E0">
 
-                <!-- Placeholder Icon -->
                 <LinearLayout
                     android:id="@+id/layout_placeholder"
                     android:layout_width="match_parent"
@@ -63,11 +58,11 @@
                     android:orientation="vertical"
                     android:gravity="center">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="📸"
-                        android:textSize="80sp"
+                    <ImageView
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:src="@drawable/ic_settings_camera"
+                        app:tint="#757575"
                         android:layout_marginBottom="8dp"/>
 
                     <TextView
@@ -76,10 +71,8 @@
                         android:text="Belum ada foto"
                         android:textSize="14sp"
                         android:textColor="#757575"/>
-
                 </LinearLayout>
 
-                <!-- Image Preview -->
                 <ImageView
                     android:id="@+id/iv_photo_preview"
                     android:layout_width="match_parent"
@@ -87,17 +80,14 @@
                     android:scaleType="centerCrop"
                     android:visibility="gone"
                     android:contentDescription="Preview foto profil"/>
-
             </FrameLayout>
-
         </androidx.cardview.widget.CardView>
 
-        <!-- Take Photo Button -->
         <Button
             android:id="@+id/btn_take_photo"
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            android:text="📸 Ambil Foto"
+            android:text="Ambil Foto"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
@@ -105,7 +95,6 @@
             android:layout_marginBottom="12dp"
             android:elevation="4dp"/>
 
-        <!-- Action Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -118,7 +107,7 @@
                 android:layout_height="56dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
-                android:text="🔄 Ulang"
+                android:text="Ulang"
                 android:textSize="14sp"
                 android:textColor="#00897B"
                 android:background="@drawable/btn_outline_teal"
@@ -130,14 +119,11 @@
                 android:layout_height="56dp"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
-                android:text="✅ Simpan"
+                android:text="Simpan"
                 android:textSize="14sp"
                 android:textColor="@android:color/white"
                 android:background="@drawable/btn_solid_teal"
                 android:visibility="gone"/>
-
         </LinearLayout>
-
     </LinearLayout>
-
 </LinearLayout>

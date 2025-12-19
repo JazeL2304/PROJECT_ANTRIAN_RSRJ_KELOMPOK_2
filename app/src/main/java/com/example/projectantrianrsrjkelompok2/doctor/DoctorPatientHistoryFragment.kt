@@ -34,17 +34,14 @@ class DoctorPatientHistoryFragment : Fragment() {
         pref = PreferencesHelper(requireContext())
         doctorName = pref.getDoctorName() ?: pref.getUserFullName() ?: "Dr. Ahmad Santoso"
 
-        // ✅ Inisialisasi Custom Adapter
         adapter = HistoryAdapter(requireContext(), historyList)
         listView.adapter = adapter
 
-        // ✅ SINGLE CLICK - Tampilkan detail lengkap
         listView.setOnItemClickListener { _, _, pos, _ ->
             val data = historyList[pos]
             showDetailDialog(data)
         }
 
-        // ✅ LONG CLICK DELETE
         listView.setOnItemLongClickListener { _, _, pos, _ ->
             val data = historyList[pos]
             confirmDelete(data)
@@ -55,9 +52,7 @@ class DoctorPatientHistoryFragment : Fragment() {
     }
 
     private fun startRealtimeHistory() {
-
         BookingRepository.listenHistoryByDoctor(doctorName) { list ->
-
             if (list.isEmpty()) {
                 emptyState.visibility = View.VISIBLE
                 listView.visibility = View.GONE
@@ -67,7 +62,6 @@ class DoctorPatientHistoryFragment : Fragment() {
             emptyState.visibility = View.GONE
             listView.visibility = View.VISIBLE
 
-            // ✅ Update data ke adapter
             historyList.clear()
             list.forEachIndexed { index, booking ->
                 historyList.add(booking.copy(queueNumber = index + 1))
@@ -76,16 +70,14 @@ class DoctorPatientHistoryFragment : Fragment() {
         }
     }
 
-    // ✅ DIALOG DETAIL - Tampilan lebih rapi untuk baca detail
     private fun showDetailDialog(booking: Booking) {
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(60, 40, 60, 40)
         }
 
-        // Title
         val tvTitle = TextView(requireContext()).apply {
-            text = "📋 Detail Pemeriksaan"
+            text = "Detail Pemeriksaan" // EMOJI HAPUS
             textSize = 20f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(android.graphics.Color.parseColor("#212121"))
@@ -93,25 +85,25 @@ class DoctorPatientHistoryFragment : Fragment() {
         }
         container.addView(tvTitle)
 
-        // Content with better formatting
         val tvContent = TextView(requireContext()).apply {
+            // SEMUA EMOJI DI SINI DIHAPUS
             text = """
-👤 Nama Pasien:
+Nama Pasien:
    ${booking.patientName}
 
-📅 Tanggal Pemeriksaan:
+Tanggal Pemeriksaan:
    ${booking.date} • ${booking.time}
 
-💬 Keluhan Pasien:
+Keluhan Pasien:
    ${booking.complaint.ifEmpty { "-" }}
 
-🩺 Diagnosis:
+Diagnosis:
    ${booking.diagnosis.ifEmpty { "(Belum diisi)" }}
 
-💊 Resep Obat:
+Resep Obat:
    ${booking.prescription.ifEmpty { "(Belum diisi)" }}
 
-✅ Status: ${booking.status.toDisplayString()}
+Status: ${booking.status.toDisplayString()}
             """.trimIndent()
             textSize = 14f
             setTextColor(android.graphics.Color.parseColor("#424242"))
@@ -122,24 +114,21 @@ class DoctorPatientHistoryFragment : Fragment() {
         android.app.AlertDialog.Builder(requireContext())
             .setView(container)
             .setPositiveButton("Tutup", null)
-            .setNeutralButton("🗑️ Hapus") { _, _ ->
+            .setNeutralButton("Hapus") { _, _ -> // EMOJI SAMPAH HAPUS
                 confirmDelete(booking)
             }
             .show()
     }
 
     private fun confirmDelete(b: Booking) {
-
         android.app.AlertDialog.Builder(requireContext())
-            .setTitle("⚠️ Hapus Riwayat")
+            .setTitle("Hapus Riwayat") // EMOJI WARNING HAPUS
             .setMessage("Yakin ingin menghapus data pemeriksaan pasien ${b.patientName}?\n\nData yang dihapus tidak dapat dikembalikan.")
             .setPositiveButton("HAPUS") { _, _ ->
-
                 BookingRepository.deleteBooking(b.firebaseId)
-
                 Toast.makeText(
                     requireContext(),
-                    "✅ Riwayat ${b.patientName} berhasil dihapus",
+                    "Riwayat ${b.patientName} berhasil dihapus", // EMOJI CENTANG HAPUS
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -147,18 +136,13 @@ class DoctorPatientHistoryFragment : Fragment() {
             .show()
     }
 
-    // ========================================
-    // ✅ CUSTOM ADAPTER - Menggunakan Card View
-    // ========================================
     inner class HistoryAdapter(
         private val context: android.content.Context,
         private val data: List<Booking>
     ) : BaseAdapter() {
 
         override fun getCount(): Int = data.size
-
         override fun getItem(position: Int): Any = data[position]
-
         override fun getItemId(position: Int): Long = position.toLong()
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
@@ -167,7 +151,6 @@ class DoctorPatientHistoryFragment : Fragment() {
 
             val booking = data[position]
 
-            // Find views
             val tvQueueNumber = view.findViewById<TextView>(R.id.tvQueueNumber)
             val tvStatus = view.findViewById<TextView>(R.id.tvStatus)
             val tvPatientName = view.findViewById<TextView>(R.id.tvPatientName)
@@ -176,13 +159,13 @@ class DoctorPatientHistoryFragment : Fragment() {
             val tvDiagnosis = view.findViewById<TextView>(R.id.tvDiagnosis)
             val tvPrescription = view.findViewById<TextView>(R.id.tvPrescription)
 
-            // Set data
             tvQueueNumber.text = "No. ${booking.queueNumber ?: position + 1}"
-            tvStatus.text = "✅ Selesai"
-            tvPatientName.text = "👤 ${booking.patientName}"
-            tvDateTime.text = "📅 ${booking.date} • ${booking.time}"
+            tvStatus.text = "Selesai" // EMOJI CENTANG HAPUS
 
-            // Format diagnosis dan resep dengan line breaks yang rapi
+            // EMOJI USER & KALENDER DIHAPUS DARI SINI
+            tvPatientName.text = booking.patientName
+            tvDateTime.text = "${booking.date} • ${booking.time}"
+
             val diagnosisText = if (booking.diagnosis.isNotEmpty()) {
                 booking.diagnosis
             } else {
@@ -199,7 +182,6 @@ class DoctorPatientHistoryFragment : Fragment() {
             tvDiagnosis.text = diagnosisText
             tvPrescription.text = prescriptionText
 
-            // Set status badge color
             tvStatus.setBackgroundResource(R.drawable.bg_status_completed)
 
             return view

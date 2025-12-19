@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -12,7 +11,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- 🎨 GRADIENT HEADER WITH PROFILE ICON -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -27,7 +25,6 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <!-- LEFT: TEXT -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -38,7 +35,7 @@
                         android:id="@+id/tv_welcome"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Selamat Datang! 👋"
+                        android:text="Selamat Datang!"
                         android:textColor="@android:color/white"
                         android:textSize="22sp"
                         android:textStyle="bold"/>
@@ -51,10 +48,8 @@
                         android:textColor="#E0FFFFFF"
                         android:textSize="14sp"
                         android:layout_marginTop="4dp"/>
-
                 </LinearLayout>
 
-                <!-- ✅ RIGHT: PROFILE ICON (CLICKABLE) -->
                 <ImageView
                     android:id="@+id/ivProfileIcon"
                     android:layout_width="40dp"
@@ -66,19 +61,15 @@
                     android:focusable="true"
                     android:foreground="?android:attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Profile Icon"/>
-
             </LinearLayout>
-
         </LinearLayout>
 
-        <!-- CONTENT AREA -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 📋 Active Queue Card (if exists) -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_active_queue"
                 android:layout_width="match_parent"
@@ -98,7 +89,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📌 Antrian Aktif"
+                        android:text="Antrian Aktif"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="#1976D2"
@@ -112,12 +103,9 @@
                         android:textSize="14sp"
                         android:textColor="#424242"
                         android:lineSpacingExtra="4dp"/>
-
                 </LinearLayout>
-
             </androidx.cardview.widget.CardView>
 
-            <!-- ⚡ Quick Actions -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -127,7 +115,7 @@
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="0dp"
-                    android:layout_height="100dp"
+                    android:layout_height="110dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
                     app:cardCornerRadius="12dp"
@@ -143,11 +131,11 @@
                         android:clickable="true"
                         android:focusable="true">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="📅"
-                            android:textSize="36sp"
+                        <ImageView
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_menu_create_queue"
+                            app:tint="#2196F3"
                             android:layout_marginBottom="8dp"/>
 
                         <TextView
@@ -157,14 +145,12 @@
                             android:textSize="14sp"
                             android:textStyle="bold"
                             android:textColor="#2196F3"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="0dp"
-                    android:layout_height="100dp"
+                    android:layout_height="110dp"
                     android:layout_weight="1"
                     android:layout_marginStart="8dp"
                     app:cardCornerRadius="12dp"
@@ -180,11 +166,10 @@
                         android:clickable="true"
                         android:focusable="true">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🚨"
-                            android:textSize="36sp"
+                        <ImageView
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_menu_emergency"
                             android:layout_marginBottom="8dp"/>
 
                         <TextView
@@ -194,14 +179,10 @@
                             android:textSize="14sp"
                             android:textStyle="bold"
                             android:textColor="#F44336"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
-
             </LinearLayout>
 
-            <!-- 📝 Section Title -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -211,7 +192,6 @@
                 android:textColor="#212121"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- 🏥 Service Grid -->
             <androidx.gridlayout.widget.GridLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -219,7 +199,6 @@
                 app:rowCount="3"
                 android:layout_marginBottom="20dp">
 
-                <!-- Layanan Umum -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/card_poli_umum"
                     android:layout_width="0dp"
@@ -239,10 +218,9 @@
                         android:background="#E8F5E9">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:src="@drawable/ic_service_general"
-                            android:tint="#4CAF50"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:src="@drawable/ic_menu_general"
                             android:layout_marginBottom="12dp"/>
 
                         <TextView
@@ -254,12 +232,9 @@
                             android:textColor="#2E7D32"
                             android:gravity="center"
                             android:lineSpacingExtra="2dp"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
-                <!-- Layanan Gigi -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/card_poli_gigi"
                     android:layout_width="0dp"
@@ -279,10 +254,9 @@
                         android:background="#E3F2FD">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:src="@drawable/ic_service_dental"
-                            android:tint="#2196F3"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:src="@drawable/ic_menu_dental"
                             android:layout_marginBottom="12dp"/>
 
                         <TextView
@@ -294,12 +268,9 @@
                             android:textColor="#1565C0"
                             android:gravity="center"
                             android:lineSpacingExtra="2dp"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
-                <!-- Layanan Mata -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/card_poli_mata"
                     android:layout_width="0dp"
@@ -319,10 +290,9 @@
                         android:background="#FFF3E0">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:src="@drawable/ic_service_eye"
-                            android:tint="#FF9800"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:src="@drawable/ic_menu_eye"
                             android:layout_marginBottom="12dp"/>
 
                         <TextView
@@ -334,12 +304,9 @@
                             android:textColor="#E65100"
                             android:gravity="center"
                             android:lineSpacingExtra="2dp"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
-                <!-- Layanan Jantung -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/card_poli_jantung"
                     android:layout_width="0dp"
@@ -359,10 +326,9 @@
                         android:background="#FCE4EC">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:src="@drawable/ic_service_heart"
-                            android:tint="#E91E63"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:src="@drawable/ic_menu_heart"
                             android:layout_marginBottom="12dp"/>
 
                         <TextView
@@ -374,12 +340,9 @@
                             android:textColor="#C2185B"
                             android:gravity="center"
                             android:lineSpacingExtra="2dp"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
-                <!-- Layanan Anak -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/card_poli_anak"
                     android:layout_width="0dp"
@@ -399,10 +362,9 @@
                         android:background="#F3E5F5">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:src="@drawable/ic_service_pediatric"
-                            android:tint="#9C27B0"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:src="@drawable/ic_menu_pediatric"
                             android:layout_marginBottom="12dp"/>
 
                         <TextView
@@ -414,12 +376,9 @@
                             android:textColor="#6A1B9A"
                             android:gravity="center"
                             android:lineSpacingExtra="2dp"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
-                <!-- Layanan Kandungan -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/card_poli_kandungan"
                     android:layout_width="0dp"
@@ -439,10 +398,9 @@
                         android:background="#FFEBEE">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:src="@drawable/ic_service_maternity"
-                            android:tint="#F44336"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:src="@drawable/ic_menu_maternity"
                             android:layout_marginBottom="12dp"/>
 
                         <TextView
@@ -454,14 +412,10 @@
                             android:textColor="#C62828"
                             android:gravity="center"
                             android:lineSpacingExtra="2dp"/>
-
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
-
             </androidx.gridlayout.widget.GridLayout>
 
-            <!-- 📞 Hospital Info Card -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -477,7 +431,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="ℹ️ Informasi Rumah Sakit"
+                        android:text="Informasi Rumah Sakit"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="#212121"
@@ -486,17 +440,12 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="📍 Jl. Kesehatan No. 123, Jakarta\n📞 (021) 1234-5678\n🕐 Jam Operasional: 24 Jam"
+                        android:text="Jl. Kesehatan No. 123, Jakarta\n(021) 1234-5678\nJam Operasional: 24 Jam"
                         android:textSize="14sp"
                         android:textColor="#616161"
                         android:lineSpacingExtra="4dp"/>
-
                 </LinearLayout>
-
             </androidx.cardview.widget.CardView>
-
         </LinearLayout>
-
     </LinearLayout>
-
 </ScrollView>

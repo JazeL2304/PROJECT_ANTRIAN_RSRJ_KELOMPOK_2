@@ -81,9 +81,9 @@ class DoctorPracticeStatusFragment : Fragment() {
                 val updatedBooking = nextPatient.copy(status = BookingStatus.CALLED)
                 DataSource.addToHistory(updatedBooking)
 
-                tvCurrentPatient.text = "📣 Pasien: ${nextPatient.patientName}\n" +
-                        "🕒 Jam: ${nextPatient.time}\n" +
-                        "💬 Keluhan: ${nextPatient.complaint}"
+                tvCurrentPatient.text = "Pasien: ${nextPatient.patientName}\n" +
+                        "Jam: ${nextPatient.time}\n" +
+                        "Keluhan: ${nextPatient.complaint}"
 
                 Toast.makeText(
                     requireContext(),
