@@ -24,6 +24,7 @@ Fitur Utama:
 
 User Roles & Fitur
 1. Pasien = 1. user@example.com, password123, 2. haha@gmail.com, hahaha
+   
 Login/Register dengan sistem autentikasi
 
 Browse dokter berdasarkan spesialisasi
@@ -39,6 +40,7 @@ Lihat riwayat kunjungan
 Akses berita kesehatan
 
 2. Dokter = 1. dokter@rumahsakit.com, dokter123, 2. siti@rumahsakit.com, siti123
+
 Login dengan kredensial dokter
 
 Dashboard dengan statistik harian:
